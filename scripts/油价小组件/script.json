@@ -1,0 +1,8 @@
+{
+  "color": "systemOrange",
+  "icon": "fuelpump.fill",
+  "runInApp": false,
+  "intentInputTypes": [],
+  "name": "油价小组件",
+  "version": 20250815
+}

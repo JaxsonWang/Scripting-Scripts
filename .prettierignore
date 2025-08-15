@@ -1,0 +1,64 @@
+# Build outputs
+/dist/*
+build/
+coverage/
+
+# Dependencies
+.local
+/node_modules/**
+pnpm-lock.yaml
+package-lock.json
+yarn.lock
+
+# Assets
+**/*.svg
+**/*.sh
+**/*.png
+**/*.jpg
+**/*.jpeg
+**/*.gif
+**/*.ico
+
+# Public files
+/public/*
+stats.html
+
+# Documentation and examples (don't format)
+docs/
+simple/
+demo/
+
+# Logs
+*.log
+logs/
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Temporary files
+*.tmp
+*.temp
+
+# Type definition files
+dts/
+*.d.ts
+
+# Configuration files with specific formatting
+.augment/
+tsconfig.json
+*.config.js
+*.config.mjs
+*.config.ts
+*.config.mts
