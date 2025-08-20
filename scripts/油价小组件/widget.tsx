@@ -34,7 +34,7 @@ const GasPriceItem = ({
 }) => {
   return (
     <HStack alignment="center" spacing={8}>
-      <Text font="title" foregroundStyle="label">
+      <Text font="title" fontWeight="bold" foregroundStyle="#EB604D">
         {type}
       </Text>
       <Spacer />
@@ -84,6 +84,8 @@ const loadOilData = async (): Promise<CompleteOilData> => {
  * @param props.data 完整油价数据
  */
 const WidgetView = ({ data }: { data: CompleteOilData }) => {
+  const parameters = Widget.parameter
+  // const isNegativeScreen = /测/
   switch (Widget.family) {
     case 'systemSmall': {
       const selectedOilType = getSelectedOilType()
@@ -97,7 +99,7 @@ const WidgetView = ({ data }: { data: CompleteOilData }) => {
           <Text font="title" fontWeight="bold" foregroundStyle="label">
             {selectedPrice}
           </Text>
-          <Text font="caption" foregroundStyle="secondaryLabel">
+          <Text font="caption" foregroundStyle="#EB604D">
             {selectedOilOption.label}
           </Text>
           <Spacer />
@@ -123,85 +125,88 @@ const WidgetView = ({ data }: { data: CompleteOilData }) => {
       }
 
       return (
-        <VStack padding={{ vertical: 14, horizontal: 8 }}>
-          <HStack spacing={4} alignment="top" padding={{ horizontal: 16 }}>
-            <Image systemName="fuelpump.fill" font="body" foregroundStyle="systemOrange" />
-            <Text font="body" foregroundStyle="label">
-              {data.region}油价
-            </Text>
-            <Spacer />
-          </HStack>
-
-          <Spacer />
-
-          <HStack padding={{ horizontal: 16 }}>
-            <VStack spacing={2} alignment="center">
-              <Text font="title2" fontWeight="medium" foregroundStyle="secondaryLabel">
-                92#
+        <VStack>
+          <VStack padding={{ vertical: 14 }}>
+            <HStack spacing={4} alignment="bottom" padding={{ horizontal: 16 }}>
+              <Image systemName="fuelpump.fill" font="body" foregroundStyle="systemOrange" />
+              <Text font="body" fontWeight="bold" foregroundStyle="label">
+                {data.region}油价
               </Text>
-              <Text font="title3" fontWeight="medium" foregroundStyle="label">
-                {data.oil92}
-              </Text>
-              <Text font="caption2" foregroundStyle={getTrendColor(data.priceDirection)}>
-                {getTrendSymbol(data.priceDirection)} {formatForecastPrice(data.forecastPrice)}
-              </Text>
-            </VStack>
+              <Spacer />
+            </HStack>
 
             <Spacer />
 
-            <VStack spacing={2} alignment="center">
-              <Text font="title2" fontWeight="medium" foregroundStyle="secondaryLabel">
-                95#
-              </Text>
-              <Text font="title3" fontWeight="medium" foregroundStyle="label">
-                {data.oil95}
-              </Text>
-              <Text font="caption2" foregroundStyle={getTrendColor(data.priceDirection)}>
-                {getTrendSymbol(data.priceDirection)} {formatForecastPrice(data.forecastPrice)}
-              </Text>
-            </VStack>
+            <HStack padding={{ horizontal: 32 }}>
+              <VStack spacing={2} alignment="center">
+                <Text font="title2" fontWeight="medium" foregroundStyle="#EB604D">
+                  92#
+                </Text>
+                <Text font="title3" fontWeight="medium" foregroundStyle="label">
+                  {data.oil92}
+                </Text>
+                <Text font="caption2" foregroundStyle={getTrendColor(data.priceDirection)}>
+                  {getTrendSymbol(data.priceDirection)} {formatForecastPrice(data.forecastPrice)}
+                </Text>
+              </VStack>
+
+              <Spacer />
+
+              <VStack spacing={2} alignment="center">
+                <Text font="title2" fontWeight="medium" foregroundStyle="#EB604D">
+                  95#
+                </Text>
+                <Text font="title3" fontWeight="medium" foregroundStyle="label">
+                  {data.oil95}
+                </Text>
+                <Text font="caption2" foregroundStyle={getTrendColor(data.priceDirection)}>
+                  {getTrendSymbol(data.priceDirection)} {formatForecastPrice(data.forecastPrice)}
+                </Text>
+              </VStack>
+
+              <Spacer />
+
+              <VStack spacing={2} alignment="center">
+                <Text font="title2" fontWeight="medium" foregroundStyle="#EB604D">
+                  98#
+                </Text>
+                <Text font="title3" fontWeight="medium" foregroundStyle="label">
+                  {data.oil98}
+                </Text>
+                <Text font="caption2" foregroundStyle={getTrendColor(data.priceDirection)}>
+                  {getTrendSymbol(data.priceDirection)} {formatForecastPrice(data.forecastPrice)}
+                </Text>
+              </VStack>
+
+              <Spacer />
+
+              <VStack spacing={2} alignment="center">
+                <Text font="title2" fontWeight="medium" foregroundStyle="#EB604D">
+                  0#
+                </Text>
+                <Text font="title3" fontWeight="medium" foregroundStyle="label">
+                  {data.oil0}
+                </Text>
+                <Text font="caption2" foregroundStyle={getTrendColor(data.priceDirection)}>
+                  {getTrendSymbol(data.priceDirection)} {formatForecastPrice(data.forecastPrice)}
+                </Text>
+              </VStack>
+            </HStack>
 
             <Spacer />
 
-            <VStack spacing={2} alignment="center">
-              <Text font="title2" fontWeight="medium" foregroundStyle="secondaryLabel">
-                98#
+            <HStack spacing={2} alignment="center">
+              <Text font={10} foregroundStyle="tertiaryLabel">
+                {data.lastUpdated}刷新
               </Text>
-              <Text font="title3" fontWeight="medium" foregroundStyle="label">
-                {data.oil98}
+              <Text font={10} foregroundStyle="tertiaryLabel">
+                •
               </Text>
-              <Text font="caption2" foregroundStyle={getTrendColor(data.priceDirection)}>
-                {getTrendSymbol(data.priceDirection)} {formatForecastPrice(data.forecastPrice)}
+              <Text font={10} foregroundStyle="tertiaryLabel">
+                {data.forecastDate + getTrendStr(data.priceDirection)}调整
               </Text>
-            </VStack>
-
-            <Spacer />
-
-            <VStack spacing={2} alignment="center">
-              <Text font="title2" fontWeight="medium" foregroundStyle="secondaryLabel">
-                0#
-              </Text>
-              <Text font="title3" fontWeight="medium" foregroundStyle="label">
-                {data.oil0}
-              </Text>
-              <Text font="caption2" foregroundStyle={getTrendColor(data.priceDirection)}>
-                {getTrendSymbol(data.priceDirection)} {formatForecastPrice(data.forecastPrice)}
-              </Text>
-            </VStack>
-          </HStack>
-          <Spacer />
-          {/* 底部时间信息 */}
-          <HStack spacing={2} alignment="center">
-            <Text font="caption2" foregroundStyle="tertiaryLabel">
-              {data.lastUpdated}刷新
-            </Text>
-            <Text font="caption2" foregroundStyle="tertiaryLabel">
-              •
-            </Text>
-            <Text font="caption2" foregroundStyle="tertiaryLabel">
-              {data.forecastDate + getTrendStr(data.priceDirection)}调整
-            </Text>
-          </HStack>
+            </HStack>
+          </VStack>
         </VStack>
       )
     }
@@ -211,8 +216,8 @@ const WidgetView = ({ data }: { data: CompleteOilData }) => {
       return (
         <VStack spacing={16} padding={16}>
           <HStack spacing={4} alignment="top">
-            <Image systemName="fuelpump.fill" font="title2" foregroundStyle="systemOrange" />
-            <Text font="title2" foregroundStyle="label">
+            <Image systemName="fuelpump.fill" font="body" foregroundStyle="systemOrange" />
+            <Text font="body" fontWeight="bold" foregroundStyle="label">
               {data.region}油价
             </Text>
             <Spacer />

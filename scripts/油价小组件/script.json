@@ -4,5 +4,11 @@
   "runInApp": false,
   "intentInputTypes": [],
   "name": "油价小组件",
-  "version": 20250815
+  "version": "0.1.2.beta",
+  "description": "在桌面随时了解油价信息",
+  "remoteResource": {
+    "autoUpdateInterval": 86400,
+    "url": "https://joiner.i95.me/scripting/油价小组件.scripting",
+    "hash": "00783b94652970dc0250169d974fa77b"
+  }
 }

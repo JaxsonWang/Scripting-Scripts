@@ -1,6 +1,15 @@
-import { Button, HStack, List, Navigation, NavigationStack, Script, Section, Spacer, Text, VStack, Widget, useEffect, useState } from 'scripting'
+import { Button, HStack, Image, List, Navigation, NavigationStack, Script, Section, Spacer, Text, VStack, Widget, useEffect, useState } from 'scripting'
 import type { CompleteOilData } from './utils/oil-price-service'
-import { areaOptions, formatForecastPrice, getCompleteOilData, getCurrentAreaSettings } from './utils/oil-price-service'
+import {
+  areaOptions,
+  fetchRemoteVersionInfo,
+  formatForecastPrice,
+  getCompleteOilData,
+  getCurrentAreaSettings,
+  getCurrentVersion,
+  markUpdateLogDismissed,
+  shouldShowUpdateLog
+} from './utils/oil-price-service'
 import { SettingsPage } from './components/settings-page'
 
 /**
@@ -14,6 +23,12 @@ const GasPriceDetail = () => {
     const settings = getCurrentAreaSettings()
     return settings.areaType
   })
+  const [versionInfo, setVersionInfo] = useState<any>(null)
+  const [hasCheckedUpdate, setHasCheckedUpdate] = useState(false)
+  const [showChangelogSheet, setShowChangelogSheet] = useState(false)
+  const [changelogContent, setChangelogContent] = useState<string>('')
+  const [updateTitle, setUpdateTitle] = useState<string>('')
+  const [bannerImageUrl, setBannerImageUrl] = useState<string>('')
 
   // 加载数据
   const loadData = async () => {
@@ -35,9 +50,106 @@ const GasPriceDetail = () => {
     await loadData()
   }
 
+  // 加载版本信息
+  const loadVersionInfo = async () => {
+    try {
+      const info = await fetchRemoteVersionInfo()
+      console.log('获取到的版本信息:', info)
+      setVersionInfo(info)
+
+      // 设置横幅图片
+      if (info && info.bannerImage) {
+        setBannerImageUrl(info.bannerImage)
+        console.log('获取到的横幅图片:', info.bannerImage)
+      }
+    } catch (error) {
+      console.error('加载版本信息失败:', error)
+    }
+  }
+
+  // 检查并显示更新提醒
+  const checkAndShowUpdateAlert = async () => {
+    try {
+      if (hasCheckedUpdate) return
+
+      const shouldShow = await shouldShowUpdateLog()
+      console.log('是否需要显示更新提醒:', shouldShow)
+
+      if (shouldShow) {
+        // 获取远程更新内容
+        const remoteInfo = await fetchRemoteVersionInfo()
+        const currentVersion = getCurrentVersion()
+
+        let changelogText = '暂无更新内容'
+        if (remoteInfo && Array.isArray(remoteInfo.changelog) && remoteInfo.changelog.length > 0) {
+          changelogText = remoteInfo.changelog.map((item: string, index: number) => `${index + 1}. ${item}`).join('\n')
+        }
+
+        setChangelogContent(changelogText)
+        setUpdateTitle(`脚本更新 - ${currentVersion}`)
+        setShowChangelogSheet(true) // 使用 changelog sheet 来显示更新提醒
+      }
+
+      setHasCheckedUpdate(true)
+    } catch (error) {
+      console.error('检查更新失败:', error)
+      setHasCheckedUpdate(true)
+    }
+  }
+
+  // 处理更新提醒确认
+  const handleUpdateDismiss = () => {
+    markUpdateLogDismissed()
+    setShowChangelogSheet(false)
+  }
+
+  // 显示更新日志
+  const showChangelogAlert = async () => {
+    try {
+      // 优先使用已加载的版本信息
+      let targetVersionInfo = versionInfo
+
+      // 如果没有版本信息，尝试获取远程信息
+      if (!targetVersionInfo) {
+        console.log('本地没有版本信息，尝试获取远程信息')
+        targetVersionInfo = await fetchRemoteVersionInfo()
+      }
+
+      if (!targetVersionInfo || !targetVersionInfo.changelog || !targetVersionInfo.changelog.length) {
+        setChangelogContent('暂无更新日志信息')
+        setUpdateTitle('更新日志')
+        setShowChangelogSheet(true)
+        return
+      }
+
+      console.log('准备显示更新日志:', targetVersionInfo.changelog)
+
+      // 格式化更新日志内容
+      const changelogText = targetVersionInfo.changelog.map((item: string, index: number) => `${index + 1}. ${item}`).join('\n')
+
+      setChangelogContent(changelogText || '暂无更新日志')
+      setUpdateTitle(`更新日志 - ${targetVersionInfo.version || '未知版本'}`)
+      setShowChangelogSheet(true)
+    } catch (error) {
+      console.error('显示更新日志失败:', error)
+      setChangelogContent('获取更新日志失败')
+      setUpdateTitle('错误')
+      setShowChangelogSheet(true)
+    }
+  }
+
   // 初始加载
   useEffect(() => {
-    loadData()
+    const initializeApp = async () => {
+      await loadData()
+      await loadVersionInfo()
+
+      // 延迟检查更新，确保组件已完全渲染
+      setTimeout(() => {
+        checkAndShowUpdateAlert()
+      }, 1000)
+    }
+    initializeApp()
   }, [])
 
   if (loading || !oilData) {
@@ -193,7 +305,39 @@ const GasPriceDetail = () => {
         </Section>
 
         {/* 操作按钮 */}
-        <Section>
+        <Section
+          footer={
+            <VStack spacing={10} alignment="leading">
+              <Image imageUrl={bannerImageUrl} resizable scaleToFit />
+              <Text font="footnote" foregroundStyle="secondaryLabel">
+                {`当前版本: ${getCurrentVersion()}`}
+              </Text>
+            </VStack>
+          }
+        >
+          <Button
+            title="更新日志"
+            action={showChangelogAlert}
+            sheet={{
+              isPresented: showChangelogSheet,
+              onChanged: setShowChangelogSheet,
+              content: (
+                <VStack presentationDragIndicator="visible" presentationDetents={['medium', 'large']} spacing={20} padding={20}>
+                  <Text font="title2" foregroundStyle="label">
+                    {updateTitle}
+                  </Text>
+                  <Text font="body" foregroundStyle="label" padding={10}>
+                    {changelogContent}
+                  </Text>
+                  {updateTitle.includes('脚本更新') ? (
+                    <Button title="我已知晓" action={handleUpdateDismiss} />
+                  ) : (
+                    <Button title="确定" action={() => setShowChangelogSheet(false)} />
+                  )}
+                </VStack>
+              )
+            }}
+          />
           <Button
             title="刷新数据"
             action={async () => {

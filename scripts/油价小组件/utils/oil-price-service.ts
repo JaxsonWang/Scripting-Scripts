@@ -1,4 +1,5 @@
 import { fetch } from 'scripting'
+import scriptConfig from '../script.json'
 
 // 地区选项配置
 export const areaOptions = [
@@ -75,7 +76,9 @@ const STORAGE_KEYS = {
   OIL_DATA: 'oilPrice_oilData',
   FORECAST_STR: 'oilPrice_forecastStr',
   AREA_ZONE_OPTIONS: 'oilPrice_areaZoneOptions',
-  SELECTED_OIL_TYPE: 'oilPrice_selectedOilType'
+  SELECTED_OIL_TYPE: 'oilPrice_selectedOilType',
+  LAST_VERSION: 'oilPrice_lastVersion',
+  UPDATE_DISMISSED: 'oilPrice_updateDismissed'
 }
 
 /**
@@ -521,4 +524,81 @@ export const getTrendSymbol = (priceDirection: string) => {
     default:
       return '→'
   }
+}
+
+// 版本管理相关类型定义
+export interface VersionInfo {
+  name: string
+  desc: string
+  version: string
+  changelog: string[]
+  bannerImage?: string
+}
+
+/**
+ * 获取远程版本信息和横幅图片
+ * @returns 远程版本信息Promise
+ */
+export const fetchRemoteVersionInfo = async (): Promise<VersionInfo | null> => {
+  try {
+    const response = await fetch('https://joiner.i95.me/scripting/joiner.json')
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+
+    const data = await response.json()
+    const oilPriceInfo = data.OilPrice
+
+    if (oilPriceInfo) {
+      return {
+        name: oilPriceInfo.name,
+        desc: oilPriceInfo.desc,
+        version: oilPriceInfo.version,
+        changelog: oilPriceInfo.changelog || [],
+        bannerImage: data.bannerImage || undefined
+      }
+    }
+
+    return null
+  } catch (error) {
+    console.error('获取远程版本信息失败:', error)
+    return null
+  }
+}
+
+/**
+ * 获取当前本地版本号
+ * @returns 当前本地版本号
+ */
+export const getCurrentVersion = (): string => {
+  return scriptConfig.version
+}
+
+/**
+ * 检查是否需要显示更新日志
+ * @returns 是否需要显示更新日志
+ */
+export const shouldShowUpdateLog = async (): Promise<boolean> => {
+  try {
+    const currentLocalVersion = getCurrentVersion()
+    const cachedVersion = Storage.get<string>(STORAGE_KEYS.LAST_VERSION)
+
+    console.log('当前本地版本:', currentLocalVersion)
+    console.log('缓存的版本:', cachedVersion)
+
+    // 如果缓存的版本与当前本地版本不同，说明有更新
+    return cachedVersion !== currentLocalVersion
+  } catch (error) {
+    console.error('检查更新日志失败:', error)
+    return false
+  }
+}
+
+/**
+ * 标记更新日志已确认（缓存当前版本号）
+ */
+export const markUpdateLogDismissed = (): void => {
+  const currentVersion = getCurrentVersion()
+  Storage.set(STORAGE_KEYS.LAST_VERSION, currentVersion)
+  console.log('已缓存版本号:', currentVersion)
 }
