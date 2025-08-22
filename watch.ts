@@ -3,9 +3,9 @@ import fs from 'fs-extra'
 import { homedir } from 'os'
 import path from 'path'
 
-const devPath = path.join(homedir(), 'Library', 'Mobile Documents', 'iCloud~com~thomfang~Scripting', 'Documents', 'scripts', '油价小组件')
+const devPath = path.join(homedir(), 'Library', 'Mobile Documents', 'iCloud~com~thomfang~Scripting', 'Documents', 'scripts')
 
-const srcDir = path.resolve('scripts/油价小组件')
+const srcDir = path.resolve('scripts')
 const destDir = path.resolve(devPath)
 
 fs.ensureDirSync(destDir)

@@ -19,6 +19,7 @@ stats.html
 !.vscode/settings.json
 .idea
 .augment
+.qoder
 .DS_Store
 *.suo
 *.ntvs*
