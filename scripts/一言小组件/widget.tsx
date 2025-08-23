@@ -95,7 +95,7 @@ const WidgetView = ({ data }: { data: HitokotoData }) => {
             font="headline"
             fontWeight="medium"
             foregroundStyle="label"
-            padding={{ horizontal: 16  }}
+            padding={{ horizontal: 16 }}
             frame={{
               maxWidth: 'infinity',
               alignment: 'center'
@@ -198,17 +198,17 @@ const main = async (): Promise<void> => {
   try {
     const data = await loadHitokotoData()
     const settings = getCurrentSettings()
-    
+
     if (settings.autoRefresh) {
       // 计算下次刷新时间
       const refreshIntervalMs = settings.refreshInterval * 60 * 1000 // 转换为毫秒
       const nextRefreshDate = new Date(Date.now() + refreshIntervalMs)
-      
+
       console.log(`组件设置自动刷新，间隔: ${settings.refreshInterval}分钟，下次刷新: ${nextRefreshDate.toLocaleString()}`)
-      
+
       // 使用定时刷新策略
       Widget.present(<WidgetView data={data} />, {
-        policy: "after",
+        policy: 'after',
         date: nextRefreshDate
       })
     } else {

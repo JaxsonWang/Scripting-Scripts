@@ -1,15 +1,14 @@
 import { Button, HStack, Image, List, Navigation, NavigationStack, Script, Section, Spacer, Text, VStack, Widget } from 'scripting'
-import { useState, useEffect } from 'scripting'
+import { useEffect, useState } from 'scripting'
 import type { HitokotoData } from './utils/hitokoto-service'
-import { 
-  fetchHitokoto, 
-  getTypeName, 
-  getCurrentSettings, 
-  getCurrentApiConfig,
+import {
+  fetchHitokoto,
   fetchRemoteVersionInfo,
+  getCurrentApiConfig,
   getCurrentVersion,
-  shouldShowUpdateLog,
-  markUpdateLogDismissed
+  getTypeName,
+  markUpdateLogDismissed,
+  shouldShowUpdateLog
 } from './utils/hitokoto-service'
 import { SettingsPage } from './components/settings-page'
 
@@ -203,13 +202,13 @@ const HitokotoDetail = () => {
           <VStack spacing={12} padding={16} alignment="center">
             <Spacer />
             <Text
-                font="title2" 
-                fontWeight="medium"
-                foregroundStyle="label"
-                frame={{
-                    maxWidth: 'infinity',
-                    alignment: 'center'
-                }}
+              font="title2"
+              fontWeight="medium"
+              foregroundStyle="label"
+              frame={{
+                maxWidth: 'infinity',
+                alignment: 'center'
+              }}
             >
               {hitokotoData.hitokoto}
             </Text>
@@ -283,7 +282,7 @@ const HitokotoDetail = () => {
             <VStack spacing={10} alignment="leading">
               <Image imageUrl={bannerImageUrl} resizable scaleToFit />
               <Text font="footnote" foregroundStyle="secondaryLabel">
-                {​`当前版本: ${getCurrentVersion()}`}
+                {`当前版本: ${getCurrentVersion()}`}
               </Text>
             </VStack>
           }

@@ -149,10 +149,10 @@ export const fetchHitokoto = async (): Promise<HitokotoData> => {
       throw new Error(`HTTP error! status: ${response.status}`)
     }
     const data = (await response.json()) as HitokotoData
-    
+
     // 保存最后更新时间
     Storage.set('hitokoto_last_update', Date.now())
-    
+
     return data
   } catch (error) {
     console.error('获取一言失败:', error)
@@ -180,12 +180,12 @@ export const fetchHitokoto = async (): Promise<HitokotoData> => {
 export const shouldRefresh = (): boolean => {
   const settings = getCurrentSettings()
   if (!settings.autoRefresh) return false
-  
+
   const lastUpdate = Storage.get<number>('hitokoto_last_update') || 0
   const now = Date.now()
   const intervalMs = settings.refreshInterval * 60 * 1000 // 转换为毫秒
-  
-  return (now - lastUpdate) >= intervalMs
+
+  return now - lastUpdate >= intervalMs
 }
 
 /**
@@ -247,7 +247,7 @@ export const fetchRemoteVersionInfo = async (): Promise<VersionInfo | null> => {
  * @returns 当前本地版本号
  */
 export const getCurrentVersion = (): string => {
-    return scriptConfig.version
+  return scriptConfig.version
 }
 
 /**
