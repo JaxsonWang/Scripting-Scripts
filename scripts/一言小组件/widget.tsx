@@ -42,19 +42,19 @@ const WidgetView = ({ data }: { data: HitokotoData }) => {
       return (
         <VStack spacing={6} padding={16} alignment="center">
           <Image systemName="quote.bubble.fill" font="title2" foregroundStyle="systemBlue" />
-          <Spacer />
           <Text
             font="body"
             fontWeight="medium"
             foregroundStyle="label"
             frame={{
               maxWidth: 'infinity',
+              minHeight: 40,
+              maxHeight: 'infinity',
               alignment: 'center'
             }}
           >
             {data.hitokoto}
           </Text>
-          <Spacer />
           <HStack spacing={2} alignment="center">
             <Text font="caption" foregroundStyle="tertiaryLabel">
               {data.from}
@@ -95,9 +95,10 @@ const WidgetView = ({ data }: { data: HitokotoData }) => {
             font="headline"
             fontWeight="medium"
             foregroundStyle="label"
-            padding={{ horizontal: 16 }}
             frame={{
               maxWidth: 'infinity',
+              minHeight: 50,
+              maxHeight: 'infinity',
               alignment: 'center'
             }}
           >
@@ -149,6 +150,8 @@ const WidgetView = ({ data }: { data: HitokotoData }) => {
             foregroundStyle="label"
             frame={{
               maxWidth: 'infinity',
+              minHeight: 100,
+              maxHeight: 'infinity',
               alignment: 'center'
             }}
           >

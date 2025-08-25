@@ -1,11 +1,18 @@
 import { Circle, Grid, GridRow, HStack, Image, RoundedRectangle, Spacer, Text, VStack, Widget } from 'scripting'
-import { formatEventTime, generateCalendarGrid, getCalendarData, getEventsForDate, getMonthNameToNumber, getWeekdayNames } from './utils/calendar-service'
+import { formatEventTime, generateCalendarGrid, getCalendarData, getMonthNameToNumber, getWeekdayNames } from './utils/calendar-service'
+import { getDaysLeftInYear, solarToLunar } from './utils/lunar-calendar'
+import { getActualColor, getCurrentSettings } from './components/settings-page'
+import {
+  calculateWeeksToShow,
+  formatDaysLeftText,
+  formatEventsForDisplay,
+  formatLunarDisplay,
+  formatMonthDisplay,
+  formatYiJiDisplay,
+  generateCalendarRows,
+  getCellStyle
+} from './utils/widget-helpers'
 
-import { getDaysLeftInYear, getLunarInfoForDate, solarToLunar } from './utils/lunar-calendar'
-import { getCurrentSettings } from './components/settings-page'
-import { getActualColor } from './components/settings-page'
-
-import type { FontWeight, ShapeStyle } from 'scripting'
 import type { CalendarData } from './utils/calendar-service'
 import type { LunarData } from './utils/lunar-calendar'
 import type { SettingsData } from './components/settings-page'
@@ -68,22 +75,8 @@ const SmallWidget = ({ data }: { data: WidgetData }) => {
   const { calendar, lunar, settings } = data
   const grid = generateCalendarGrid(calendar.currentYear, calendar.currentMonth)
   const weekdays = getWeekdayNames()
-
-  // 计算实际需要的周数（动态计算，避免显示空白周）
-  let weeksToShow = 6 // 默认6周
-
-  // 检查最后一周是否有当前月份的日期
-  for (let week = 5; week >= 4; week--) {
-    const weekStart = week * 7
-    const weekEnd = weekStart + 7
-    const weekCells = grid.slice(weekStart, weekEnd)
-    const hasCurrentMonthDays = weekCells.some(cell => cell.isCurrentMonth)
-
-    if (!hasCurrentMonthDays && week === 5) {
-      weeksToShow = 5 // 如果第6周没有当前月份日期，只显示5周
-      break
-    }
-  }
+  const weeksToShow = calculateWeeksToShow(grid)
+  const calendarRows = generateCalendarRows(grid, weeksToShow, calendar, false)
 
   return (
     <VStack padding={{ horizontal: 10, vertical: 5 }}>
@@ -116,22 +109,25 @@ const SmallWidget = ({ data }: { data: WidgetData }) => {
 
       {/* 日历网格 - Grid 布局，全宽自适应 */}
       <Grid horizontalSpacing={2} verticalSpacing={2} alignment="center">
-        {Array.from({ length: weeksToShow }, (_, weekIndex) => (
-          <GridRow key={weekIndex}>
-            {grid.slice(weekIndex * 7, (weekIndex + 1) * 7).map((cell, dayIndex) => (
-              <Text
-                key={`${weekIndex}-${dayIndex}`}
-                font={10}
-                foregroundStyle={cell.isToday ? 'white' : cell.isCurrentMonth ? 'label' : 'tertiaryLabel'}
-                fontWeight={cell.isToday ? 'bold' : 'regular'}
-                frame={{ maxWidth: 'infinity', minHeight: 18, alignment: 'center' }}
-                padding={cell.isToday ? 2 : 0}
-                background={cell.isToday ? <Circle fill={getActualColor(settings)} /> : undefined}
-                gridCellAnchor="center"
-              >
-                {cell.day}
-              </Text>
-            ))}
+        {calendarRows.map(row => (
+          <GridRow key={row.weekIndex}>
+            {row.cells.map(cell => {
+              const cellStyle = getCellStyle(cell, settings, getActualColor)
+              return (
+                <Text
+                  key={cell.key}
+                  font={10}
+                  foregroundStyle={cellStyle.foregroundStyle}
+                  fontWeight={cellStyle.fontWeight}
+                  frame={{ maxWidth: 'infinity', minHeight: 18, alignment: 'center' }}
+                  padding={cell.isToday ? 2 : 0}
+                  background={cell.isToday ? <Circle fill={getActualColor(settings)} /> : undefined}
+                  gridCellAnchor="center"
+                >
+                  {cell.day}
+                </Text>
+              )
+            })}
           </GridRow>
         ))}
       </Grid>
@@ -146,27 +142,16 @@ const MediumWidget = ({ data }: { data: WidgetData }) => {
   const { calendar, lunar, daysLeft, settings } = data
   const grid = generateCalendarGrid(calendar.currentYear, calendar.currentMonth)
   const weekdays = getWeekdayNames()
-
-  // 计算需要显示的周数（与小号组件一致）
-  let weeksToShow = 6 // 默认6周
-
-  // 检查最后一周是否有当前月份的日期
-  for (let week = 5; week >= 4; week--) {
-    const weekStart = week * 7
-    const weekEnd = weekStart + 7
-    const weekCells = grid.slice(weekStart, weekEnd)
-    const hasCurrentMonthDays = weekCells.some(cell => cell.isCurrentMonth)
-
-    if (!hasCurrentMonthDays && week === 5) {
-      weeksToShow = 5 // 如果第6周没有当前月份日期，只显示5周
-      break
-    }
-  }
+  const weeksToShow = calculateWeeksToShow(grid)
+  const calendarRows = generateCalendarRows(grid, weeksToShow, calendar, true)
+  const upcomingEvents = formatEventsForDisplay(calendar.upcomingEvents, 2, formatEventTime)
+  const daysLeftText = formatDaysLeftText(daysLeft)
+  const lunarDisplay = formatLunarDisplay(lunar)
 
   return (
     <HStack spacing={0} padding={{ horizontal: 8, vertical: 10 }}>
       {/* 左侧 - 日历网格 (4/6 宽度) */}
-      <VStack spacing={0} frame={{ maxWidth: 'infinity' }}>
+      <VStack spacing={0} frame={{ maxWidth: 'infinity', maxHeight: 'infinity', alignment: 'leading' }}>
         {/* 星期标题 - Grid 布局 */}
         <Grid horizontalSpacing={0} verticalSpacing={0}>
           <GridRow>
@@ -180,58 +165,29 @@ const MediumWidget = ({ data }: { data: WidgetData }) => {
 
         {/* 日历网格 - Grid 布局，固定宽度 */}
         <Grid horizontalSpacing={0} verticalSpacing={0}>
-          {Array.from({ length: weeksToShow }, (_, weekIndex) => (
-            <GridRow key={weekIndex}>
-              {grid.slice(weekIndex * 7, (weekIndex + 1) * 7).map((cell, dayIndex) => {
-                // 获取当前日期的农历信息和事件信息
-                const cellDate = new Date(calendar.currentYear, calendar.currentMonth - 1, cell.day)
-                const lunarInfo = getLunarInfoForDate(cellDate)
-
-                // 获取当天的事件
-                const dayEvents = getEventsForDate(calendar.currentMonthEvents, cellDate)
-                const primaryEvent = dayEvents.length > 0 ? dayEvents[0] : null // 取第一个事件作为主要事件
-
-                // 根据优先级确定显示内容：事件 > 节气 > 农历日期
-                let displayText = lunarInfo.dayName // 默认显示农历日期
-                let displayColor: ShapeStyle = 'tertiaryLabel'
-                let fontWeight: FontWeight = 'regular'
-
-                if (primaryEvent) {
-                  // 最高优先级：事件
-                  displayText = primaryEvent.title.replace(/节/g, '')
-                  // 事件颜色使用固定的系统颜色，因为目前不支持自定义颜色
-                  displayColor = primaryEvent.calendar.color
-                  fontWeight = 'regular'
-                } else if (lunarInfo.jieqi) {
-                  // 其次：节气
-                  displayText = lunarInfo.jieqi
-                  displayColor = 'systemOrange'
-                  fontWeight = 'regular'
-                }
-
+          {calendarRows.map(row => (
+            <GridRow key={row.weekIndex}>
+              {row.cells.map(cell => {
+                const cellStyle = getCellStyle(cell, settings, getActualColor)
                 return (
                   <VStack
-                    key={`${weekIndex}-${dayIndex}`}
+                    key={cell.key}
                     spacing={0}
                     alignment="center"
-                    frame={{ width: 28, height: 20, alignment: 'center' }}
+                    frame={{ width: 28, height: 18, alignment: 'center' }}
                     padding={cell.isToday ? { horizontal: 0, vertical: 3 } : { horizontal: 0, vertical: 3 }}
                     background={
                       cell.isToday ? <RoundedRectangle fill={getActualColor(settings)} cornerRadius={5} cornerSize={{ width: 10, height: 10 }} /> : undefined
                     }
                     gridCellAnchor="center"
                   >
-                    <Text
-                      font={10}
-                      foregroundStyle={cell.isToday ? 'white' : cell.isCurrentMonth ? 'label' : 'tertiaryLabel'}
-                      fontWeight={cell.isToday ? 'bold' : 'regular'}
-                    >
+                    <Text font={10} foregroundStyle={cellStyle.foregroundStyle} fontWeight={cellStyle.fontWeight}>
                       {cell.day}
                     </Text>
                     {/* 显示内容：优先级为 事件 > 节气 > 农历日期 */}
-                    {cell.isCurrentMonth ? (
-                      <Text font={8} foregroundStyle={cell.isToday ? 'white' : displayColor} fontWeight={fontWeight}>
-                        {displayText}
+                    {cell.isCurrentMonth && cell.displayText ? (
+                      <Text font={8} foregroundStyle={cell.isToday ? 'white' : cell.displayColor} fontWeight={cell.fontWeight}>
+                        {cell.displayText}
                       </Text>
                     ) : null}
                   </VStack>
@@ -248,12 +204,11 @@ const MediumWidget = ({ data }: { data: WidgetData }) => {
         <VStack padding={{ top: 2 }} spacing={0} alignment="leading">
           <HStack spacing={0}>
             <Text font={12} fontWeight="bold" foregroundStyle={getActualColor(settings)}>
-              {calendar.currentYear}年{getMonthNameToNumber(calendar.currentMonth)}
-              {calendar.currentDateDay}日
+              {formatMonthDisplay(calendar.currentYear, calendar.currentMonth, calendar.currentDateDay)}
             </Text>
           </HStack>
           <Text font={12} foregroundStyle="secondaryLabel">
-            {lunar.monthName + lunar.dayName}
+            {lunarDisplay}
           </Text>
         </VStack>
 
@@ -261,13 +216,13 @@ const MediumWidget = ({ data }: { data: WidgetData }) => {
 
         {/* 下一个节日倒计时 */}
         <VStack spacing={2} alignment="leading">
-          {calendar.upcomingEvents.slice(0, 2).map(event => (
+          {upcomingEvents.map(event => (
             <VStack key={event.id} spacing={1} alignment="leading">
-              <Text font="caption" foregroundStyle={event.calendar.color ?? 'systemOrange'} lineLimit={1}>
+              <Text font="caption" foregroundStyle={event.color} lineLimit={1}>
                 {event.title}
               </Text>
               <Text font="caption2" foregroundStyle="tertiaryLabel">
-                {formatEventTime(event)}
+                {event.time}
               </Text>
             </VStack>
           ))}
@@ -278,7 +233,7 @@ const MediumWidget = ({ data }: { data: WidgetData }) => {
         {/* 底部信息 */}
         <VStack padding={{ bottom: 4 }} alignment="leading">
           <Text font={10} foregroundStyle="tertiaryLabel">
-            今年还剩 {daysLeft} 天
+            {daysLeftText}
           </Text>
         </VStack>
       </VStack>
@@ -293,22 +248,11 @@ const LargeWidget = ({ data }: { data: WidgetData }) => {
   const { calendar, lunar, daysLeft, settings } = data
   const grid = generateCalendarGrid(calendar.currentYear, calendar.currentMonth)
   const weekdays = getWeekdayNames()
-
-  // 计算需要显示的周数（与小号组件一致）
-  let weeksToShow = 6 // 默认6周
-
-  // 检查最后一周是否有当前月份的日期
-  for (let week = 5; week >= 4; week--) {
-    const weekStart = week * 7
-    const weekEnd = weekStart + 7
-    const weekCells = grid.slice(weekStart, weekEnd)
-    const hasCurrentMonthDays = weekCells.some(cell => cell.isCurrentMonth)
-
-    if (!hasCurrentMonthDays && week === 5) {
-      weeksToShow = 5 // 如果第6周没有当前月份日期，只显示5周
-      break
-    }
-  }
+  const weeksToShow = calculateWeeksToShow(grid)
+  const calendarRows = generateCalendarRows(grid, weeksToShow, calendar, true)
+  const daysLeftText = formatDaysLeftText(daysLeft)
+  const lunarDisplay = formatLunarDisplay(lunar)
+  const yiJiDisplay = formatYiJiDisplay(lunar.yi, lunar.ji)
 
   return (
     <VStack padding={16}>
@@ -316,8 +260,7 @@ const LargeWidget = ({ data }: { data: WidgetData }) => {
       <HStack alignment="center">
         <VStack alignment="leading" spacing={2}>
           <Text font="title2" fontWeight="bold" foregroundStyle={getActualColor(settings)}>
-            {calendar.currentYear}年{getMonthNameToNumber(calendar.currentMonth)}
-            {calendar.currentDateDay}日
+            {formatMonthDisplay(calendar.currentYear, calendar.currentMonth, calendar.currentDateDay)}
           </Text>
           <Text font="caption" foregroundStyle="secondaryLabel">
             {lunar.formatted}
@@ -326,10 +269,10 @@ const LargeWidget = ({ data }: { data: WidgetData }) => {
         <Spacer />
         <VStack alignment="trailing" spacing={2}>
           <Text font="title3" fontWeight="bold" foregroundStyle="label">
-            {lunar.monthName + lunar.dayName}
+            {lunarDisplay}
           </Text>
           <Text font="caption" padding={{ top: 2 }} foregroundStyle="secondaryLabel">
-            今年还剩 {daysLeft} 天
+            {daysLeftText}
           </Text>
         </VStack>
       </HStack>
@@ -338,20 +281,20 @@ const LargeWidget = ({ data }: { data: WidgetData }) => {
 
       {/* 宜/忌信息 */}
       <HStack padding={0} spacing={4}>
-        <Text font="caption2" foregroundStyle="systemGreen">
-          宜
+        <Text font="caption2" foregroundStyle={yiJiDisplay.yi.color}>
+          {yiJiDisplay.yi.label}
         </Text>
         <Text font="caption2" foregroundStyle="secondaryLabel" lineLimit={1}>
-          {data.lunar.yi.join(',')}
+          {yiJiDisplay.yi.content}
         </Text>
         <Spacer />
       </HStack>
       <HStack padding={0} spacing={4}>
-        <Text font="caption2" foregroundStyle="systemRed">
-          忌
+        <Text font="caption2" foregroundStyle={yiJiDisplay.ji.color}>
+          {yiJiDisplay.ji.label}
         </Text>
         <Text font="caption2" foregroundStyle="secondaryLabel" lineLimit={1}>
-          {data.lunar.ji.join(',')}
+          {yiJiDisplay.ji.content}
         </Text>
         <Spacer />
       </HStack>
@@ -373,38 +316,13 @@ const LargeWidget = ({ data }: { data: WidgetData }) => {
 
         {/* 日历网格 - 使用 Grid 布局，全宽自适应 */}
         <Grid horizontalSpacing={4} verticalSpacing={4} alignment="center">
-          {Array.from({ length: weeksToShow }, (_, weekIndex) => (
-            <GridRow key={weekIndex}>
-              {grid.slice(weekIndex * 7, (weekIndex + 1) * 7).map((cell, dayIndex) => {
-                // 获取当前日期的农历信息和事件信息
-                const cellDate = new Date(calendar.currentYear, calendar.currentMonth - 1, cell.day)
-                const lunarInfo = getLunarInfoForDate(cellDate)
-
-                // 获取当天的事件
-                const dayEvents = getEventsForDate(calendar.currentMonthEvents, cellDate)
-                const primaryEvent = dayEvents.length > 0 ? dayEvents[0] : null // 取第一个事件作为主要事件
-
-                // 根据优先级确定显示内容：事件 > 节气 > 农历日期
-                let displayText = lunarInfo.dayName // 默认显示农历日期
-                let displayColor: ShapeStyle = 'tertiaryLabel'
-                let fontWeight: FontWeight = 'regular'
-
-                if (primaryEvent) {
-                  // 最高优先级：事件
-                  displayText = primaryEvent.title.replace(/节/g, '')
-                  // 事件颜色使用固定的系统颜色，因为目前不支持自定义颜色
-                  displayColor = primaryEvent.calendar.color
-                  fontWeight = 'regular'
-                } else if (lunarInfo.jieqi) {
-                  // 其次：节气
-                  displayText = lunarInfo.jieqi
-                  displayColor = 'systemOrange'
-                  fontWeight = 'regular'
-                }
-
+          {calendarRows.map(row => (
+            <GridRow key={row.weekIndex}>
+              {row.cells.map(cell => {
+                const cellStyle = getCellStyle(cell, settings, getActualColor)
                 return (
                   <VStack
-                    key={`${weekIndex}-${dayIndex}`}
+                    key={cell.key}
                     spacing={0}
                     frame={{ maxWidth: 'infinity', maxHeight: 25, alignment: 'center' }}
                     padding={cell.isToday ? { horizontal: 4, vertical: 10 } : { horizontal: 4, vertical: 6 }}
@@ -413,17 +331,13 @@ const LargeWidget = ({ data }: { data: WidgetData }) => {
                     }
                     gridCellAnchor="center"
                   >
-                    <Text
-                      font="caption"
-                      foregroundStyle={cell.isToday ? 'white' : cell.isCurrentMonth ? 'label' : 'tertiaryLabel'}
-                      fontWeight={cell.isToday ? 'bold' : 'regular'}
-                    >
+                    <Text font="caption" foregroundStyle={cellStyle.foregroundStyle} fontWeight={cellStyle.fontWeight}>
                       {cell.day}
                     </Text>
                     {/* 显示内容：优先级为 事件 > 节气 > 农历日期 */}
-                    {cell.isCurrentMonth ? (
-                      <Text font="caption2" foregroundStyle={cell.isToday ? 'white' : displayColor} fontWeight={fontWeight}>
-                        {displayText}
+                    {cell.isCurrentMonth && cell.displayText ? (
+                      <Text font="caption2" foregroundStyle={cell.isToday ? 'white' : cell.displayColor} fontWeight={cell.fontWeight}>
+                        {cell.displayText}
                       </Text>
                     ) : null}
                   </VStack>
