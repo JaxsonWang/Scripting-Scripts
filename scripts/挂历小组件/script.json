@@ -1,0 +1,9 @@
+{
+  "color": "systemGreen",
+  "icon": "calendar.badge.clock",
+  "runInApp": false,
+  "intentInputTypes": [],
+  "name": "挂历小组件",
+  "version": "0.1.1.beta",
+  "description": "在桌面显示日历、天气和事件信息的挂历小组件"
+}

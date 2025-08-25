@@ -1,6 +1,6 @@
 import { HStack, Image, Spacer, Text, VStack, Widget } from 'scripting'
 import type { HitokotoData } from './utils/hitokoto-service'
-import { fetchHitokoto, getTypeName, getCurrentSettings } from './utils/hitokoto-service'
+import { fetchHitokoto, getCurrentSettings } from './utils/hitokoto-service'
 
 // 无需全局缓存变量，每次都获取新数据
 

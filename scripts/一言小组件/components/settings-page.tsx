@@ -1,14 +1,6 @@
 import { Button, HStack, List, Navigation, NavigationStack, Picker, Section, Spacer, Text, VStack } from 'scripting'
-import { useEffect, useState } from 'scripting'
-import {
-  type ApiConfig,
-  apiConfigs,
-  categoryOptions,
-  refreshIntervalOptions,
-  getCurrentSettings,
-  saveSettings,
-  getRefreshIntervalText
-} from '../utils/hitokoto-service'
+import { useState } from 'scripting'
+import { apiConfigs, categoryOptions, getCurrentSettings, refreshIntervalOptions, saveSettings } from '../utils/hitokoto-service'
 
 /**
  * 设置页面组件

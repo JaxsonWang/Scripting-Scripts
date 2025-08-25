@@ -69,6 +69,9 @@ export interface AreaSettings {
   areaZoneOptions: any[]
 }
 
+// 储存键名
+const STORAGE_NAME = 'OilPriceSettings'
+
 // 存储键
 const STORAGE_KEYS = {
   AREA_TYPE: 'oilPrice_areaType',
