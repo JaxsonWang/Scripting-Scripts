@@ -1,4 +1,6 @@
+import { fetch } from 'scripting'
 import scriptConfig from '../script.json'
+import { createStorageManager } from './storage'
 
 /**
  * 一言数据接口
@@ -72,10 +74,19 @@ export const refreshIntervalOptions = [
   { label: '6小时', value: 360 }
 ]
 
-/**
- * 设置文件路径和存储管理
- */
-const SETTINGS_KEY = 'hitokoto_settings'
+// 储存键名 - 统一管理所有持久化数据
+const STORAGE_NAME = 'ScriptPie.HitokotoSettings'
+
+// 存储键 - 用于访问统一存储对象中的具体字段
+const STORAGE_KEYS = {
+  SETTINGS: 'settings',
+  LAST_UPDATE: 'lastUpdate',
+  LAST_VERSION: 'lastVersion',
+  UPDATE_DISMISSED: 'updateDismissed'
+}
+
+// 创建存储管理器实例
+const storageManager = createStorageManager(STORAGE_NAME)
 
 /**
  * 默认设置
@@ -92,7 +103,7 @@ const DEFAULT_SETTINGS = {
  */
 export const getCurrentSettings = () => {
   try {
-    const savedSettings = Storage.get<any>(SETTINGS_KEY)
+    const savedSettings = storageManager.storage.get<any>(STORAGE_KEYS.SETTINGS)
     if (savedSettings) {
       return { ...DEFAULT_SETTINGS, ...savedSettings }
     }
@@ -107,7 +118,7 @@ export const getCurrentSettings = () => {
  */
 export const saveSettings = (settings: any) => {
   try {
-    Storage.set(SETTINGS_KEY, settings)
+    storageManager.storage.set(STORAGE_KEYS.SETTINGS, settings)
     return true
   } catch (error) {
     console.error('保存设置失败:', error)
@@ -151,7 +162,7 @@ export const fetchHitokoto = async (): Promise<HitokotoData> => {
     const data = (await response.json()) as HitokotoData
 
     // 保存最后更新时间
-    Storage.set('hitokoto_last_update', Date.now())
+    storageManager.storage.set(STORAGE_KEYS.LAST_UPDATE, Date.now())
 
     return data
   } catch (error) {
@@ -181,7 +192,7 @@ export const shouldRefresh = (): boolean => {
   const settings = getCurrentSettings()
   if (!settings.autoRefresh) return false
 
-  const lastUpdate = Storage.get<number>('hitokoto_last_update') || 0
+  const lastUpdate = storageManager.storage.get<number>(STORAGE_KEYS.LAST_UPDATE) || 0
   const now = Date.now()
   const intervalMs = settings.refreshInterval * 60 * 1000 // 转换为毫秒
 
@@ -203,12 +214,6 @@ export interface VersionInfo {
   version: string
   changelog: string[]
   bannerImage?: string
-}
-
-// 存储键
-const STORAGE_KEYS = {
-  LAST_VERSION: 'hitokoto_lastVersion',
-  UPDATE_DISMISSED: 'hitokoto_updateDismissed'
 }
 
 /**
@@ -257,7 +262,7 @@ export const getCurrentVersion = (): string => {
 export const shouldShowUpdateLog = async (): Promise<boolean> => {
   try {
     const currentLocalVersion = getCurrentVersion()
-    const cachedVersion = Storage.get<string>(STORAGE_KEYS.LAST_VERSION)
+    const cachedVersion = storageManager.storage.get<string>(STORAGE_KEYS.LAST_VERSION)
 
     console.log('当前本地版本:', currentLocalVersion)
     console.log('缓存的版本:', cachedVersion)
@@ -275,6 +280,6 @@ export const shouldShowUpdateLog = async (): Promise<boolean> => {
  */
 export const markUpdateLogDismissed = (): void => {
   const currentVersion = getCurrentVersion()
-  Storage.set(STORAGE_KEYS.LAST_VERSION, currentVersion)
+  storageManager.storage.set(STORAGE_KEYS.LAST_VERSION, currentVersion)
   console.log('已缓存版本号:', currentVersion)
 }

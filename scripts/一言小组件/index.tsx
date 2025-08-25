@@ -11,6 +11,7 @@ import {
   shouldShowUpdateLog
 } from './utils/hitokoto-service'
 import { SettingsPage } from './components/settings-page'
+import { ImageCacheManager } from './utils/image-cache'
 
 /**
  * 一言详情页面
@@ -26,6 +27,7 @@ const HitokotoDetail = () => {
   const [changelogContent, setChangelogContent] = useState<string>('')
   const [updateTitle, setUpdateTitle] = useState<string>('')
   const [bannerImageUrl, setBannerImageUrl] = useState<string>('')
+  const [cachedBannerImagePath, setCachedBannerImagePath] = useState<string>('')
 
   // 加载数据
   const loadData = async () => {
@@ -59,6 +61,17 @@ const HitokotoDetail = () => {
       if (info && info.bannerImage) {
         setBannerImageUrl(info.bannerImage)
         console.log('获取到的横幅图片:', info.bannerImage)
+
+        // 缓存横幅图片
+        try {
+          const cachedPath = await ImageCacheManager.getCachedImagePath(info.bannerImage)
+          if (cachedPath) {
+            setCachedBannerImagePath(cachedPath)
+            console.log('横幅图片缓存路径:', cachedPath)
+          }
+        } catch (error) {
+          console.error('缓存横幅图片失败:', error)
+        }
       }
     } catch (error) {
       console.error('加载版本信息失败:', error)
@@ -280,9 +293,15 @@ const HitokotoDetail = () => {
         <Section
           footer={
             <VStack spacing={10} alignment="leading">
-              <Image imageUrl={bannerImageUrl} resizable scaleToFit />
+              {cachedBannerImagePath ? (
+                <Image filePath={cachedBannerImagePath} resizable scaleToFit />
+              ) : bannerImageUrl ? (
+                <Image imageUrl={bannerImageUrl} resizable scaleToFit />
+              ) : null}
               <Text font="footnote" foregroundStyle="secondaryLabel">
-                {`当前版本: ${getCurrentVersion()}`}
+                一言小组件 v{getCurrentVersion()}
+                {'\n'}
+                在桌面显示每日一言
               </Text>
             </VStack>
           }
@@ -310,7 +329,7 @@ const HitokotoDetail = () => {
               )
             }}
           />
-          <Button title="刷新一言" action={refreshData} />
+          <Button title="刷新数据" action={refreshData} />
         </Section>
       </List>
     </NavigationStack>

@@ -1,5 +1,6 @@
 import { Button, ColorPicker, List, Navigation, NavigationStack, Picker, Section, Text, VStack, useState } from 'scripting'
 import type { Color } from 'scripting'
+import { createStorageManager } from '../utils/storage'
 
 /**
  * 设置数据类型
@@ -16,10 +17,16 @@ export function getActualColor(settings: SettingsData): Color {
   return settings.primaryColor === 'custom' ? settings.customColor : settings.primaryColor
 }
 
-/**
- * 设置存储键
- */
-const SETTINGS_KEY = 'calendar_settings'
+// 储存键名 - 统一管理所有持久化数据
+const STORAGE_NAME = 'ScriptPie.LunarCalendarSettings'
+
+// 存储键 - 用于访问统一存储对象中的具体字段
+const STORAGE_KEYS = {
+  SETTINGS: 'settings'
+}
+
+// 创建存储管理器实例
+const storageManager = createStorageManager(STORAGE_NAME)
 
 /**
  * 默认设置
@@ -34,7 +41,7 @@ const DEFAULT_SETTINGS: SettingsData = {
  */
 export function getCurrentSettings(): SettingsData {
   try {
-    const savedSettings = Storage.get<SettingsData>(SETTINGS_KEY)
+    const savedSettings = storageManager.storage.get<SettingsData>(STORAGE_KEYS.SETTINGS)
     if (savedSettings) {
       return { ...DEFAULT_SETTINGS, ...savedSettings }
     }
@@ -49,7 +56,7 @@ export function getCurrentSettings(): SettingsData {
  */
 export function saveSettings(settings: SettingsData): boolean {
   try {
-    Storage.set(SETTINGS_KEY, settings)
+    storageManager.storage.set(STORAGE_KEYS.SETTINGS, settings)
     console.log('设置已保存:', settings)
     return true
   } catch (error) {

@@ -1,5 +1,6 @@
 import { fetch } from 'scripting'
 import scriptConfig from '../script.json'
+import { createStorageManager } from './storage'
 
 // 地区选项配置
 export const areaOptions = [
@@ -69,20 +70,23 @@ export interface AreaSettings {
   areaZoneOptions: any[]
 }
 
-// 储存键名
-const STORAGE_NAME = 'OilPriceSettings'
+// 储存键名 - 统一管理所有持久化数据
+const STORAGE_NAME = 'ScriptPie.OilPriceSettings'
 
-// 存储键
+// 存储键 - 用于访问统一存储对象中的具体字段
 const STORAGE_KEYS = {
-  AREA_TYPE: 'oilPrice_areaType',
-  AREA_ZONE_TYPE: 'oilPrice_areaZoneType',
-  OIL_DATA: 'oilPrice_oilData',
-  FORECAST_STR: 'oilPrice_forecastStr',
-  AREA_ZONE_OPTIONS: 'oilPrice_areaZoneOptions',
-  SELECTED_OIL_TYPE: 'oilPrice_selectedOilType',
-  LAST_VERSION: 'oilPrice_lastVersion',
-  UPDATE_DISMISSED: 'oilPrice_updateDismissed'
+  AREA_TYPE: 'areaType',
+  AREA_ZONE_TYPE: 'areaZoneType',
+  OIL_DATA: 'oilData',
+  FORECAST_STR: 'forecastStr',
+  AREA_ZONE_OPTIONS: 'areaZoneOptions',
+  SELECTED_OIL_TYPE: 'selectedOilType',
+  LAST_VERSION: 'lastVersion',
+  UPDATE_DISMISSED: 'updateDismissed'
 }
+
+// 创建存储管理器实例
+const storageManager = createStorageManager(STORAGE_NAME)
 
 /**
  * 格式化日期
@@ -103,8 +107,8 @@ const formatDate = (date: Date, format: string): string => {
  * @returns 油价数据Promise
  */
 export const fetchOilPriceData = async (): Promise<OilPriceData> => {
-  const areaType = Storage.get<string>(STORAGE_KEYS.AREA_TYPE) || '32' // 默认江苏
-  const areaZoneType = Storage.get<number>(STORAGE_KEYS.AREA_ZONE_TYPE) || 0
+  const areaType = storageManager.storage.get<string>(STORAGE_KEYS.AREA_TYPE) || '32' // 默认江苏
+  const areaZoneType = storageManager.storage.get<number>(STORAGE_KEYS.AREA_ZONE_TYPE) || 0
 
   try {
     const response = await fetch('https://cx.sinopecsales.com/yjkqiantai/data/switchProvince', {
@@ -127,13 +131,13 @@ export const fetchOilPriceData = async (): Promise<OilPriceData> => {
     const data = await response.json()
 
     // 缓存数据
-    Storage.set(STORAGE_KEYS.OIL_DATA, data)
+    storageManager.storage.set(STORAGE_KEYS.OIL_DATA, data)
 
     return await handleOilPriceData(data, areaType, areaZoneType)
   } catch (error) {
     console.error('获取油价数据失败:', error)
     // 使用缓存数据
-    const cachedData = Storage.get<any>(STORAGE_KEYS.OIL_DATA)
+    const cachedData = storageManager.storage.get<any>(STORAGE_KEYS.OIL_DATA)
     if (cachedData) {
       return await handleOilPriceData(cachedData, areaType, areaZoneType)
     }
@@ -163,12 +167,12 @@ const handleOilPriceData = async (response: any, areaType: string, areaZoneType:
       value: index,
       name: item.areaCheck.AREA_DESC
     }))
-    Storage.set(STORAGE_KEYS.AREA_ZONE_OPTIONS, areaZoneOptions)
+    storageManager.storage.set(STORAGE_KEYS.AREA_ZONE_OPTIONS, areaZoneOptions)
 
     provinceData = areaData[areaZoneType]?.areaData || {}
     provinceCheck = areaData[areaZoneType]?.areaCheck || {}
   } else {
-    Storage.set(STORAGE_KEYS.AREA_ZONE_OPTIONS, [])
+    storageManager.storage.set(STORAGE_KEYS.AREA_ZONE_OPTIONS, [])
     provinceData = data.provinceData || {}
     provinceCheck = data.provinceCheck || {}
   }
@@ -260,7 +264,7 @@ const getDefaultOilData = (areaType: string): OilPriceData => {
  * @returns 预测数据Promise
  */
 export const fetchForecastData = async (): Promise<ForecastData> => {
-  const areaType = Storage.get<string>(STORAGE_KEYS.AREA_TYPE) || '32'
+  const areaType = storageManager.storage.get<string>(STORAGE_KEYS.AREA_TYPE) || '32'
   const areaName = areaOptions.find(i => i.value === areaType)?.name || 'jiangsu'
   const url = `http://m.qiyoujiage.com/${areaName}.shtml`
 
@@ -271,13 +275,13 @@ export const fetchForecastData = async (): Promise<ForecastData> => {
     const str = await webView.evaluateJavaScript(js)
 
     // 缓存预测字符串
-    Storage.set(STORAGE_KEYS.FORECAST_STR, str)
+    storageManager.storage.set(STORAGE_KEYS.FORECAST_STR, str)
 
     return parseForecastString(str)
   } catch (error) {
     console.error('获取预测数据失败:', error)
     // 使用缓存数据
-    const cachedStr = Storage.get<string>(STORAGE_KEYS.FORECAST_STR)
+    const cachedStr = storageManager.storage.get<string>(STORAGE_KEYS.FORECAST_STR)
     if (cachedStr) {
       return parseForecastString(cachedStr as string)
     }
@@ -354,7 +358,7 @@ export const getCompleteOilData = async (): Promise<CompleteOilData> => {
   } catch (error) {
     console.error('获取完整油价数据失败:', error)
     // 返回默认数据
-    const areaType = Storage.get<string>(STORAGE_KEYS.AREA_TYPE) || '32'
+    const areaType = storageManager.storage.get<string>(STORAGE_KEYS.AREA_TYPE) || '32'
     return {
       ...getDefaultOilData(areaType as string),
       priceDirection: 'stranded' as const,
@@ -370,8 +374,10 @@ export const getCompleteOilData = async (): Promise<CompleteOilData> => {
  * @param areaZoneType 价区类型，默认为0
  */
 export const setArea = (areaType: string, areaZoneType: number = 0): void => {
-  Storage.set(STORAGE_KEYS.AREA_TYPE, areaType)
-  Storage.set(STORAGE_KEYS.AREA_ZONE_TYPE, areaZoneType)
+  storageManager.storage.batchSet({
+    [STORAGE_KEYS.AREA_TYPE]: areaType,
+    [STORAGE_KEYS.AREA_ZONE_TYPE]: areaZoneType
+  })
 }
 
 /**
@@ -380,9 +386,9 @@ export const setArea = (areaType: string, areaZoneType: number = 0): void => {
  */
 export const getCurrentAreaSettings = (): AreaSettings => {
   return {
-    areaType: Storage.get<string>(STORAGE_KEYS.AREA_TYPE) || '32',
-    areaZoneType: Storage.get<number>(STORAGE_KEYS.AREA_ZONE_TYPE) || 0,
-    areaZoneOptions: Storage.get<any[]>(STORAGE_KEYS.AREA_ZONE_OPTIONS) || []
+    areaType: storageManager.storage.get<string>(STORAGE_KEYS.AREA_TYPE) || '32',
+    areaZoneType: storageManager.storage.get<number>(STORAGE_KEYS.AREA_ZONE_TYPE) || 0,
+    areaZoneOptions: storageManager.storage.get<any[]>(STORAGE_KEYS.AREA_ZONE_OPTIONS) || []
   }
 }
 
@@ -432,17 +438,17 @@ export const getAreaZoneOptions = async (areaType: string): Promise<any[]> => {
       })
 
       // 缓存价区选项
-      Storage.set(STORAGE_KEYS.AREA_ZONE_OPTIONS, options)
+      storageManager.storage.set(STORAGE_KEYS.AREA_ZONE_OPTIONS, options)
       return options
     } else {
       // 没有价区选项的省份
-      Storage.set(STORAGE_KEYS.AREA_ZONE_OPTIONS, [])
+      storageManager.storage.set(STORAGE_KEYS.AREA_ZONE_OPTIONS, [])
       return []
     }
   } catch (error) {
     console.error('获取价区选项失败:', error)
     // 返回缓存的选项
-    return Storage.get<any[]>(STORAGE_KEYS.AREA_ZONE_OPTIONS) || []
+    return storageManager.storage.get<any[]>(STORAGE_KEYS.AREA_ZONE_OPTIONS) || []
   }
 }
 
@@ -451,7 +457,7 @@ export const getAreaZoneOptions = async (areaType: string): Promise<any[]> => {
  * @param oilType 油号类型
  */
 export const setSelectedOilType = (oilType: string): void => {
-  Storage.set(STORAGE_KEYS.SELECTED_OIL_TYPE, oilType)
+  storageManager.storage.set(STORAGE_KEYS.SELECTED_OIL_TYPE, oilType)
 }
 
 /**
@@ -459,7 +465,7 @@ export const setSelectedOilType = (oilType: string): void => {
  * @returns 选中的油号类型
  */
 export const getSelectedOilType = (): string => {
-  return Storage.get<string>(STORAGE_KEYS.SELECTED_OIL_TYPE) || '92'
+  return storageManager.storage.get<string>(STORAGE_KEYS.SELECTED_OIL_TYPE) || '92'
 }
 
 /**
@@ -584,7 +590,7 @@ export const getCurrentVersion = (): string => {
 export const shouldShowUpdateLog = async (): Promise<boolean> => {
   try {
     const currentLocalVersion = getCurrentVersion()
-    const cachedVersion = Storage.get<string>(STORAGE_KEYS.LAST_VERSION)
+    const cachedVersion = storageManager.storage.get<string>(STORAGE_KEYS.LAST_VERSION)
 
     console.log('当前本地版本:', currentLocalVersion)
     console.log('缓存的版本:', cachedVersion)
@@ -602,6 +608,6 @@ export const shouldShowUpdateLog = async (): Promise<boolean> => {
  */
 export const markUpdateLogDismissed = (): void => {
   const currentVersion = getCurrentVersion()
-  Storage.set(STORAGE_KEYS.LAST_VERSION, currentVersion)
+  storageManager.storage.set(STORAGE_KEYS.LAST_VERSION, currentVersion)
   console.log('已缓存版本号:', currentVersion)
 }

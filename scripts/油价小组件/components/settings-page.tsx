@@ -1,4 +1,4 @@
-import { Button, List, Navigation, NavigationStack, Picker, Section, Text, Widget, useEffect, useState } from 'scripting'
+import { Button, List, Navigation, NavigationStack, Picker, Section, Text, useEffect, useState } from 'scripting'
 import {
   areaOptions,
   getAreaZoneOptions,
@@ -53,20 +53,17 @@ export const SettingsPage = () => {
     setCurrentAreaZoneType(0) // 重置价区选择
     await loadAreaZoneOptions(newAreaType)
     setArea(newAreaType, 0)
-    Widget.reloadAll()
   }
 
   const handleAreaZoneChange = async (newAreaZoneType: string) => {
     const zoneIndex = parseInt(newAreaZoneType, 10)
     setCurrentAreaZoneType(zoneIndex)
     setArea(currentAreaType, zoneIndex)
-    Widget.reloadAll()
   }
 
   const handleOilTypeChange = async (newOilType: string) => {
     setSelectedOilTypeState(newOilType)
     setSelectedOilType(newOilType)
-    Widget.reloadAll()
   }
 
   return (
@@ -111,10 +108,10 @@ export const SettingsPage = () => {
 
         {/* 油号选择（仅小号Widget使用） */}
         <Section
-          header={<Text font="headline">小号Widget油号</Text>}
+          header={<Text font="headline">优先展示油号</Text>}
           footer={
             <Text font="footnote" foregroundStyle="secondaryLabel">
-              此设置仅影响小号Widget显示的油号类型
+              此设置仅影响优先显示的油号的规格组件
             </Text>
           }
         >
@@ -125,23 +122,6 @@ export const SettingsPage = () => {
               </Text>
             ))}
           </Picker>
-        </Section>
-
-        {/* 说明信息 */}
-        <Section
-          footer={
-            <Text font="footnote" foregroundStyle="secondaryLabel">
-              修改设置后，Widget会自动刷新显示最新数据
-            </Text>
-          }
-        >
-          <Button
-            title="刷新所有Widget"
-            action={() => {
-              Widget.reloadAll()
-              dismiss()
-            }}
-          />
         </Section>
       </List>
     </NavigationStack>

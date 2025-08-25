@@ -1,5 +1,6 @@
 import type { Color } from 'scripting'
 import scriptConfig from '../script.json'
+import { createStorageManager } from './storage'
 
 // 版本管理相关类型定义
 export interface VersionInfo {
@@ -10,11 +11,17 @@ export interface VersionInfo {
   bannerImage?: string
 }
 
-// 存储键
+// 储存键名 - 统一管理所有持久化数据
+const STORAGE_NAME = 'ScriptPie.LunarCalendarSettings'
+
+// 存储键 - 用于访问统一存储对象中的具体字段
 const STORAGE_KEYS = {
-  LAST_VERSION: 'calendar_lastVersion',
-  UPDATE_DISMISSED: 'calendar_updateDismissed'
+  LAST_VERSION: 'lastVersion',
+  UPDATE_DISMISSED: 'updateDismissed'
 }
+
+// 创建存储管理器实例
+const storageManager = createStorageManager(STORAGE_NAME)
 
 /**
  * 日历事件数据类型
@@ -338,7 +345,7 @@ export const getCurrentVersion = (): string => {
 export const shouldShowUpdateLog = async (): Promise<boolean> => {
   try {
     const currentLocalVersion = getCurrentVersion()
-    const cachedVersion = Storage.get<string>(STORAGE_KEYS.LAST_VERSION)
+    const cachedVersion = storageManager.storage.get<string>(STORAGE_KEYS.LAST_VERSION)
 
     console.log('当前本地版本:', currentLocalVersion)
     console.log('缓存的版本:', cachedVersion)
@@ -356,6 +363,6 @@ export const shouldShowUpdateLog = async (): Promise<boolean> => {
  */
 export const markUpdateLogDismissed = (): void => {
   const currentVersion = getCurrentVersion()
-  Storage.set(STORAGE_KEYS.LAST_VERSION, currentVersion)
+  storageManager.storage.set(STORAGE_KEYS.LAST_VERSION, currentVersion)
   console.log('已缓存版本号:', currentVersion)
 }
