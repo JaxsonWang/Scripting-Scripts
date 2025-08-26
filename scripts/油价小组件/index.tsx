@@ -330,6 +330,8 @@ const GasPriceDetail = () => {
                 油价小组件 v{getCurrentVersion()}
                 {'\n'}
                 显示当前中国油价、预测油价信息
+                {'\n'}
+                淮城一只猫© - 更多小组件请关注微信公众号
               </Text>
             </VStack>
           }

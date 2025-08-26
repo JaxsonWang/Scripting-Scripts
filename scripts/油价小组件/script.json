@@ -4,7 +4,7 @@
   "runInApp": false,
   "intentInputTypes": [],
   "name": "油价小组件",
-  "version": "0.1.2.beta",
+  "version": "1.0.1",
   "description": "在桌面随时了解油价信息",
   "remoteResource": {
     "autoUpdateInterval": 86400,

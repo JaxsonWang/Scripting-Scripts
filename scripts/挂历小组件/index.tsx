@@ -275,7 +275,7 @@ const CalendarDetail = () => {
           footer={
             <VStack spacing={10} alignment="leading">
               {cachedBannerImagePath ? (
-                <Image filePath={cachedBannerImagePath} resizable scaleToFit />
+                <Image filePath={cachedBannerImagePath} resizable scaleToFit frame={{ maxWidth: 'infinity' }} />
               ) : bannerImageUrl ? (
                 <Image imageUrl={bannerImageUrl} resizable scaleToFit />
               ) : null}
@@ -283,6 +283,8 @@ const CalendarDetail = () => {
                 挂历小组件 v{getCurrentVersion()}
                 {'\n'}
                 显示日历、农历、宜忌和事件信息
+                {'\n'}
+                淮城一只猫© - 更多小组件请关注微信公众号
               </Text>
             </VStack>
           }

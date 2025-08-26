@@ -4,7 +4,7 @@
   "runInApp": false,
   "intentInputTypes": [],
   "name": "一言小组件",
-  "version": "0.1.1.beta",
+  "version": "1.0.1",
   "description": "在桌面显示一言",
   "remoteResource": {
     "autoUpdateInterval": 86400,

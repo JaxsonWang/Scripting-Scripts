@@ -302,6 +302,8 @@ const HitokotoDetail = () => {
                 一言小组件 v{getCurrentVersion()}
                 {'\n'}
                 在桌面显示每日一言
+                {'\n'}
+                淮城一只猫© - 更多小组件请关注微信公众号
               </Text>
             </VStack>
           }
