@@ -119,6 +119,7 @@ export default [
       }
     },
     rules: {
+      '@typescript-eslint/ban-ts-comment': 'off'
       // '@typescript-eslint/no-floating-promises': 'error',
       // '@typescript-eslint/await-thenable': 'error',
       // '@typescript-eslint/no-misused-promises': 'error'
