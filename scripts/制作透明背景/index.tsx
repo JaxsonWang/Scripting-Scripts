@@ -68,21 +68,7 @@ const App = () => {
           cancellationAction: <Button title={'Close'} action={Navigation.useDismiss()} />
         }}
       >
-        <Section
-          listSectionSpacing={0}
-          padding={{ top: -15, bottom: -5, leading: -15 }}
-          header={
-            <Text
-              font="title"
-              foregroundStyle={{
-                light: 'black',
-                dark: 'white'
-              }}
-            >
-              制作透明背景
-            </Text>
-          }
-        />
+        <Section listSectionSpacing={0} padding={{ top: -15, bottom: -5, leading: -15 }} header={<Text font="title">透明背景</Text>} />
         <Section title="SCREENSHOT">
           <Button
             action={async () => {
@@ -142,7 +128,7 @@ const App = () => {
           footer={
             <VStack spacing={10} alignment="leading">
               <Text font="footnote" foregroundStyle="secondaryLabel">
-                制作透明背景 v{getCurrentVersion()}
+                透明背景 v{getCurrentVersion()}
                 {'\n'}
                 本组件来自@Scripting 开发者和@小白代码，本组件组合优化。
                 {'\n'}
@@ -159,14 +145,7 @@ const App = () => {
               await updateImageCount()
             }}
           />
-          <Text
-            font="caption"
-            foregroundStyle={{
-              light: 'gray',
-              dark: 'gray'
-            }}
-            padding={{ top: 8 }}
-          >
+          <Text font="caption" padding={{ top: 8 }}>
             将一次性生成以下图片：{'\n'}• Small: 6张 (top-right, top-left, middle-left, middle-right, bottom-right, bottom-left){'\n'}• Medium: 3张 (top,
             middle, bottom){'\n'}• Large: 2张 (top, bottom)
           </Text>

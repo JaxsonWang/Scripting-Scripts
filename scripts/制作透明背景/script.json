@@ -1,7 +1,7 @@
 {
   "runInApp": false,
   "color": "rgba(174, 109, 216,1)",
-  "name": "制作透明背景",
+  "name": "透明背景",
   "icon": "photo.fill",
   "description": null,
   "intentInputTypes": [],
