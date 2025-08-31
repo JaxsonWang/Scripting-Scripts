@@ -136,7 +136,7 @@ const SmallWidget = ({ data }: { data: WidgetData }) => {
 }
 
 /**
- * 中号组件 - 左侧日历网格，右侧天气和信息
+ * 中号组件 - 左侧日历网格，右侧信息
  */
 const MediumWidget = ({ data }: { data: WidgetData }) => {
   const { calendar, lunar, daysLeft, settings } = data
@@ -375,7 +375,7 @@ const WidgetView = ({ data }: { data: WidgetData }) => {
             挂历小组件
           </Text>
           <Text font="caption" foregroundStyle="secondaryLabel">
-            日历、天气、事件
+            日历、事件
           </Text>
         </VStack>
       )
