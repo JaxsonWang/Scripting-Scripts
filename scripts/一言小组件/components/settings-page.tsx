@@ -1,4 +1,4 @@
-import { Button, HStack, List, Navigation, NavigationStack, Picker, Section, Spacer, Text, VStack } from 'scripting'
+import { Button, HStack, List, Navigation, NavigationStack, Picker, Section, Spacer, Text, TextField, Toggle, VStack } from 'scripting'
 import { useState } from 'scripting'
 import { apiConfigs, categoryOptions, getCurrentSettings, refreshIntervalOptions, saveSettings } from '../utils/hitokoto-service'
 
@@ -15,25 +15,7 @@ export const SettingsPage = () => {
   const [autoRefresh, setAutoRefresh] = useState(currentSettings.autoRefresh ?? true)
   const [refreshInterval, setRefreshInterval] = useState(currentSettings.refreshInterval ?? 30)
 
-  // 保存设置
-  const handleSave = async () => {
-    const newSettings = {
-      apiConfigIndex: selectedApiIndex,
-      categories: selectedCategories.length > 0 ? selectedCategories : ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l'],
-      autoRefresh,
-      refreshInterval
-    }
-
-    const success = saveSettings(newSettings)
-    if (success) {
-      setCurrentSettings(newSettings)
-      console.log('设置已保存:', newSettings)
-    } else {
-      console.error('保存设置失败')
-    }
-
-    dismiss()
-  }
+  const [bgPath, setBgPath] = useState<string>(() => currentSettings.bgPath ?? '')
 
   // 切换分类选择
   const toggleCategory = (category: string) => {
@@ -64,10 +46,22 @@ export const SettingsPage = () => {
         navigationTitle="一言设置"
         navigationBarTitleDisplayMode="large"
         toolbar={{
-          cancellationAction: <Button title="取消" action={dismiss} />,
-          primaryAction: <Button title="保存" action={handleSave} />
+          cancellationAction: <Button title="完成" action={dismiss} />
         }}
       >
+        {/* 透明背景图片 - 填写图片地址 */}
+        <Section
+          header={<Text font="headline">透明背景图片</Text>}
+          footer={
+            <Text font="footnote" foregroundStyle="secondaryLabel">
+              启用该选项，需要安装 “透明背景”
+            </Text>
+          }
+        >
+          <VStack navigationTitle="背景图路径">
+            <TextField title="背景图片路径" value={bgPath} onChanged={setBgPath} prompt="请输入背景图路径" />
+          </VStack>
+        </Section>
         {/* API接口设置 */}
         <Section
           header={<Text font="headline">API接口</Text>}

@@ -92,6 +92,7 @@ const storageManager = createStorageManager(STORAGE_NAME)
  * 默认设置
  */
 const DEFAULT_SETTINGS = {
+  bgPath: '', // 透明背景图片路径
   apiConfigIndex: 1, // 默认使用国际接口
   categories: ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l'], // 默认全选所有类型
   autoRefresh: true, // 自动刷新开关
@@ -183,28 +184,6 @@ export const fetchHitokoto = async (): Promise<HitokotoData> => {
       length: 0
     }
   }
-}
-
-/**
- * 检查是否需要刷新
- */
-export const shouldRefresh = (): boolean => {
-  const settings = getCurrentSettings()
-  if (!settings.autoRefresh) return false
-
-  const lastUpdate = storageManager.storage.get<number>(STORAGE_KEYS.LAST_UPDATE) || 0
-  const now = Date.now()
-  const intervalMs = settings.refreshInterval * 60 * 1000 // 转换为毫秒
-
-  return now - lastUpdate >= intervalMs
-}
-
-/**
- * 获取刷新间隔显示文本
- */
-export const getRefreshIntervalText = (minutes: number): string => {
-  const option = refreshIntervalOptions.find(opt => opt.value === minutes)
-  return option ? option.label : `${minutes}分钟`
 }
 
 // 版本管理相关类型定义

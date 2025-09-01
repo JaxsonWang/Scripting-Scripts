@@ -36,11 +36,16 @@ const loadHitokotoData = async (): Promise<HitokotoData> => {
  * Widget视图 - 根据不同尺寸显示不同布局
  */
 const WidgetView = ({ data }: { data: HitokotoData }) => {
+  const settings = getCurrentSettings()
+
+  // 获取背景图片路径
+  const getWidgetBg = settings.bgPath && Widget.parameter ? settings.bgPath + Widget.parameter : undefined
+
   switch (Widget.family) {
     case 'systemSmall': {
       // 小尺寸小组件 - 显示一言内容和来源
       return (
-        <VStack spacing={6} padding={16} alignment="center">
+        <VStack spacing={6} padding={16} alignment="center" background={getWidgetBg ? <Image filePath={getWidgetBg} /> : undefined}>
           <Image systemName="quote.bubble.fill" font="title2" foregroundStyle="systemBlue" />
           <Text
             font="body"
