@@ -14,30 +14,59 @@ export const SettingsPage = () => {
   )
   const [autoRefresh, setAutoRefresh] = useState(currentSettings.autoRefresh ?? true)
   const [refreshInterval, setRefreshInterval] = useState(currentSettings.refreshInterval ?? 30)
-
   const [bgPath, setBgPath] = useState<string>(() => currentSettings.bgPath ?? '')
+
+  // 更新设置的通用函数
+  const updateSettings = (newSettings: any) => {
+    setCurrentSettings(newSettings)
+    const success = saveSettings(newSettings)
+    if (!success) {
+      console.error('保存设置失败')
+      // 如果保存失败，可以在这里显示错误提示给用户
+    }
+  }
+
+  // 处理API接口选择
+  const handleApiIndexChange = (index: number) => {
+    setSelectedApiIndex(index)
+    const newSettings = { ...currentSettings, apiConfigIndex: index }
+    updateSettings(newSettings)
+  }
+
+  // 处理背景图片路径变化
+  const handleBgPathChange = (path: string) => {
+    setBgPath(path)
+    const newSettings = { ...currentSettings, bgPath: path }
+    updateSettings(newSettings)
+  }
 
   // 切换分类选择
   const toggleCategory = (category: string) => {
-    setSelectedCategories(prev => {
-      if (prev.includes(category)) {
-        // 如果已选中，则移除（但至少保留一个）
-        return prev.length > 1 ? prev.filter(c => c !== category) : prev
-      } else {
-        // 如果未选中，则添加
-        return [...prev, category]
-      }
-    })
+    const newCategories = selectedCategories.includes(category)
+      ? selectedCategories.length > 1
+        ? selectedCategories.filter(c => c !== category)
+        : selectedCategories
+      : [...selectedCategories, category]
+
+    setSelectedCategories(newCategories)
+    const newSettings = { ...currentSettings, categories: newCategories }
+    updateSettings(newSettings)
   }
 
   // 处理刷新间隔选择
   const handleRefreshIntervalChange = (value: string) => {
-    setRefreshInterval(parseInt(value))
+    const interval = parseInt(value)
+    setRefreshInterval(interval)
+    const newSettings = { ...currentSettings, refreshInterval: interval }
+    updateSettings(newSettings)
   }
 
   // 处理自动刷新选择
   const handleAutoRefreshChange = (value: string) => {
-    setAutoRefresh(value === 'true')
+    const autoRefreshValue = value === 'true'
+    setAutoRefresh(autoRefreshValue)
+    const newSettings = { ...currentSettings, autoRefresh: autoRefreshValue }
+    updateSettings(newSettings)
   }
 
   return (
@@ -59,7 +88,7 @@ export const SettingsPage = () => {
           }
         >
           <VStack navigationTitle="背景图路径">
-            <TextField title="背景图片路径" value={bgPath} onChanged={setBgPath} prompt="请输入背景图路径" />
+            <TextField title="背景图片路径" value={bgPath} onChanged={handleBgPathChange} prompt="请输入背景图路径" />
           </VStack>
         </Section>
         {/* API接口设置 */}
@@ -72,7 +101,7 @@ export const SettingsPage = () => {
           }
         >
           {apiConfigs.map((config, index) => (
-            <Button key={index} action={() => setSelectedApiIndex(index)}>
+            <Button key={index} action={() => handleApiIndexChange(index)}>
               <HStack alignment="center">
                 <VStack alignment="leading" spacing={2}>
                   <Text font="body" foregroundStyle="label">

@@ -1,4 +1,4 @@
-import { HStack, Image, Spacer, Text, VStack, Widget } from 'scripting'
+import { HStack, Image, Path, Spacer, Text, VStack, Widget } from 'scripting'
 import type { HitokotoData } from './utils/hitokoto-service'
 import { fetchHitokoto, getCurrentSettings } from './utils/hitokoto-service'
 
@@ -39,13 +39,18 @@ const WidgetView = ({ data }: { data: HitokotoData }) => {
   const settings = getCurrentSettings()
 
   // 获取背景图片路径
-  const getWidgetBg = settings.bgPath && Widget.parameter ? settings.bgPath + Widget.parameter : undefined
+  const getWidgetBg = settings.bgPath && Widget.parameter ? Path.join(settings.bgPath, Widget.parameter) : undefined
 
   switch (Widget.family) {
     case 'systemSmall': {
       // 小尺寸小组件 - 显示一言内容和来源
       return (
-        <VStack spacing={6} padding={16} alignment="center" background={getWidgetBg ? <Image filePath={getWidgetBg} /> : undefined}>
+        <VStack
+          spacing={6}
+          padding={16}
+          alignment="center"
+          background={getWidgetBg ? <Image filePath={getWidgetBg} resizable={true} scaleToFill={true} /> : undefined}
+        >
           <Image systemName="quote.bubble.fill" font="title2" foregroundStyle="systemBlue" />
           <Text
             font="body"
@@ -82,7 +87,11 @@ const WidgetView = ({ data }: { data: HitokotoData }) => {
     case 'systemMedium': {
       // 中等尺寸小组件 - 显示完整信息
       return (
-        <VStack spacing={10} padding={{ horizontal: 16, top: 16, bottom: 12 }}>
+        <VStack
+          spacing={10}
+          padding={{ horizontal: 16, top: 16, bottom: 12 }}
+          background={getWidgetBg ? <Image filePath={getWidgetBg} resizable={true} scaleToFill={true} /> : undefined}
+        >
           <HStack spacing={4} alignment="center">
             <Image systemName="quote.bubble.fill" font="body" foregroundStyle="systemBlue" />
             <Text font="body" fontWeight="bold" foregroundStyle="label">
@@ -135,7 +144,7 @@ const WidgetView = ({ data }: { data: HitokotoData }) => {
     case 'systemExtraLarge': {
       // 大尺寸小组件 - 显示最完整信息
       return (
-        <VStack spacing={16} padding={20}>
+        <VStack spacing={16} padding={20} background={getWidgetBg ? <Image filePath={getWidgetBg} resizable={true} scaleToFill={true} /> : undefined}>
           <HStack spacing={4} alignment="center">
             <Image systemName="quote.bubble.fill" font="title2" foregroundStyle="systemBlue" />
             <Text font="title2" fontWeight="bold" foregroundStyle="label">
