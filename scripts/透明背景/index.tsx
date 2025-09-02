@@ -1,4 +1,4 @@
-import { Button, HStack, Image, List, Navigation, NavigationStack, Path, Section, Spacer, Text, useEffect, useState, VStack } from 'scripting'
+import { Button, HStack, List, Navigation, NavigationStack, Path, Picker, Section, Spacer, Text, TextField, VStack, useEffect, useState } from 'scripting'
 import { cropAllImages } from './cropImage'
 import type { Config } from './typeof'
 import { calculateCropCoordinates } from './utils/calculateCropCoordinates'
@@ -13,6 +13,7 @@ const App = () => {
   })
 
   const [imageCount, setImageCount] = useState<number>(0)
+  const [subDirectory, setSubDirectory] = useState<string>('透明背景') // 子目录名称
 
   // 计算保存目录下的图片数量
   const countImagesInDirectory = async (path: string): Promise<number> => {
@@ -61,15 +62,83 @@ const App = () => {
   useEffect(() => {
     updateImageCount()
   }, [config.path])
+
+  // 根据当前路径判断选中的保存位置（iCloud / 本地）
+  const selectedLocation = (() => {
+    if (config.path?.startsWith(FileManager.iCloudDocumentsDirectory)) return 'icloud'
+    if (config.path?.startsWith(FileManager.appGroupDocumentsDirectory)) return 'local'
+    return ''
+  })()
+
+  // 从当前路径中提取子目录名称
+  const extractSubDirectory = () => {
+    if (!config.path) return subDirectory
+    if (config.path.startsWith(FileManager.iCloudDocumentsDirectory)) {
+      const relative = config.path.replace(FileManager.iCloudDocumentsDirectory, '').replace(/^\//, '')
+      return relative || subDirectory
+    }
+    if (config.path.startsWith(FileManager.appGroupDocumentsDirectory)) {
+      const relative = config.path.replace(FileManager.appGroupDocumentsDirectory, '').replace(/^\//, '')
+      return relative || subDirectory
+    }
+    return subDirectory
+  }
+
+  // 初始化时从路径中提取子目录
+  useEffect(() => {
+    const extracted = extractSubDirectory()
+    if (extracted !== subDirectory) {
+      setSubDirectory(extracted)
+    }
+  }, [config.path])
+
+  const ensureDir = async (dir: string) => {
+    try {
+      await FileManager.createDirectory(dir, true)
+    } catch (e) {
+      // 目录已存在或创建失败时忽略，让后续写入报错更明确
+      console.log(e)
+    }
+  }
+
+  // 选择保存路径（iCloud 或 本地）- 只保存设置，不创建目录
+  const handleSaveLocationChange = async (value: string) => {
+    const base = value === 'icloud' ? FileManager.iCloudDocumentsDirectory : FileManager.appGroupDocumentsDirectory
+    const newPath = Path.join(base, subDirectory)
+    setSavePath(newPath)
+    setConfig({ ...config, path: newPath })
+    // 不在这里创建目录，避免生成垃圾目录
+    await updateImageCount()
+  }
+
+  // 处理子目录名称变化（实时输入）
+  const handleSubDirectoryChange = async (newSubDir: string) => {
+    setSubDirectory(newSubDir)
+  }
+
+  // 复制当前保存路径到剪贴板
+  const handleCopyPath = async () => {
+    if (!config.path) {
+      await Dialog.alert({ title: '提示', message: '请先选择保存路径' })
+      return
+    }
+    try {
+      await Clipboard.copyText(config.path)
+      await Dialog.alert({ title: '已复制', message: config.path })
+    } catch (error) {
+      await Dialog.alert({ title: '复制失败', message: `${config.path}\n\n请手动复制上述路径。` })
+    }
+  }
+
   return (
     <NavigationStack>
       <List
         toolbar={{
-          cancellationAction: <Button title={'Close'} action={Navigation.useDismiss()} />
+          cancellationAction: <Button title="完成" action={Navigation.useDismiss()} />
         }}
       >
         <Section listSectionSpacing={0} padding={{ top: -15, bottom: -5, leading: -15 }} header={<Text font="title">透明背景</Text>} />
-        <Section title="SCREENSHOT">
+        <Section title="设置偏好">
           <Button
             action={async () => {
               const widgetPosition = await calculateCropCoordinates()
@@ -101,18 +170,22 @@ const App = () => {
             </HStack>
           </Button>
 
-          <Button
-            action={async () => {
-              const path = await DocumentPicker.pickDirectory()
-              if (path == null) return
-              setSavePath(path) // 保存路径到存储
-              setConfig({ ...config, path })
-            }}
-          >
+          <Button action={() => void null}>
+            <Picker title="选择保存路径" value={selectedLocation} onChanged={handleSaveLocationChange}>
+              <Text tag="icloud">iCloud</Text>
+              <Text tag="local">本地</Text>
+            </Picker>
+          </Button>
+
+          <Button action={() => void null}>
+            <TextField title="子目录名称" value={subDirectory} onChanged={handleSubDirectoryChange} prompt="输入子目录名称，如：透明背景" />
+          </Button>
+
+          <Button action={handleCopyPath}>
             <HStack>
-              <Text>选择保存路径</Text>
+              <Text>点击复制当前保存路径</Text>
               <Spacer />
-              <Text>{config.path ? `已选择${imageCount > 0 ? ` (${imageCount}张图片)` : ''}` : ''}</Text>
+              <Text>{config.path ? '已设置' : '未设置'}</Text>
             </HStack>
           </Button>
 
@@ -120,11 +193,80 @@ const App = () => {
             <Text font="caption" foregroundStyle="gray" padding={{ leading: 8 }}>
               目录下已有 {imageCount} 张透明背景图片
             </Text>
-          ) : null}
+          ) : (
+            <Text font="caption" foregroundStyle="systemOrange" padding={{ leading: 8 }}>
+              该目录没有透明背景图，请先生成
+            </Text>
+          )}
         </Section>
 
+        {config.path ? (
+          <Section>
+            <Button
+              title="删除当前图片目录"
+              foregroundStyle="systemRed"
+              action={async () => {
+                if (!config.path) return
+
+                try {
+                  // 检查目录是否存在
+                  const dirExists = await FileManager.exists(config.path)
+                  if (!dirExists) {
+                    await Dialog.alert({
+                      title: '目录不存在',
+                      message: '指定的目录不存在，无需删除。'
+                    })
+                    return
+                  }
+
+                  // 确认删除操作
+                  const confirmed = await Dialog.confirm({
+                    title: '确认删除',
+                    message: `确定要删除目录 "${config.path}" 下的所有图片吗？此操作不可撤销。`
+                  })
+
+                  if (!confirmed) return
+
+                  // 删除目录
+                  await FileManager.remove(config.path)
+
+                  // 重新创建空目录
+                  // await FileManager.createDirectory(config.path, true)
+
+                  // 更新图片数量
+                  await updateImageCount()
+
+                  await Dialog.alert({
+                    title: '删除成功',
+                    message: '目录下的所有图片已删除。'
+                  })
+                } catch (error) {
+                  console.error('删除目录失败:', error)
+                  await Dialog.alert({
+                    title: '删除失败',
+                    message: `删除操作失败：${error}`
+                  })
+                }
+              }}
+            />
+            <Text
+              styledText={{
+                font: 'caption2',
+                content: [
+                  '本次操作会删除 ',
+                  {
+                    content: config.path,
+                    foregroundColor: 'systemOrange',
+                    bold: true
+                  },
+                  ' 目录下的所有图片'
+                ]
+              }}
+            />
+          </Section>
+        ) : null}
+
         <Section
-          title="GENERATE ALL IMAGES"
           footer={
             <VStack spacing={10} alignment="leading">
               <Text font="footnote" foregroundStyle="secondaryLabel">
@@ -132,7 +274,7 @@ const App = () => {
                 {'\n'}
                 本组件来自@Scripting 开发者和@小白代码，本组件组合优化。
                 {'\n'}
-                淮城一只猫© - 更多小组件请关注微信公众号
+                淮城一只猫© - 更多小组件请关注微信公众号「组件派」
               </Text>
             </VStack>
           }
@@ -140,12 +282,14 @@ const App = () => {
           <Button
             title="生成所有透明背景图片"
             action={async () => {
+              // 判断生成目录是否为空，如果空则创建目录
+              if (config.path != null) await ensureDir(config.path)
               await cropAllImages(config, setConfig)
               // 生成完成后更新图片数量
               await updateImageCount()
             }}
           />
-          <Text font="caption" padding={{ top: 8 }}>
+          <Text font="caption">
             将一次性生成以下图片：{'\n'}• Small: 6张 (top-right, top-left, middle-left, middle-right, bottom-right, bottom-left){'\n'}• Medium: 3张 (top,
             middle, bottom){'\n'}• Large: 2张 (top, bottom)
           </Text>

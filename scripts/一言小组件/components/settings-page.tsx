@@ -83,12 +83,19 @@ export const SettingsPage = () => {
           header={<Text font="headline">透明背景图片</Text>}
           footer={
             <Text font="footnote" foregroundStyle="secondaryLabel">
-              启用该选项，需要安装 “透明背景”
+              填空不开启，若要使用需要安装 “透明背景” 脚本组件。{'\n'}关注微信公众号「组件派」获取。
             </Text>
           }
         >
           <VStack navigationTitle="背景图路径">
-            <TextField title="背景图片路径" value={bgPath} onChanged={handleBgPathChange} prompt="请输入背景图路径" />
+            <TextField
+              title="背景图片路径"
+              value={bgPath}
+              onChanged={handleBgPathChange}
+              prompt="请输入背景图路径"
+              axis="vertical"
+              lineLimit={{ min: 2, max: 4 }}
+            />
           </VStack>
         </Section>
         {/* API接口设置 */}
