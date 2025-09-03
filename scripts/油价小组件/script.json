@@ -4,11 +4,10 @@
   "runInApp": false,
   "intentInputTypes": [],
   "name": "油价小组件",
-  "version": "1.0.1",
   "description": "在桌面随时了解油价信息",
+  "version": "1.0.2",
   "changelog": [
-    "重写数据持久化逻辑",
-    "修复中号规格组件在缩放模式「更大模式」中显示省略号的问题"
+    "添加对透明小组件支持"
   ],
   "remoteResource": {
     "autoUpdateInterval": 86400,

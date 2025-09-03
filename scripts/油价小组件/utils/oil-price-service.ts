@@ -565,64 +565,65 @@ export const fetchBannerImage = async (): Promise<string | null> => {
 }
 
 /**
- * 检查是否需要显示更新日志
- * @returns 是否需要显示更新日志
+ * 更新日志管理工具
  */
-export const shouldShowUpdateLog = async (): Promise<boolean> => {
-  try {
-    const currentLocalVersion = scriptConfig.version
-    const cachedVersion = storageManager.storage.get<string>(STORAGE_KEYS.LAST_VERSION)
+export const UpdateLogManager = {
+  /** 检查是否需要显示更新日志 */
+  shouldShowUpdateLog: async (): Promise<boolean> => {
+    try {
+      const currentLocalVersion = scriptConfig.version
+      const cachedVersion = storageManager.storage.get<string>(STORAGE_KEYS.LAST_VERSION)
 
-    console.log('当前本地版本:', currentLocalVersion)
-    console.log('缓存的版本:', cachedVersion)
+      console.log('当前本地版本:', currentLocalVersion)
+      console.log('缓存的版本:', cachedVersion)
 
-    // 如果缓存的版本与当前本地版本不同，说明有更新
-    return cachedVersion !== currentLocalVersion
-  } catch (error) {
-    console.error('检查更新日志失败:', error)
-    return false
+      return cachedVersion !== currentLocalVersion
+    } catch (error) {
+      console.error('检查更新日志失败:', error)
+      return false
+    }
+  },
+
+  /** 标记更新日志已确认 */
+  markUpdateLogDismissed: (): void => {
+    storageManager.storage.set(STORAGE_KEYS.LAST_VERSION, scriptConfig.version)
+    console.log('已缓存版本号:', scriptConfig.version)
   }
 }
 
-/**
- * 标记更新日志已确认（缓存当前版本号）
- */
-export const markUpdateLogDismissed = (): void => {
-  storageManager.storage.set(STORAGE_KEYS.LAST_VERSION, scriptConfig.version)
-  console.log('已缓存版本号:', scriptConfig.version)
-}
+// 保持向后兼容的导出
+export const shouldShowUpdateLog = UpdateLogManager.shouldShowUpdateLog
+export const markUpdateLogDismissed = UpdateLogManager.markUpdateLogDismissed
 
 /**
- * 获取当前设置
- * @returns 当前设置对象
+ * 设置管理工具
  */
-export const getCurrentSettings = () => {
-  const savedSettings = storageManager.storage.get<any>(STORAGE_KEYS.SETTINGS) || {}
-  return { ...DEFAULT_SETTINGS, ...savedSettings }
-}
+export const SettingsManager = {
+  /** 获取当前设置 */
+  getCurrentSettings: () => {
+    const savedSettings = storageManager.storage.get<any>(STORAGE_KEYS.SETTINGS) || {}
+    return { ...DEFAULT_SETTINGS, ...savedSettings }
+  },
 
-/**
- * 保存设置
- * @param settings 要保存的设置
- */
-export const saveSettings = (settings: any) => {
-  storageManager.storage.set(STORAGE_KEYS.SETTINGS, settings)
-}
+  /** 保存设置 */
+  saveSettings: (settings: any) => {
+    storageManager.storage.set(STORAGE_KEYS.SETTINGS, settings)
+  },
 
-/**
- * 获取动态字体颜色
- * 根据用户设置的浅色/深色模式颜色创建动态颜色对象
- * @returns 动态颜色对象，会自动适配系统的颜色模式
- */
-export const getDynamicTextColor = () => {
-  const settings = getCurrentSettings()
-
-  // 返回一个动态颜色对象，Scripting 框架会自动根据系统颜色模式选择合适的颜色
-  return {
-    light: settings.lightModeColor || '#000000', // 浅色模式下的颜色
-    dark: settings.darkModeColor || '#FFFFFF' // 深色模式下的颜色
+  /** 获取动态字体颜色 */
+  getDynamicTextColor: () => {
+    const settings = SettingsManager.getCurrentSettings()
+    return {
+      light: settings.lightModeColor || '#000000',
+      dark: settings.darkModeColor || '#FFFFFF'
+    }
   }
 }
+
+// 保持向后兼容的导出
+export const getCurrentSettings = SettingsManager.getCurrentSettings
+export const saveSettings = SettingsManager.saveSettings
+export const getDynamicTextColor = SettingsManager.getDynamicTextColor
 
 // 版本管理相关类型定义
 export interface VersionInfo {
@@ -633,24 +634,25 @@ export interface VersionInfo {
 }
 
 /**
- * 获取当前版本号
- * @returns 当前版本号
+ * 版本信息管理工具
  */
-export const getCurrentVersion = (): string => scriptConfig.version
+export const VersionManager = {
+  /** 获取当前版本号 */
+  getCurrentVersion: (): string => scriptConfig.version,
 
-/**
- * 获取本地版本信息
- * @returns 本地版本信息
- */
-export const getLocalVersionInfo = (): VersionInfo => ({
-  name: scriptConfig.name,
-  desc: scriptConfig.description,
-  version: scriptConfig.version,
-  changelog: scriptConfig.changelog || []
-})
+  /** 获取本地版本信息 */
+  getLocalVersionInfo: (): VersionInfo => ({
+    name: scriptConfig.name,
+    desc: scriptConfig.description,
+    version: scriptConfig.version,
+    changelog: scriptConfig.changelog || []
+  }),
 
-/**
- * 获取更新日志
- * @returns 更新日志数组
- */
-export const getChangelog = (): string[] => scriptConfig.changelog || []
+  /** 获取更新日志 */
+  getChangelog: (): string[] => scriptConfig.changelog || []
+}
+
+// 保持向后兼容的导出
+export const getCurrentVersion = VersionManager.getCurrentVersion
+export const getLocalVersionInfo = VersionManager.getLocalVersionInfo
+export const getChangelog = VersionManager.getChangelog

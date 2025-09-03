@@ -5,6 +5,13 @@
   "icon": "photo.fill",
   "description": null,
   "intentInputTypes": [],
-  "remoteResource": null,
-  "version": "1.0.0"
+  "version": "1.0.0",
+  "changelog": [
+    "第一版本"
+  ],
+  "remoteResource": {
+    "autoUpdateInterval": 86400,
+    "url": "https://joiner.i95.me/scripting/透明背景.scripting",
+    "hash": "00783b94652970dc0250169d974fa77b"
+  }
 }
