@@ -96,7 +96,9 @@ const DEFAULT_SETTINGS = {
   apiConfigIndex: 1, // 默认使用国际接口
   categories: ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l'], // 默认全选所有类型
   autoRefresh: true, // 自动刷新开关
-  refreshInterval: 30 // 刷新间隔（分钟）
+  refreshInterval: 30, // 刷新间隔（分钟）
+  lightModeColor: '#000000', // 浅色模式字体颜色
+  darkModeColor: '#FFFFFF' // 深色模式字体颜色
 }
 
 /**
@@ -192,14 +194,51 @@ export interface VersionInfo {
   desc: string
   version: string
   changelog: string[]
-  bannerImage?: string
 }
 
 /**
- * 获取远程版本信息和横幅图片
- * @returns 远程版本信息Promise
+ * 获取当前版本号
+ * @returns 当前版本号
  */
-export const fetchRemoteVersionInfo = async (): Promise<VersionInfo | null> => {
+export const getCurrentVersion = (): string => scriptConfig.version
+
+/**
+ * 获取本地版本信息
+ * @returns 本地版本信息
+ */
+export const getLocalVersionInfo = (): VersionInfo => ({
+  name: scriptConfig.name,
+  desc: scriptConfig.description,
+  version: scriptConfig.version,
+  changelog: scriptConfig.changelog || []
+})
+
+/**
+ * 获取动态字体颜色
+ * 根据用户设置的浅色/深色模式颜色创建动态颜色对象
+ * @returns 动态颜色对象，会自动适配系统的颜色模式
+ */
+export const getDynamicTextColor = () => {
+  const settings = getCurrentSettings()
+
+  // 返回一个动态颜色对象，Scripting 框架会自动根据系统颜色模式选择合适的颜色
+  return {
+    light: settings.lightModeColor, // 浅色模式下的颜色
+    dark: settings.darkModeColor // 深色模式下的颜色
+  }
+}
+
+/**
+ * 获取更新日志
+ * @returns 更新日志数组
+ */
+export const getChangelog = (): string[] => scriptConfig.changelog || []
+
+/**
+ * 获取远程横幅图片URL
+ * @returns 横幅图片URL Promise
+ */
+export const fetchBannerImage = async (): Promise<string | null> => {
   try {
     const response = await fetch('https://joiner.i95.me/scripting/joiner.json')
     if (!response.ok) {
@@ -207,31 +246,11 @@ export const fetchRemoteVersionInfo = async (): Promise<VersionInfo | null> => {
     }
 
     const data = (await response.json()) as any
-    const hitokotoInfo = data.Hitokoto
-
-    if (hitokotoInfo) {
-      return {
-        name: hitokotoInfo.name,
-        desc: hitokotoInfo.desc,
-        version: hitokotoInfo.version,
-        changelog: hitokotoInfo.changelog || [],
-        bannerImage: data.bannerImage || undefined
-      }
-    }
-
-    return null
+    return data.bannerImage || null
   } catch (error) {
-    console.error('获取远程版本信息失败:', error)
+    console.error('获取横幅图片失败:', error)
     return null
   }
-}
-
-/**
- * 获取当前本地版本号
- * @returns 当前本地版本号
- */
-export const getCurrentVersion = (): string => {
-  return scriptConfig.version
 }
 
 /**
@@ -240,7 +259,7 @@ export const getCurrentVersion = (): string => {
  */
 export const shouldShowUpdateLog = async (): Promise<boolean> => {
   try {
-    const currentLocalVersion = getCurrentVersion()
+    const currentLocalVersion = scriptConfig.version
     const cachedVersion = storageManager.storage.get<string>(STORAGE_KEYS.LAST_VERSION)
 
     console.log('当前本地版本:', currentLocalVersion)
@@ -258,7 +277,6 @@ export const shouldShowUpdateLog = async (): Promise<boolean> => {
  * 标记更新日志已确认（缓存当前版本号）
  */
 export const markUpdateLogDismissed = (): void => {
-  const currentVersion = getCurrentVersion()
-  storageManager.storage.set(STORAGE_KEYS.LAST_VERSION, currentVersion)
-  console.log('已缓存版本号:', currentVersion)
+  storageManager.storage.set(STORAGE_KEYS.LAST_VERSION, scriptConfig.version)
+  console.log('已缓存版本号:', scriptConfig.version)
 }

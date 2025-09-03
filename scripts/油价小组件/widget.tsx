@@ -1,4 +1,4 @@
-import { HStack, Image, Spacer, Text, VStack, Widget } from 'scripting'
+import { HStack, Image, Path, Spacer, Text, VStack, Widget } from 'scripting'
 import type { CompleteOilData } from './utils/oil-price-service'
 import {
   formatForecastPrice,
@@ -7,7 +7,9 @@ import {
   getSelectedOilType,
   getTrendColor,
   getTrendSymbol,
-  oilTypeOptions
+  oilTypeOptions,
+  getDynamicTextColor,
+  getCurrentSettings
 } from './utils/oil-price-service'
 
 // 全局数据变量
@@ -32,13 +34,16 @@ const GasPriceItem = ({
   forecastPrice?: string
   priceDirection?: 'rising' | 'falling' | 'stranded'
 }) => {
+  // 获取动态字体颜色
+  const textColor = getDynamicTextColor()
+
   return (
     <HStack alignment="center" spacing={8}>
       <Text font="title" fontWeight="bold" foregroundStyle="#EB604D">
         {type}
       </Text>
       <Spacer />
-      <Text font="title2" foregroundStyle="label">
+      <Text font="title2" foregroundStyle={textColor}>
         {price}
       </Text>
       {forecastPrice && priceDirection ? (
@@ -85,7 +90,11 @@ const loadOilData = async (): Promise<CompleteOilData> => {
  */
 const WidgetView = ({ data }: { data: CompleteOilData }) => {
   const parameters = Widget.parameter
-  // const isNegativeScreen = /测/
+  // 获取动态字体颜色和背景图片设置
+  const textColor = getDynamicTextColor()
+  const oilSettings = getCurrentSettings()
+  const getWidgetBg = oilSettings.bgPath && Widget.parameter ? Path.join(oilSettings.bgPath, Widget.parameter) : undefined
+
   switch (Widget.family) {
     case 'systemSmall': {
       const selectedOilType = getSelectedOilType()
@@ -93,17 +102,22 @@ const WidgetView = ({ data }: { data: CompleteOilData }) => {
       const selectedPrice = getPriceByOilType(data, selectedOilType)
 
       return (
-        <VStack spacing={6} padding={16} alignment="center">
+        <VStack
+          spacing={6}
+          padding={16}
+          alignment="center"
+          background={getWidgetBg ? <Image filePath={getWidgetBg} resizable={true} scaleToFill={true} /> : undefined}
+        >
           <Image systemName="fuelpump.fill" font="title2" foregroundStyle="systemOrange" />
           <Spacer />
-          <Text font="title" fontWeight="bold" foregroundStyle="label">
+          <Text font="title" fontWeight="bold" foregroundStyle={textColor}>
             {selectedPrice}
           </Text>
           <Text font="caption" foregroundStyle="#EB604D">
             {selectedOilOption.label}
           </Text>
           <Spacer />
-          <Text font="caption2" foregroundStyle="tertiaryLabel">
+          <Text font="caption2" foregroundStyle={textColor}>
             {data.lastUpdated}
           </Text>
         </VStack>
@@ -125,11 +139,11 @@ const WidgetView = ({ data }: { data: CompleteOilData }) => {
       }
 
       return (
-        <VStack>
+        <VStack background={getWidgetBg ? <Image filePath={getWidgetBg} resizable={true} scaleToFill={true} /> : undefined}>
           <VStack padding={{ vertical: 14 }}>
             <HStack spacing={4} alignment="bottom" padding={{ horizontal: 16 }}>
               <Image systemName="fuelpump.fill" font="body" foregroundStyle="systemOrange" />
-              <Text font="body" fontWeight="bold" foregroundStyle="label">
+              <Text font="body" fontWeight="bold" foregroundStyle={textColor}>
                 {data.region}油价
               </Text>
               <Spacer />
@@ -142,7 +156,7 @@ const WidgetView = ({ data }: { data: CompleteOilData }) => {
                 <Text font="title2" fontWeight="medium" foregroundStyle="#EB604D">
                   92#
                 </Text>
-                <Text font="title3" fontWeight="medium" foregroundStyle="label">
+                <Text font="title3" fontWeight="medium" foregroundStyle={textColor}>
                   {data.oil92}
                 </Text>
                 <Text font="caption2" foregroundStyle={getTrendColor(data.priceDirection)}>
@@ -156,7 +170,7 @@ const WidgetView = ({ data }: { data: CompleteOilData }) => {
                 <Text font="title2" fontWeight="medium" foregroundStyle="#EB604D">
                   95#
                 </Text>
-                <Text font="title3" fontWeight="medium" foregroundStyle="label">
+                <Text font="title3" fontWeight="medium" foregroundStyle={textColor}>
                   {data.oil95}
                 </Text>
                 <Text font="caption2" foregroundStyle={getTrendColor(data.priceDirection)}>
@@ -170,7 +184,7 @@ const WidgetView = ({ data }: { data: CompleteOilData }) => {
                 <Text font="title2" fontWeight="medium" foregroundStyle="#EB604D">
                   98#
                 </Text>
-                <Text font="title3" fontWeight="medium" foregroundStyle="label">
+                <Text font="title3" fontWeight="medium" foregroundStyle={textColor}>
                   {data.oil98}
                 </Text>
                 <Text font="caption2" foregroundStyle={getTrendColor(data.priceDirection)}>
@@ -184,7 +198,7 @@ const WidgetView = ({ data }: { data: CompleteOilData }) => {
                 <Text font="title2" fontWeight="medium" foregroundStyle="#EB604D">
                   0#
                 </Text>
-                <Text font="title3" fontWeight="medium" foregroundStyle="label">
+                <Text font="title3" fontWeight="medium" foregroundStyle={textColor}>
                   {data.oil0}
                 </Text>
                 <Text font="caption2" foregroundStyle={getTrendColor(data.priceDirection)}>
@@ -196,13 +210,13 @@ const WidgetView = ({ data }: { data: CompleteOilData }) => {
             <Spacer />
 
             <HStack spacing={2} alignment="center">
-              <Text font={10} foregroundStyle="tertiaryLabel">
+              <Text font={10} foregroundStyle={textColor}>
                 {data.lastUpdated}刷新
               </Text>
-              <Text font={10} foregroundStyle="tertiaryLabel">
+              <Text font={10} foregroundStyle={textColor}>
                 •
               </Text>
-              <Text font={10} foregroundStyle="tertiaryLabel">
+              <Text font={10} foregroundStyle={textColor}>
                 {data.forecastDate + getTrendStr(data.priceDirection)}调整
               </Text>
             </HStack>
@@ -214,10 +228,10 @@ const WidgetView = ({ data }: { data: CompleteOilData }) => {
     case 'systemLarge':
     case 'systemExtraLarge': {
       return (
-        <VStack spacing={16} padding={16}>
+        <VStack spacing={16} padding={16} background={getWidgetBg ? <Image filePath={getWidgetBg} resizable={true} scaleToFill={true} /> : undefined}>
           <HStack spacing={4} alignment="top">
             <Image systemName="fuelpump.fill" font="body" foregroundStyle="systemOrange" />
-            <Text font="body" fontWeight="bold" foregroundStyle="label">
+            <Text font="body" fontWeight="bold" foregroundStyle={textColor}>
               {data.region}油价
             </Text>
             <Spacer />
@@ -231,11 +245,11 @@ const WidgetView = ({ data }: { data: CompleteOilData }) => {
           </VStack>
           <Spacer />
           <VStack spacing={4} alignment="center">
-            <Text font="caption2" foregroundStyle="tertiaryLabel">
+            <Text font="caption2" foregroundStyle={textColor}>
               预测{data.forecastDate}
               {data.priceDirection === 'rising' ? '上涨' : data.priceDirection === 'falling' ? '下跌' : '搁浅'} {formatForecastPrice(data.forecastPrice)}
             </Text>
-            <Text font="caption2" foregroundStyle="tertiaryLabel">
+            <Text font="caption2" foregroundStyle={textColor}>
               {data.lastUpdated}数据更新
             </Text>
           </VStack>
@@ -247,10 +261,10 @@ const WidgetView = ({ data }: { data: CompleteOilData }) => {
       return (
         <VStack spacing={8} alignment="center">
           <Image systemName="fuelpump.fill" font="title" foregroundStyle="systemOrange" />
-          <Text font="body" foregroundStyle="label">
+          <Text font="body" foregroundStyle={textColor}>
             油价小组件
           </Text>
-          <Text font="caption" foregroundStyle="secondaryLabel">
+          <Text font="caption" foregroundStyle={textColor}>
             {data.region}
           </Text>
         </VStack>
@@ -267,14 +281,18 @@ const main = async (): Promise<void> => {
     Widget.present(<WidgetView data={data} />)
   } catch (error) {
     console.error('Widget加载失败:', error)
+
+    // 获取动态字体颜色和背景图片设置用于错误显示
+    const errorTextColor = getDynamicTextColor()
+
     // 显示错误信息
     Widget.present(
       <VStack spacing={8} alignment="center" padding={16}>
         <Image systemName="exclamationmark.triangle.fill" font="title" foregroundStyle="systemRed" />
-        <Text font="body" foregroundStyle="label">
+        <Text font="body" foregroundStyle={errorTextColor}>
           数据加载失败
         </Text>
-        <Text font="caption" foregroundStyle="secondaryLabel">
+        <Text font="caption" foregroundStyle={errorTextColor}>
           请检查网络连接
         </Text>
       </VStack>

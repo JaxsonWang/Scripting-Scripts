@@ -1,5 +1,13 @@
-import { Circle, Grid, GridRow, HStack, Image, RoundedRectangle, Spacer, Text, VStack, Widget } from 'scripting'
-import { formatEventTime, generateCalendarGrid, getCalendarData, getMonthNameToNumber, getWeekdayNames } from './utils/calendar-service'
+import { Circle, Grid, GridRow, HStack, Image, Path, RoundedRectangle, Spacer, Text, VStack, Widget } from 'scripting'
+import {
+  formatEventTime,
+  generateCalendarGrid,
+  getCalendarData,
+  getCurrentSettings as getCalendarSettings,
+  getDynamicTextColor,
+  getMonthNameToNumber,
+  getWeekdayNames
+} from './utils/calendar-service'
 import { getDaysLeftInYear, solarToLunar } from './utils/lunar-calendar'
 import { getActualColor, getCurrentSettings } from './components/settings-page'
 import {
@@ -78,18 +86,26 @@ const SmallWidget = ({ data }: { data: WidgetData }) => {
   const weeksToShow = calculateWeeksToShow(grid)
   const calendarRows = generateCalendarRows(grid, weeksToShow, calendar, false)
 
+  // 获取动态字体颜色和背景图片设置
+  const textColor = getDynamicTextColor()
+  const calendarSettings = getCalendarSettings()
+  const getWidgetBg = calendarSettings.bgPath && Widget.parameter ? Path.join(calendarSettings.bgPath, Widget.parameter) : undefined
+
   return (
-    <VStack padding={{ horizontal: 10, vertical: 5 }}>
+    <VStack
+      padding={{ horizontal: 10, vertical: 5 }}
+      background={getWidgetBg ? <Image filePath={getWidgetBg} resizable={true} scaleToFill={true} /> : undefined}
+    >
       {/* 月份标题 - 包含农历信息 */}
       <VStack padding={{ bottom: 2 }}>
         <HStack spacing={2}>
           <Text font={12} fontWeight="bold" foregroundStyle={getActualColor(settings)}>
             {getMonthNameToNumber(calendar.currentMonth)}
           </Text>
-          <Text font="caption2" foregroundStyle="secondaryLabel">
+          <Text font="caption2" foregroundStyle={textColor}>
             •
           </Text>
-          <Text font="caption2" foregroundStyle="secondaryLabel">
+          <Text font="caption2" foregroundStyle={textColor}>
             {lunar.monthName + lunar.dayName}
           </Text>
           <Spacer />
@@ -100,7 +116,7 @@ const SmallWidget = ({ data }: { data: WidgetData }) => {
       <Grid horizontalSpacing={2} verticalSpacing={2} alignment="center">
         <GridRow>
           {weekdays.map(day => (
-            <Text key={day} font={11} foregroundStyle="label" frame={{ maxWidth: 'infinity', alignment: 'center' }} gridCellAnchor="center">
+            <Text key={day} font={11} foregroundStyle={textColor} frame={{ maxWidth: 'infinity', alignment: 'center' }} gridCellAnchor="center">
               {day}
             </Text>
           ))}
@@ -146,17 +162,26 @@ const MediumWidget = ({ data }: { data: WidgetData }) => {
   const calendarRows = generateCalendarRows(grid, weeksToShow, calendar, true)
   const upcomingEvents = formatEventsForDisplay(calendar.upcomingEvents, 2, formatEventTime)
   const daysLeftText = formatDaysLeftText(daysLeft)
+
+  // 获取动态字体颜色和背景图片设置
+  const textColor = getDynamicTextColor()
+  const calendarSettings = getCalendarSettings()
+  const getWidgetBg = calendarSettings.bgPath && Widget.parameter ? Path.join(calendarSettings.bgPath, Widget.parameter) : undefined
   const lunarDisplay = formatLunarDisplay(lunar)
 
   return (
-    <HStack spacing={0} padding={{ horizontal: 8, vertical: 10 }}>
+    <HStack
+      spacing={0}
+      padding={{ horizontal: 8, vertical: 10 }}
+      background={getWidgetBg ? <Image filePath={getWidgetBg} resizable={true} scaleToFill={true} /> : undefined}
+    >
       {/* 左侧 - 日历网格 (4/6 宽度) */}
       <VStack spacing={0} frame={{ maxWidth: 'infinity', maxHeight: 'infinity', alignment: 'leading' }}>
         {/* 星期标题 - Grid 布局 */}
         <Grid horizontalSpacing={0} verticalSpacing={0}>
           <GridRow>
             {weekdays.map(day => (
-              <Text key={day} font="caption2" foregroundStyle="label" frame={{ width: 28, alignment: 'center' }} gridCellAnchor="center">
+              <Text key={day} font="caption2" foregroundStyle={textColor} frame={{ width: 28, alignment: 'center' }} gridCellAnchor="center">
                 {day}
               </Text>
             ))}
@@ -207,7 +232,7 @@ const MediumWidget = ({ data }: { data: WidgetData }) => {
               {formatMonthDisplay(calendar.currentYear, calendar.currentMonth, calendar.currentDateDay)}
             </Text>
           </HStack>
-          <Text font={12} foregroundStyle="secondaryLabel">
+          <Text font={12} foregroundStyle={textColor}>
             {lunarDisplay}
           </Text>
         </VStack>
@@ -221,7 +246,7 @@ const MediumWidget = ({ data }: { data: WidgetData }) => {
               <Text font="caption" foregroundStyle={event.color} lineLimit={1}>
                 {event.title}
               </Text>
-              <Text font="caption2" foregroundStyle="tertiaryLabel">
+              <Text font="caption2" foregroundStyle={textColor}>
                 {event.time}
               </Text>
             </VStack>
@@ -232,7 +257,7 @@ const MediumWidget = ({ data }: { data: WidgetData }) => {
 
         {/* 底部信息 */}
         <VStack padding={{ bottom: 4 }} alignment="leading">
-          <Text font={10} foregroundStyle="tertiaryLabel">
+          <Text font={10} foregroundStyle={textColor}>
             {daysLeftText}
           </Text>
         </VStack>
@@ -254,24 +279,29 @@ const LargeWidget = ({ data }: { data: WidgetData }) => {
   const lunarDisplay = formatLunarDisplay(lunar)
   const yiJiDisplay = formatYiJiDisplay(lunar.yi, lunar.ji)
 
+  // 获取动态字体颜色和背景图片设置
+  const textColor = getDynamicTextColor()
+  const calendarSettings = getCalendarSettings()
+  const getWidgetBg = calendarSettings.bgPath && Widget.parameter ? Path.join(calendarSettings.bgPath, Widget.parameter) : undefined
+
   return (
-    <VStack padding={16}>
+    <VStack padding={16} background={getWidgetBg ? <Image filePath={getWidgetBg} resizable={true} scaleToFill={true} /> : undefined}>
       {/* 标题栏 */}
       <HStack alignment="center">
         <VStack alignment="leading" spacing={2}>
           <Text font="title2" fontWeight="bold" foregroundStyle={getActualColor(settings)}>
             {formatMonthDisplay(calendar.currentYear, calendar.currentMonth, calendar.currentDateDay)}
           </Text>
-          <Text font="caption" foregroundStyle="secondaryLabel">
+          <Text font="caption" foregroundStyle={textColor}>
             {lunar.formatted}
           </Text>
         </VStack>
         <Spacer />
         <VStack alignment="trailing" spacing={2}>
-          <Text font="title3" fontWeight="bold" foregroundStyle="label">
+          <Text font="title3" fontWeight="bold" foregroundStyle={textColor}>
             {lunarDisplay}
           </Text>
-          <Text font="caption" padding={{ top: 2 }} foregroundStyle="secondaryLabel">
+          <Text font="caption" padding={{ top: 2 }} foregroundStyle={textColor}>
             {daysLeftText}
           </Text>
         </VStack>
@@ -284,7 +314,7 @@ const LargeWidget = ({ data }: { data: WidgetData }) => {
         <Text font="caption2" foregroundStyle={yiJiDisplay.yi.color}>
           {yiJiDisplay.yi.label}
         </Text>
-        <Text font="caption2" foregroundStyle="secondaryLabel" lineLimit={1}>
+        <Text font="caption2" foregroundStyle={textColor} lineLimit={1}>
           {yiJiDisplay.yi.content}
         </Text>
         <Spacer />
@@ -293,7 +323,7 @@ const LargeWidget = ({ data }: { data: WidgetData }) => {
         <Text font="caption2" foregroundStyle={yiJiDisplay.ji.color}>
           {yiJiDisplay.ji.label}
         </Text>
-        <Text font="caption2" foregroundStyle="secondaryLabel" lineLimit={1}>
+        <Text font="caption2" foregroundStyle={textColor} lineLimit={1}>
           {yiJiDisplay.ji.content}
         </Text>
         <Spacer />
@@ -307,7 +337,7 @@ const LargeWidget = ({ data }: { data: WidgetData }) => {
         <Grid horizontalSpacing={4} verticalSpacing={4} alignment="center">
           <GridRow>
             {weekdays.map(day => (
-              <Text key={day} font="caption" foregroundStyle="label" gridCellAnchor="center" frame={{ maxWidth: 'infinity', alignment: 'center' }}>
+              <Text key={day} font="caption" foregroundStyle={textColor} gridCellAnchor="center" frame={{ maxWidth: 'infinity', alignment: 'center' }}>
                 {day}
               </Text>
             ))}
@@ -366,19 +396,21 @@ const WidgetView = ({ data }: { data: WidgetData }) => {
     case 'systemExtraLarge':
       return <LargeWidget data={data} />
 
-    default:
-      // 可能需要获取设置来显示正确的颜色，这里先使用默认颜色
+    default: {
+      // 获取动态字体颜色和背景图片设置用于默认显示
+      const defaultTextColor = getDynamicTextColor()
       return (
         <VStack spacing={8} alignment="center" padding={16}>
           <Image systemName="calendar.badge.clock" font="title" foregroundStyle="systemGreen" />
-          <Text font="body" foregroundStyle="label">
+          <Text font="body" foregroundStyle={defaultTextColor}>
             挂历小组件
           </Text>
-          <Text font="caption" foregroundStyle="secondaryLabel">
+          <Text font="caption" foregroundStyle={defaultTextColor}>
             日历、事件
           </Text>
         </VStack>
       )
+    }
   }
 }
 
@@ -394,14 +426,17 @@ const main = async (): Promise<void> => {
   } catch (error) {
     console.error('Widget加载失败:', error)
 
+    // 获取动态字体颜色和背景图片设置用于错误显示
+    const errorTextColor = getDynamicTextColor()
+
     // 显示错误信息
     Widget.present(
       <VStack spacing={8} alignment="center" padding={16}>
         <Image systemName="exclamationmark.triangle.fill" font="title" foregroundStyle="systemRed" />
-        <Text font="body" foregroundStyle="label">
+        <Text font="body" foregroundStyle={errorTextColor}>
           数据加载失败
         </Text>
-        <Text font="caption" foregroundStyle="secondaryLabel">
+        <Text font="caption" foregroundStyle={errorTextColor}>
           请检查网络连接和权限设置
         </Text>
       </VStack>

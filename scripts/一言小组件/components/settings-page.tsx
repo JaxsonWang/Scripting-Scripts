@@ -1,5 +1,6 @@
-import { Button, HStack, List, Navigation, NavigationStack, Picker, Section, Spacer, Text, TextField, Toggle, VStack } from 'scripting'
+import { Button, ColorPicker, HStack, List, Navigation, NavigationStack, Picker, Section, Spacer, Text, TextField, Toggle, VStack } from 'scripting'
 import { useState } from 'scripting'
+import type { Color } from 'scripting'
 import { apiConfigs, categoryOptions, getCurrentSettings, refreshIntervalOptions, saveSettings } from '../utils/hitokoto-service'
 
 /**
@@ -15,6 +16,8 @@ export const SettingsPage = () => {
   const [autoRefresh, setAutoRefresh] = useState(currentSettings.autoRefresh ?? true)
   const [refreshInterval, setRefreshInterval] = useState(currentSettings.refreshInterval ?? 30)
   const [bgPath, setBgPath] = useState<string>(() => currentSettings.bgPath ?? '')
+  const [lightModeColor, setLightModeColor] = useState<Color>(() => currentSettings.lightModeColor ?? '#000000')
+  const [darkModeColor, setDarkModeColor] = useState<Color>(() => currentSettings.darkModeColor ?? '#FFFFFF')
 
   // 更新设置的通用函数
   const updateSettings = (newSettings: any) => {
@@ -69,6 +72,20 @@ export const SettingsPage = () => {
     updateSettings(newSettings)
   }
 
+  // 处理浅色模式颜色变化
+  const handleLightModeColorChange = (color: Color) => {
+    setLightModeColor(color)
+    const newSettings = { ...currentSettings, lightModeColor: color }
+    updateSettings(newSettings)
+  }
+
+  // 处理深色模式颜色变化
+  const handleDarkModeColorChange = (color: Color) => {
+    setDarkModeColor(color)
+    const newSettings = { ...currentSettings, darkModeColor: color }
+    updateSettings(newSettings)
+  }
+
   return (
     <NavigationStack>
       <List
@@ -97,6 +114,18 @@ export const SettingsPage = () => {
               lineLimit={{ min: 2, max: 4 }}
             />
           </VStack>
+        </Section>
+        {/* 字体颜色优化 */}
+        <Section
+          header={<Text font="headline">字体个性化</Text>}
+          footer={
+            <Text font="footnote" foregroundStyle="secondaryLabel">
+              设置不同模式下的字体颜色，在各种背景下都清晰可见
+            </Text>
+          }
+        >
+          <ColorPicker title="浅色模式" value={lightModeColor} onChanged={handleLightModeColorChange} supportsOpacity={false} />
+          <ColorPicker title="深色模式" value={darkModeColor} onChanged={handleDarkModeColorChange} supportsOpacity={false} />
         </Section>
         {/* API接口设置 */}
         <Section

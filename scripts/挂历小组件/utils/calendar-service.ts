@@ -17,7 +17,17 @@ const STORAGE_NAME = 'ScriptPie.LunarCalendarSettings'
 // 存储键 - 用于访问统一存储对象中的具体字段
 const STORAGE_KEYS = {
   LAST_VERSION: 'lastVersion',
-  UPDATE_DISMISSED: 'updateDismissed'
+  UPDATE_DISMISSED: 'updateDismissed',
+  SETTINGS: 'settings'
+}
+
+/**
+ * 默认设置
+ */
+const DEFAULT_SETTINGS = {
+  bgPath: '', // 透明背景图片路径
+  lightModeColor: '#000000', // 浅色模式字体颜色
+  darkModeColor: '#FFFFFF' // 深色模式字体颜色
 }
 
 // 创建存储管理器实例
@@ -300,10 +310,21 @@ export function getWeekdayNames(): string[] {
 }
 
 /**
- * 获取远程版本信息和横幅图片
- * @returns 远程版本信息Promise
+ * 获取本地版本信息
+ * @returns 本地版本信息
  */
-export const fetchRemoteVersionInfo = async (): Promise<VersionInfo | null> => {
+export const getLocalVersionInfo = (): VersionInfo => ({
+  name: scriptConfig.name,
+  desc: scriptConfig.description,
+  version: scriptConfig.version,
+  changelog: scriptConfig.changelog || []
+})
+
+/**
+ * 获取远程横幅图片URL
+ * @returns 横幅图片URL Promise
+ */
+export const fetchBannerImage = async (): Promise<string | null> => {
   try {
     const response = await fetch('https://joiner.i95.me/scripting/joiner.json')
     if (!response.ok) {
@@ -311,32 +332,18 @@ export const fetchRemoteVersionInfo = async (): Promise<VersionInfo | null> => {
     }
 
     const data = (await response.json()) as any
-    const calendarInfo = data.WallCalendar
-
-    if (calendarInfo) {
-      return {
-        name: calendarInfo.name,
-        desc: calendarInfo.desc,
-        version: calendarInfo.version,
-        changelog: calendarInfo.changelog || [],
-        bannerImage: data.bannerImage || undefined
-      }
-    }
-
-    return null
+    return data.bannerImage || null
   } catch (error) {
-    console.error('获取远程版本信息失败:', error)
+    console.error('获取横幅图片失败:', error)
     return null
   }
 }
 
 /**
- * 获取当前本地版本号
- * @returns 当前本地版本号
+ * 获取当前版本号
+ * @returns 当前版本号
  */
-export const getCurrentVersion = (): string => {
-  return scriptConfig.version
-}
+export const getCurrentVersion = (): string => scriptConfig.version
 
 /**
  * 检查是否需要显示更新日志
@@ -344,7 +351,7 @@ export const getCurrentVersion = (): string => {
  */
 export const shouldShowUpdateLog = async (): Promise<boolean> => {
   try {
-    const currentLocalVersion = getCurrentVersion()
+    const currentLocalVersion = scriptConfig.version
     const cachedVersion = storageManager.storage.get<string>(STORAGE_KEYS.LAST_VERSION)
 
     console.log('当前本地版本:', currentLocalVersion)
@@ -362,7 +369,44 @@ export const shouldShowUpdateLog = async (): Promise<boolean> => {
  * 标记更新日志已确认（缓存当前版本号）
  */
 export const markUpdateLogDismissed = (): void => {
-  const currentVersion = getCurrentVersion()
-  storageManager.storage.set(STORAGE_KEYS.LAST_VERSION, currentVersion)
-  console.log('已缓存版本号:', currentVersion)
+  storageManager.storage.set(STORAGE_KEYS.LAST_VERSION, scriptConfig.version)
+  console.log('已缓存版本号:', scriptConfig.version)
 }
+
+/**
+ * 获取当前设置
+ * @returns 当前设置对象
+ */
+export const getCurrentSettings = () => {
+  const savedSettings = storageManager.storage.get<any>(STORAGE_KEYS.SETTINGS) || {}
+  return { ...DEFAULT_SETTINGS, ...savedSettings }
+}
+
+/**
+ * 保存设置
+ * @param settings 要保存的设置
+ */
+export const saveSettings = (settings: any) => {
+  storageManager.storage.set(STORAGE_KEYS.SETTINGS, settings)
+}
+
+/**
+ * 获取动态字体颜色
+ * 根据用户设置的浅色/深色模式颜色创建动态颜色对象
+ * @returns 动态颜色对象，会自动适配系统的颜色模式
+ */
+export const getDynamicTextColor = () => {
+  const settings = getCurrentSettings()
+
+  // 返回一个动态颜色对象，Scripting 框架会自动根据系统颜色模式选择合适的颜色
+  return {
+    light: settings.lightModeColor || '#000000', // 浅色模式下的颜色
+    dark: settings.darkModeColor || '#FFFFFF'    // 深色模式下的颜色
+  }
+}
+
+/**
+ * 获取更新日志
+ * @returns 更新日志数组
+ */
+export const getChangelog = (): string[] => scriptConfig.changelog || []

@@ -6,6 +6,10 @@
   "name": "一言小组件",
   "version": "1.0.1",
   "description": "在桌面显示一言",
+  "changelog": [
+    "重写数据持久化逻辑",
+    "修复中号规格组件在缩放模式「更大模式」中显示省略号的问题"
+  ],
   "remoteResource": {
     "autoUpdateInterval": 86400,
     "url": "https://joiner.i95.me/scripting/一言小组件.scripting",

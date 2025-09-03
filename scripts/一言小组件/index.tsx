@@ -2,10 +2,12 @@ import { Button, HStack, Image, List, Navigation, NavigationStack, Script, Secti
 import { useEffect, useState } from 'scripting'
 import type { HitokotoData } from './utils/hitokoto-service'
 import {
+  fetchBannerImage,
   fetchHitokoto,
-  fetchRemoteVersionInfo,
+  getChangelog,
   getCurrentApiConfig,
   getCurrentVersion,
+  getLocalVersionInfo,
   getTypeName,
   markUpdateLogDismissed,
   shouldShowUpdateLog
@@ -51,20 +53,27 @@ const HitokotoDetail = () => {
   }
 
   // 加载版本信息
-  const loadVersionInfo = async () => {
+  const loadVersionInfo = () => {
     try {
-      const info = await fetchRemoteVersionInfo()
-      console.log('获取到的版本信息:', info)
+      const info = getLocalVersionInfo()
+      console.log('获取到的本地版本信息:', info)
       setVersionInfo(info)
+    } catch (error) {
+      console.error('加载版本信息失败:', error)
+    }
+  }
 
-      // 设置横幅图片
-      if (info && info.bannerImage) {
-        setBannerImageUrl(info.bannerImage)
-        console.log('获取到的横幅图片:', info.bannerImage)
+  // 加载横幅图片
+  const loadBannerImage = async () => {
+    try {
+      const bannerUrl = await fetchBannerImage()
+      if (bannerUrl) {
+        setBannerImageUrl(bannerUrl)
+        console.log('获取到的横幅图片:', bannerUrl)
 
         // 缓存横幅图片
         try {
-          const cachedPath = await ImageCacheManager.getCachedImagePath(info.bannerImage)
+          const cachedPath = await ImageCacheManager.getCachedImagePath(bannerUrl)
           if (cachedPath) {
             setCachedBannerImagePath(cachedPath)
             console.log('横幅图片缓存路径:', cachedPath)
@@ -74,7 +83,7 @@ const HitokotoDetail = () => {
         }
       }
     } catch (error) {
-      console.error('加载版本信息失败:', error)
+      console.error('加载横幅图片失败:', error)
     }
   }
 
@@ -87,13 +96,13 @@ const HitokotoDetail = () => {
       console.log('是否需要显示更新提醒:', shouldShow)
 
       if (shouldShow) {
-        // 获取远程更新内容
-        const remoteInfo = await fetchRemoteVersionInfo()
+        // 获取本地更新内容
+        const changelog = getChangelog()
         const currentVersion = getCurrentVersion()
 
         let changelogText = '暂无更新内容'
-        if (remoteInfo && Array.isArray(remoteInfo.changelog) && remoteInfo.changelog.length > 0) {
-          changelogText = remoteInfo.changelog.map((item: string, index: number) => `${index + 1}. ${item}`).join('\n')
+        if (Array.isArray(changelog) && changelog.length > 0) {
+          changelogText = changelog.map((item: string, index: number) => `${index + 1}. ${item}`).join('\n')
         }
 
         setChangelogContent(changelogText)
@@ -115,15 +124,15 @@ const HitokotoDetail = () => {
   }
 
   // 显示更新日志
-  const showChangelogAlert = async () => {
+  const showChangelogAlert = () => {
     try {
       // 优先使用已加载的版本信息
       let targetVersionInfo = versionInfo
 
-      // 如果没有版本信息，尝试获取远程信息
+      // 如果没有版本信息，获取本地信息
       if (!targetVersionInfo) {
-        console.log('本地没有版本信息，尝试获取远程信息')
-        targetVersionInfo = await fetchRemoteVersionInfo()
+        console.log('本地没有版本信息，获取本地信息')
+        targetVersionInfo = getLocalVersionInfo()
       }
 
       if (!targetVersionInfo || !targetVersionInfo.changelog || !targetVersionInfo.changelog.length) {
@@ -153,7 +162,8 @@ const HitokotoDetail = () => {
   useEffect(() => {
     const initializeApp = async () => {
       await loadData()
-      await loadVersionInfo()
+      loadVersionInfo() // 现在是同步函数，不需要 await
+      await loadBannerImage() // 加载横幅图片
 
       // 延迟检查更新，确保组件已完全渲染
       setTimeout(() => {

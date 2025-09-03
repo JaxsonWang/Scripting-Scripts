@@ -1,6 +1,6 @@
 import { HStack, Image, Path, Spacer, Text, VStack, Widget } from 'scripting'
 import type { HitokotoData } from './utils/hitokoto-service'
-import { fetchHitokoto, getCurrentSettings } from './utils/hitokoto-service'
+import { fetchHitokoto, getCurrentSettings, getDynamicTextColor } from './utils/hitokoto-service'
 
 // 无需全局缓存变量，每次都获取新数据
 
@@ -41,6 +41,9 @@ const WidgetView = ({ data }: { data: HitokotoData }) => {
   // 获取背景图片路径
   const getWidgetBg = settings.bgPath && Widget.parameter ? Path.join(settings.bgPath, Widget.parameter) : undefined
 
+  // 获取动态字体颜色（会自动适配系统的浅色/深色模式）
+  const textColor = getDynamicTextColor()
+
   switch (Widget.family) {
     case 'systemSmall': {
       // 小尺寸小组件 - 显示一言内容和来源
@@ -55,7 +58,7 @@ const WidgetView = ({ data }: { data: HitokotoData }) => {
           <Text
             font="body"
             fontWeight="medium"
-            foregroundStyle="label"
+            foregroundStyle={textColor}
             frame={{
               maxWidth: 'infinity',
               minHeight: 40,
@@ -66,15 +69,15 @@ const WidgetView = ({ data }: { data: HitokotoData }) => {
             {data.hitokoto}
           </Text>
           <HStack spacing={2} alignment="center">
-            <Text font="caption" foregroundStyle="tertiaryLabel">
+            <Text font="caption" foregroundStyle={textColor}>
               {data.from}
             </Text>
             {data.from_who ? (
               <>
-                <Text font="caption" foregroundStyle="tertiaryLabel">
+                <Text font="caption" foregroundStyle={textColor}>
                   •
                 </Text>
-                <Text font="caption" foregroundStyle="tertiaryLabel">
+                <Text font="caption" foregroundStyle={textColor}>
                   {data.from_who}
                 </Text>
               </>
@@ -94,11 +97,11 @@ const WidgetView = ({ data }: { data: HitokotoData }) => {
         >
           <HStack spacing={4} alignment="center">
             <Image systemName="quote.bubble.fill" font="body" foregroundStyle="systemBlue" />
-            <Text font="body" fontWeight="bold" foregroundStyle="label">
+            <Text font="body" fontWeight="bold" foregroundStyle={textColor}>
               今日一言
             </Text>
             <Spacer />
-            <Text font="caption2" foregroundStyle="secondaryLabel">
+            <Text font="caption2" foregroundStyle={textColor}>
               {data.creator}
             </Text>
           </HStack>
@@ -108,7 +111,7 @@ const WidgetView = ({ data }: { data: HitokotoData }) => {
           <Text
             font="headline"
             fontWeight="medium"
-            foregroundStyle="label"
+            foregroundStyle={textColor}
             frame={{
               maxWidth: 'infinity',
               minHeight: 50,
@@ -122,15 +125,15 @@ const WidgetView = ({ data }: { data: HitokotoData }) => {
           <Spacer />
 
           <HStack spacing={4} alignment="center">
-            <Text font="caption2" foregroundStyle="tertiaryLabel">
+            <Text font="caption2" foregroundStyle={textColor}>
               {data.from}
             </Text>
             {data.from_who ? (
               <>
-                <Text font="caption2" foregroundStyle="tertiaryLabel">
+                <Text font="caption2" foregroundStyle={textColor}>
                   •
                 </Text>
-                <Text font="caption2" foregroundStyle="tertiaryLabel">
+                <Text font="caption2" foregroundStyle={textColor}>
                   {data.from_who}
                 </Text>
               </>
@@ -147,11 +150,11 @@ const WidgetView = ({ data }: { data: HitokotoData }) => {
         <VStack spacing={16} padding={20} background={getWidgetBg ? <Image filePath={getWidgetBg} resizable={true} scaleToFill={true} /> : undefined}>
           <HStack spacing={4} alignment="center">
             <Image systemName="quote.bubble.fill" font="title2" foregroundStyle="systemBlue" />
-            <Text font="title2" fontWeight="bold" foregroundStyle="label">
+            <Text font="title2" fontWeight="bold" foregroundStyle={textColor}>
               今日一言
             </Text>
             <Spacer />
-            <Text font="caption" foregroundStyle="tertiaryLabel">
+            <Text font="caption" foregroundStyle={textColor}>
               {data.creator}
             </Text>
           </HStack>
@@ -161,7 +164,7 @@ const WidgetView = ({ data }: { data: HitokotoData }) => {
           <Text
             font="title"
             fontWeight="medium"
-            foregroundStyle="label"
+            foregroundStyle={textColor}
             frame={{
               maxWidth: 'infinity',
               minHeight: 100,
@@ -175,15 +178,15 @@ const WidgetView = ({ data }: { data: HitokotoData }) => {
           <Spacer />
 
           <HStack alignment="center">
-            <Text font="caption" foregroundStyle="tertiaryLabel">
+            <Text font="caption" foregroundStyle={textColor}>
               {data.from}
             </Text>
             {data.from_who ? (
               <>
-                <Text font="caption" foregroundStyle="tertiaryLabel">
+                <Text font="caption" foregroundStyle={textColor}>
                   •
                 </Text>
-                <Text font="caption" foregroundStyle="tertiaryLabel">
+                <Text font="caption" foregroundStyle={textColor}>
                   {data.from_who}
                 </Text>
               </>
@@ -197,10 +200,10 @@ const WidgetView = ({ data }: { data: HitokotoData }) => {
       return (
         <VStack spacing={8} alignment="center" padding={16}>
           <Image systemName="quote.bubble.fill" font="title" foregroundStyle="systemBlue" />
-          <Text font="body" foregroundStyle="label">
+          <Text font="body" foregroundStyle={textColor}>
             一言小组件
           </Text>
-          <Text font="caption" foregroundStyle="secondaryLabel">
+          <Text font="caption" foregroundStyle={textColor}>
             今日一言
           </Text>
         </VStack>
@@ -235,14 +238,18 @@ const main = async (): Promise<void> => {
     }
   } catch (error) {
     console.error('Widget加载失败:', error)
+
+    // 获取动态字体颜色以便在错误显示时也能自动适配颜色模式
+    const errorTextColor = getDynamicTextColor()
+
     // 显示错误信息
     Widget.present(
       <VStack spacing={8} alignment="center" padding={16}>
         <Image systemName="exclamationmark.triangle.fill" font="title" foregroundStyle="systemRed" />
-        <Text font="body" foregroundStyle="label">
+        <Text font="body" foregroundStyle={errorTextColor}>
           数据加载失败
         </Text>
-        <Text font="caption" foregroundStyle="secondaryLabel">
+        <Text font="caption" foregroundStyle={errorTextColor}>
           请检查网络连接
         </Text>
       </VStack>

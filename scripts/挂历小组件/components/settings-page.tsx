@@ -1,6 +1,7 @@
-import { Button, ColorPicker, List, Navigation, NavigationStack, Picker, Section, Text, VStack, useState } from 'scripting'
+import { Button, ColorPicker, List, Navigation, NavigationStack, Picker, Section, Text, TextField, VStack, useState } from 'scripting'
 import type { Color } from 'scripting'
 import { createStorageManager } from '../utils/storage'
+import { getCurrentSettings as getCalendarSettings, saveSettings as saveCalendarSettings } from '../utils/calendar-service'
 
 /**
  * 设置数据类型
@@ -72,6 +73,12 @@ export const SettingsPage = () => {
   const dismiss = Navigation.useDismiss()
   const [settings, setSettings] = useState<SettingsData>(() => getCurrentSettings())
 
+  // 获取字体颜色设置
+  const calendarSettings = getCalendarSettings()
+  const [bgPath, setBgPath] = useState<string>(() => calendarSettings.bgPath ?? '')
+  const [lightModeColor, setLightModeColor] = useState<Color>(() => calendarSettings.lightModeColor || '#000000')
+  const [darkModeColor, setDarkModeColor] = useState<Color>(() => calendarSettings.darkModeColor || '#FFFFFF')
+
   // 更新设置的通用函数
   const updateSetting = <K extends keyof SettingsData>(key: K, value: SettingsData[K]) => {
     const newSettings = { ...settings, [key]: value }
@@ -81,6 +88,18 @@ export const SettingsPage = () => {
       console.error('保存设置失败')
       // 如果保存失败，可以在这里显示错误提示给用户
     }
+  }
+
+  // 更新字体颜色设置的函数
+  const updateCalendarSettings = (newSettings: any) => {
+    saveCalendarSettings(newSettings)
+  }
+
+  // 处理背景图片路径变化
+  const handleBgPathChange = (path: string) => {
+    setBgPath(path)
+    const newSettings = { ...calendarSettings, bgPath: path }
+    updateCalendarSettings(newSettings)
   }
 
   // 颜色选项配置
@@ -104,6 +123,20 @@ export const SettingsPage = () => {
     updateSetting('customColor', color)
   }
 
+  // 处理浅色模式颜色变化
+  const handleLightModeColorChange = (color: Color) => {
+    setLightModeColor(color)
+    const newSettings = { ...calendarSettings, lightModeColor: color }
+    updateCalendarSettings(newSettings)
+  }
+
+  // 处理深色模式颜色变化
+  const handleDarkModeColorChange = (color: Color) => {
+    setDarkModeColor(color)
+    const newSettings = { ...calendarSettings, darkModeColor: color }
+    updateCalendarSettings(newSettings)
+  }
+
   return (
     <NavigationStack>
       <List
@@ -113,6 +146,39 @@ export const SettingsPage = () => {
           cancellationAction: <Button title="完成" action={dismiss} />
         }}
       >
+        {/* 透明背景图片 - 填写图片地址 */}
+        <Section
+          header={<Text font="headline">透明背景图片</Text>}
+          footer={
+            <Text font="footnote" foregroundStyle="secondaryLabel">
+              填空不开启，若要使用需要安装 "透明背景" 脚本组件。{'\n'}关注微信公众号「组件派」获取。
+            </Text>
+          }
+        >
+          <VStack navigationTitle="背景图路径">
+            <TextField
+              title="背景图片路径"
+              value={bgPath}
+              onChanged={handleBgPathChange}
+              prompt="请输入背景图路径"
+              axis="vertical"
+              lineLimit={{ min: 2, max: 4 }}
+            />
+          </VStack>
+        </Section>
+
+        {/* 字体颜色设置 */}
+        <Section
+          header={<Text font="headline">字体个性化</Text>}
+          footer={
+            <Text font="footnote" foregroundStyle="secondaryLabel">
+              设置不同模式下的字体颜色，在各种背景下都清晰可见
+            </Text>
+          }
+        >
+          <ColorPicker title="浅色模式" value={lightModeColor} onChanged={handleLightModeColorChange} supportsOpacity={false} />
+          <ColorPicker title="深色模式" value={darkModeColor} onChanged={handleDarkModeColorChange} supportsOpacity={false} />
+        </Section>
         {/* 主调色设置 */}
         <Section header={<Text font="headline">主调色设置</Text>}>
           <Picker title="主调色" value={settings.primaryColor} onChanged={handleColorChange}>
