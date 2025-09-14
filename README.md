@@ -110,26 +110,6 @@ function MyWidget() {
 Widget.register(MyWidget)
 ```
 
-## 🔧 配置说明
-
-### EditorConfig
-项目使用 EditorConfig 统一代码风格：
-- UTF-8 编码
-- LF 换行符
-- 2 空格缩进
-- 最大行长度 160 字符
-
-### TypeScript
-- 严格类型检查
-- ES2020 目标
-- 模块化支持
-
 ## 📄 许可证
 
 本项目采用 MIT 许可证 - 查看 [LICENSE](LICENSE) 文件了解详情。
-
-## 🙏 致谢
-
-- [Scripting App](https://apps.apple.com/app/scripting/id1471239139) - 强大的 iOS 脚本开发平台
-- React 社区 - TSX 语法灵感来源
-- SwiftUI - 原生 iOS 组件设计理念

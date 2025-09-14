@@ -48,14 +48,16 @@ li + li {
           </ol>
         </div>
       </div>
-      <input type="file" accept="image/*" placeholder="选择屏幕截图">
+      <input id="screenshotInput" type="file" accept="image/*" placeholder="选择屏幕截图">
       <div><samp style="color:red"></samp></div>
       <pre><code></code></pre>
     </main>
     <script module="">
-			const input = document.querySelector("input");
+      window.onerror = function(e) { 
+        alert('脚本运行出错，请截图并联系作者' + String(e));
+      }
+			const input = document.getElementById("screenshotInput");
       const pre = document.querySelector('pre');
-			window.widgetSize;
 
       const appendItem = (text) => {
         const div = document.createElement('div')
@@ -63,10 +65,15 @@ li + li {
         pre.appendChild(div)
         return div
       }
-			
-      window.run = async () => {
-      const { promise, resolve, reject } = Promise.withResolvers();
-      input.addEventListener("input", (e) => {
+
+      var resolve, reject;
+
+      var promise = new Promise((res, rej) => {
+        resolve = res;
+        reject = rej;
+      });
+
+      input.onchange = (e) => {
         const file = e.target.files[0];
         const image = new Image();
         image.onload = () => {
@@ -215,10 +222,11 @@ li + li {
         };
         reader.readAsDataURL(file);
         
-      });
-		return promise;
-      }
-	 run()
+      };
+
+      window.run = () => {
+        return Promise.resolve(promise);
+      };
     </script>
 
 </body></html>`
@@ -227,5 +235,6 @@ export const calculateCropCoordinates = async () => {
   const web = new WebViewController()
   web.present()
   await web.loadHTML(html)
-  return await web.evaluateJavaScript<string>('return window.run()')
+  const result = await web.evaluateJavaScript<string>('return window.run()')
+  return result
 }
