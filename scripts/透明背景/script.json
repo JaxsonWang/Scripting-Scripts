@@ -4,7 +4,7 @@
   "name": "透明背景",
   "icon": "photo.fill",
   "intentInputTypes": [],
-  "version": "1.0.1",
+  "version": "1.0.2",
   "changelog": [
     "修复 iOS26 版本无法生成坐标的问题"
   ],

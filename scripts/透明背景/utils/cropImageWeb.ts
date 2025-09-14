@@ -9,30 +9,30 @@
  * @returns Promise<string> - 返回裁剪后的 Base64 图片数据
  */
 const cropImage = (base64Image: string, x: number, y: number, width: number, height: number): Promise<string> => {
-  const { promise, resolve, reject } = Promise.withResolvers<string>()
-  // @ts-ignore - 在 WebViewController 的浏览器环境中执行，Image 可用
-  const img = new Image()
+  return new Promise<string>((resolve, reject) => {
+    // @ts-ignore - 在 WebViewController 的浏览器环境中执行，Image 可用
+    const img = new Image()
 
-  img.onload = (): void => {
-    // @ts-ignore - 在 WebViewController 的浏览器环境中执行，document 可用
-    const canvas = document.createElement('canvas')
-    // @ts-ignore - 在 WebViewController 的浏览器环境中执行，canvas.getContext 可用
-    const ctx = canvas.getContext('2d')
+    img.onload = (): void => {
+      // @ts-ignore - 在 WebViewController 的浏览器环境中执行，document 可用
+      const canvas = document.createElement('canvas')
+      // @ts-ignore - 在 WebViewController 的浏览器环境中执行，canvas.getContext 可用
+      const ctx = canvas.getContext('2d')
 
-    if (!ctx) {
-      reject(new Error('无法获取 Canvas 2D 上下文'))
-      return
+      if (!ctx) {
+        reject(new Error('无法获取 Canvas 2D 上下文'))
+        return
+      }
+
+      Object.assign(canvas, { width, height })
+      ctx.drawImage(img, x, y, width, height, 0, 0, width, height)
+      const base64Result = canvas.toDataURL('image/jpeg').replace(/^data:image\/jpeg;base64,/, '')
+      resolve(base64Result)
     }
 
-    Object.assign(canvas, { width, height })
-    ctx.drawImage(img, x, y, width, height, 0, 0, width, height)
-    const base64Result = canvas.toDataURL('image/jpeg').replace(/^data:image\/jpeg;base64,/, '')
-    resolve(base64Result)
-  }
-
-  img.onerror = (): void => reject(new Error('图片加载失败'))
-  img.src = base64Image
-  return promise
+    img.onerror = (): void => reject(new Error('图片加载失败'))
+    img.src = base64Image
+  })
 }
 
 /**
