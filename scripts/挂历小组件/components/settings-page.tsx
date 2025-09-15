@@ -155,7 +155,7 @@ export const SettingsPage = () => {
             </Text>
           }
         >
-          <VStack navigationTitle="背景图路径">
+          <VStack>
             <TextField
               title="背景图片路径"
               value={bgPath}

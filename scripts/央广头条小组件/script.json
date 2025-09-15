@@ -1,0 +1,22 @@
+{
+  "color": "systemRed",
+  "icon": "newspaper.fill",
+  "runInApp": false,
+  "intentInputTypes": [],
+  "name": "央广头条小组件",
+  "description": "在桌面随时了解央广网最新头条新闻",
+  "version": "1.0.0",
+  "changelog": [
+    "初始版本发布",
+    "支持小号、中号、大号小组件",
+    "支持透明背景和字体个性化",
+    "支持自动刷新功能",
+    "点击新闻可打开详情链接"
+  ],
+  "author": "淮城一只猫",
+  "remoteResource": {
+    "autoUpdateInterval": 86400,
+    "url": "https://joiner.i95.me/scripting/央广头条小组件.scripting",
+    "hash": "00783b94652970dc0250169d974fa77b"
+  }
+}
