@@ -194,6 +194,9 @@ const MediumWidget = ({ data }: { data: WidgetData }) => {
             <GridRow key={row.weekIndex}>
               {row.cells.map(cell => {
                 const cellStyle = getCellStyle(cell, settings, getActualColor)
+                // 获取工作状态（只对当前月份的日期显示）
+                const workStatus = cell.isCurrentMonth && cell.workStatus ? cell.workStatus : null
+
                 return (
                   <VStack
                     key={cell.key}
@@ -206,9 +209,28 @@ const MediumWidget = ({ data }: { data: WidgetData }) => {
                     }
                     gridCellAnchor="center"
                   >
-                    <Text font={10} foregroundStyle={cellStyle.foregroundStyle} fontWeight={cellStyle.fontWeight}>
-                      {cell.day}
-                    </Text>
+                    <VStack
+                      spacing={0}
+                      alignment="center"
+                      overlay={{
+                        alignment: 'topTrailing',
+                        content: workStatus ? (
+                          <Circle
+                            offset={{ x: 2, y: -1 }}
+                            fill={workStatus === 'work' ? calendarSettings.workColor : calendarSettings.haltColor}
+                            frame={{ width: 3, height: 3 }}
+                          />
+                        ) : (
+                          <></>
+                        )
+                      }}
+                    >
+                      <HStack spacing={0} alignment="center">
+                        <Text font={10} foregroundStyle={cellStyle.foregroundStyle} fontWeight={cellStyle.fontWeight}>
+                          {cell.day}
+                        </Text>
+                      </HStack>
+                    </VStack>
                     {/* 显示内容：优先级为 事件 > 节气 > 农历日期 */}
                     {cell.isCurrentMonth && cell.displayText ? (
                       <Text font={8} foregroundStyle={cell.isToday ? 'white' : cell.displayColor} fontWeight={cell.fontWeight}>
@@ -350,6 +372,9 @@ const LargeWidget = ({ data }: { data: WidgetData }) => {
             <GridRow key={row.weekIndex}>
               {row.cells.map(cell => {
                 const cellStyle = getCellStyle(cell, settings, getActualColor)
+                // 获取工作状态（只对当前月份的日期显示）
+                const workStatus = cell.isCurrentMonth && cell.workStatus ? cell.workStatus : null
+
                 return (
                   <VStack
                     key={cell.key}
@@ -361,9 +386,28 @@ const LargeWidget = ({ data }: { data: WidgetData }) => {
                     }
                     gridCellAnchor="center"
                   >
-                    <Text font="caption" foregroundStyle={cellStyle.foregroundStyle} fontWeight={cellStyle.fontWeight}>
-                      {cell.day}
-                    </Text>
+                    <VStack
+                      spacing={0}
+                      alignment="center"
+                      overlay={{
+                        alignment: 'topTrailing',
+                        content: workStatus ? (
+                          <Circle
+                            offset={{ x: 3, y: -2 }}
+                            fill={workStatus === 'work' ? calendarSettings.workColor : calendarSettings.haltColor}
+                            frame={{ width: 5, height: 5 }}
+                          />
+                        ) : (
+                          <></>
+                        )
+                      }}
+                    >
+                      <HStack spacing={0} alignment="center">
+                        <Text font="caption" foregroundStyle={cellStyle.foregroundStyle} fontWeight={cellStyle.fontWeight}>
+                          {cell.day}
+                        </Text>
+                      </HStack>
+                    </VStack>
                     {/* 显示内容：优先级为 事件 > 节气 > 农历日期 */}
                     {cell.isCurrentMonth && cell.displayText ? (
                       <Text font="caption2" foregroundStyle={cell.isToday ? 'white' : cell.displayColor} fontWeight={cell.fontWeight}>

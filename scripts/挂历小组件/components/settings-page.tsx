@@ -1,7 +1,8 @@
-import { Button, ColorPicker, List, Navigation, NavigationStack, Picker, Section, Text, TextField, VStack, useState } from 'scripting'
+import { Button, ColorPicker, Form, HStack, List, Navigation, NavigationStack, Picker, Section, Spacer, Text, TextField, VStack, useState } from 'scripting'
 import type { Color } from 'scripting'
 import { createStorageManager } from '../utils/storage'
-import { getCurrentSettings as getCalendarSettings, saveSettings as saveCalendarSettings } from '../utils/calendar-service'
+import { SettingsManager, getCurrentSettings as getCalendarSettings, saveSettings as saveCalendarSettings } from '../utils/calendar-service'
+import type { FieldReplaceRule } from '../utils/calendar-service'
 
 /**
  * 设置数据类型
@@ -78,6 +79,14 @@ export const SettingsPage = () => {
   const [bgPath, setBgPath] = useState<string>(() => calendarSettings.bgPath ?? '')
   const [lightModeColor, setLightModeColor] = useState<Color>(() => calendarSettings.lightModeColor || '#000000')
   const [darkModeColor, setDarkModeColor] = useState<Color>(() => calendarSettings.darkModeColor || '#FFFFFF')
+  const [workColor, setWorkColor] = useState<Color>(() => calendarSettings.workColor || '#666666')
+  const [haltColor, setHaltColor] = useState<Color>(() => calendarSettings.haltColor || '#00CC00')
+
+  // 字段替换规则状态
+  const [fieldReplaceRules, setFieldReplaceRules] = useState<FieldReplaceRule[]>(() => SettingsManager.getFieldReplaceRules())
+  const [showAddRuleModal, setShowAddRuleModal] = useState<boolean>(false)
+  const [newSearchText, setNewSearchText] = useState<string>('')
+  const [newReplaceText, setNewReplaceText] = useState<string>('')
 
   // 更新设置的通用函数
   const updateSetting = <K extends keyof SettingsData>(key: K, value: SettingsData[K]) => {
@@ -137,6 +146,28 @@ export const SettingsPage = () => {
     updateCalendarSettings(newSettings)
   }
 
+  // 字段替换规则处理函数
+  const handleAddFieldReplaceRule = () => {
+    if (newSearchText.trim()) {
+      SettingsManager.addFieldReplaceRule(newSearchText, newReplaceText)
+      setFieldReplaceRules(SettingsManager.getFieldReplaceRules())
+      setNewSearchText('')
+      setNewReplaceText('')
+      setShowAddRuleModal(false)
+    }
+  }
+
+  const handleCancelAddRule = () => {
+    setNewSearchText('')
+    setNewReplaceText('')
+    setShowAddRuleModal(false)
+  }
+
+  const handleRemoveFieldReplaceRule = (ruleId: string) => {
+    SettingsManager.removeFieldReplaceRule(ruleId)
+    setFieldReplaceRules(SettingsManager.getFieldReplaceRules())
+  }
+
   return (
     <NavigationStack>
       <List
@@ -172,13 +203,14 @@ export const SettingsPage = () => {
           header={<Text font="headline">字体个性化</Text>}
           footer={
             <Text font="footnote" foregroundStyle="secondaryLabel">
-              设置不同模式下的字体颜色，在各种背景下都清晰可见
+              设置不同模式下的字体颜色，在各种背景下都清晰可见。
             </Text>
           }
         >
           <ColorPicker title="浅色模式" value={lightModeColor} onChanged={handleLightModeColorChange} supportsOpacity={false} />
           <ColorPicker title="深色模式" value={darkModeColor} onChanged={handleDarkModeColorChange} supportsOpacity={false} />
         </Section>
+
         {/* 主调色设置 */}
         <Section header={<Text font="headline">主调色设置</Text>}>
           <Picker title="主调色" value={settings.primaryColor} onChanged={handleColorChange}>
@@ -195,6 +227,78 @@ export const SettingsPage = () => {
               <ColorPicker title="选择自定义颜色" value={settings.customColor} onChanged={handleCustomColorChange} supportsOpacity={false} />
             </VStack>
           ) : null}
+        </Section>
+
+        {/* 班/休标识颜色设置 */}
+        <Section
+          header={<Text font="headline">班/休标识设置</Text>}
+          footer={
+            <Text font="footnote" foregroundStyle="secondaryLabel">
+              在日历右上角小点颜色表示工作状态。
+            </Text>
+          }
+        >
+          <ColorPicker title="法定工作" value={workColor} onChanged={setWorkColor} supportsOpacity={false} />
+          <ColorPicker title="法定休假" value={haltColor} onChanged={setHaltColor} supportsOpacity={false} />
+        </Section>
+
+        {/* 字段替换规则设置 */}
+        <Section
+          header={<Text font="headline">日历事件字段替换</Text>}
+          footer={
+            <Text font="footnote" foregroundStyle="secondaryLabel">
+              设置字段替换规则，可以将日历事件标题中的特定文字替换为其他文字。{'\n'}
+              例如：将"节"替换为空，"国庆节"会显示为"国庆"。
+            </Text>
+          }
+        >
+          {/* 添加规则按钮 */}
+          <Button
+            title="添加规则"
+            action={() => setShowAddRuleModal(true)}
+            sheet={{
+              isPresented: showAddRuleModal,
+              onChanged: setShowAddRuleModal,
+              content: (
+                <NavigationStack>
+                  <Form
+                    navigationTitle="添加规则"
+                    navigationBarTitleDisplayMode="inline"
+                    toolbar={{
+                      topBarLeading: <Button title="取消" action={handleCancelAddRule} />,
+                      topBarTrailing: <Button title="保存" action={handleAddFieldReplaceRule} fontWeight="medium" />
+                    }}
+                  >
+                    <Section>
+                      <TextField title="搜索文字" value={newSearchText} onChanged={setNewSearchText} prompt="输入要替换的文字（不能为空）" />
+                    </Section>
+                    <Section>
+                      <TextField title="替换为" value={newReplaceText} onChanged={setNewReplaceText} prompt="输入替换后的文字（可以为空）" />
+                    </Section>
+                  </Form>
+                </NavigationStack>
+              )
+            }}
+          />
+
+          {/* 显示现有规则列表 */}
+          {fieldReplaceRules.length > 0 ? (
+            fieldReplaceRules.map(rule => (
+              <HStack key={rule.id}>
+                <Text>
+                  "{rule.searchText}" → "{rule.replaceText || '(删除)'}"
+                </Text>
+                <Spacer />
+                <Button title="删除" action={() => handleRemoveFieldReplaceRule(rule.id)} role="destructive" controlSize="small" />
+              </HStack>
+            ))
+          ) : (
+            <VStack padding={{ top: 16 }}>
+              <Text font="caption" foregroundStyle="secondaryLabel">
+                暂无替换规则，点击"添加规则"开始设置
+              </Text>
+            </VStack>
+          )}
         </Section>
       </List>
     </NavigationStack>

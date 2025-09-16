@@ -5,9 +5,10 @@
   "intentInputTypes": [],
   "name": "挂历小组件",
   "description": "在桌面显示日历和事件信息的挂历小组件",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "changelog": [
-    "添加对透明小组件支持"
+    "添加字典替换支持",
+    "添加班/休标识支持（右上角小点）"
   ],
   "remoteResource": {
     "autoUpdateInterval": 86400,

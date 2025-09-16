@@ -22,12 +22,36 @@ const STORAGE_KEYS = {
 }
 
 /**
+ * 字段替换规则类型
+ */
+export type FieldReplaceRule = {
+  id: string
+  searchText: string // 要搜索的文本（不能为空）
+  replaceText: string // 替换为的文本（可以为空）
+}
+
+/**
+ * 工作状态类型
+ */
+export type WorkStatus = 'work' | 'rest' | null
+
+/**
+ * 日历事件扩展数据类型（包含工作状态）
+ */
+export type CalendarEventWithStatus = CalendarEventData & {
+  workStatus: WorkStatus
+}
+
+/**
  * 默认设置
  */
 const DEFAULT_SETTINGS = {
   bgPath: '', // 透明背景图片路径
   lightModeColor: '#000000', // 浅色模式字体颜色
-  darkModeColor: '#FFFFFF' // 深色模式字体颜色
+  darkModeColor: '#FFFFFF', // 深色模式字体颜色
+  workColor: '#666666', // 工作状态颜色
+  haltColor: '#00CC00', // 休息状态颜色
+  fieldReplaceRules: [] as FieldReplaceRule[] // 字段替换规则
 }
 
 // 创建存储管理器实例
@@ -59,8 +83,8 @@ export type CalendarData = {
   currentYear: number
   daysInMonth: number
   firstDayOfWeek: number
-  upcomingEvents: CalendarEventData[]
-  currentMonthEvents: CalendarEventData[]
+  upcomingEvents: CalendarEventWithStatus[]
+  currentMonthEvents: CalendarEventWithStatus[]
 }
 
 /**
@@ -78,9 +102,43 @@ export function getFirstDayOfWeek(year: number, month: number): number {
 }
 
 /**
+ * 检测事件标题中的工作状态
+ */
+export function detectWorkStatus(title: string): WorkStatus {
+  // 检测班：支持全角和半角括号
+  if (title.includes('（班）') || title.includes('(班)')) {
+    return 'work'
+  }
+  // 检测休：支持全角和半角括号
+  if (title.includes('（休）') || title.includes('(休)')) {
+    return 'rest'
+  }
+  return null
+}
+
+/**
+ * 应用字段替换规则到文本
+ */
+export function applyFieldReplaceRules(text: string): string {
+  const settings = SettingsManager.getCurrentSettings()
+  const rules = settings.fieldReplaceRules || []
+
+  let result = text
+  for (const rule of rules) {
+    if (rule.searchText && rule.searchText.trim()) {
+      // 使用全局替换，替换所有匹配的文本
+      const regex = new RegExp(rule.searchText, 'g')
+      result = result.replace(regex, rule.replaceText || '')
+    }
+  }
+
+  return result
+}
+
+/**
  * 获取即将到来的日历事件
  */
-export async function getUpcomingEvents(daysAhead: number = 7): Promise<CalendarEventData[]> {
+export async function getUpcomingEvents(daysAhead: number = 7): Promise<CalendarEventWithStatus[]> {
   try {
     const startDate = new Date()
     const endDate = new Date()
@@ -95,18 +153,25 @@ export async function getUpcomingEvents(daysAhead: number = 7): Promise<Calendar
     // 转换为数据格式
     // 只取前5个事件
     return events
-      .map(event => ({
-        id: event.identifier,
-        title: event.title,
-        startDate: event.startDate,
-        endDate: event.endDate,
-        isAllDay: event.isAllDay,
-        location: event.location,
-        calendar: {
-          title: event.calendar?.title || '未知日历',
-          color: event.calendar?.color || '#007AFF'
-        }
-      }))
+      .map(event => {
+        const originalTitle = event.title
+        const processedTitle = applyFieldReplaceRules(originalTitle) // 应用字段替换规则
+        const workStatus = detectWorkStatus(originalTitle) // 检测工作状态（基于原始标题）
+
+        return {
+          id: event.identifier,
+          title: processedTitle,
+          startDate: event.startDate,
+          endDate: event.endDate,
+          isAllDay: event.isAllDay,
+          location: event.location,
+          calendar: {
+            title: event.calendar?.title || '未知日历',
+            color: event.calendar?.color || '#007AFF'
+          },
+          workStatus
+        } as CalendarEventWithStatus
+      })
       .sort((a, b) => a.startDate.getTime() - b.startDate.getTime())
       .slice(0, 5)
   } catch (error) {
@@ -118,7 +183,7 @@ export async function getUpcomingEvents(daysAhead: number = 7): Promise<Calendar
 /**
  * 获取当前月份的所有事件
  */
-export async function getCurrentMonthEvents(): Promise<CalendarEventData[]> {
+export async function getCurrentMonthEvents(): Promise<CalendarEventWithStatus[]> {
   try {
     const now = new Date()
     const startDate = new Date(now.getFullYear(), now.getMonth(), 1) // 月初
@@ -131,18 +196,25 @@ export async function getCurrentMonthEvents(): Promise<CalendarEventData[]> {
     const events = await CalendarEvent.getAll(startDate, endDate, calendars)
 
     // 转换为数据格式
-    return events.map(event => ({
-      id: event.identifier,
-      title: event.title,
-      startDate: event.startDate,
-      endDate: event.endDate,
-      isAllDay: event.isAllDay,
-      location: event.location,
-      calendar: {
-        title: event.calendar?.title || '未知日历',
-        color: event.calendar?.color || '#007AFF'
-      }
-    }))
+    return events.map(event => {
+      const originalTitle = event.title
+      const processedTitle = applyFieldReplaceRules(originalTitle) // 应用字段替换规则
+      const workStatus = detectWorkStatus(originalTitle) // 检测工作状态（基于原始标题）
+
+      return {
+        id: event.identifier,
+        title: processedTitle,
+        startDate: event.startDate,
+        endDate: event.endDate,
+        isAllDay: event.isAllDay,
+        location: event.location,
+        calendar: {
+          title: event.calendar?.title || '未知日历',
+          color: event.calendar?.color || '#007AFF'
+        },
+        workStatus
+      } as CalendarEventWithStatus
+    })
   } catch (error) {
     console.error('获取当前月份事件失败:', error)
     return []
@@ -152,7 +224,7 @@ export async function getCurrentMonthEvents(): Promise<CalendarEventData[]> {
 /**
  * 获取指定日期的事件
  */
-export function getEventsForDate(events: CalendarEventData[], date: Date): CalendarEventData[] {
+export function getEventsForDate(events: CalendarEventWithStatus[], date: Date): CalendarEventWithStatus[] {
   const targetDate = new Date(date.getFullYear(), date.getMonth(), date.getDate())
 
   return events.filter(event => {
@@ -162,6 +234,28 @@ export function getEventsForDate(events: CalendarEventData[], date: Date): Calen
     // 检查事件是否在当天或跨越当天
     return eventStartDate.getTime() <= targetDate.getTime() && eventEndDate.getTime() >= targetDate.getTime()
   })
+}
+
+/**
+ * 获取指定日期的工作状态
+ */
+export function getWorkStatusForDate(events: CalendarEventWithStatus[], date: Date): WorkStatus {
+  const dayEvents = getEventsForDate(events, date)
+
+  // 优先级：班 > 休
+  for (const event of dayEvents) {
+    if (event.workStatus === 'work') {
+      return 'work'
+    }
+  }
+
+  for (const event of dayEvents) {
+    if (event.workStatus === 'rest') {
+      return 'rest'
+    }
+  }
+
+  return null
 }
 
 /**
@@ -402,6 +496,59 @@ export const SettingsManager = {
       light: settings.lightModeColor || '#000000',
       dark: settings.darkModeColor || '#FFFFFF'
     }
+  },
+
+  /** 获取字段替换规则 */
+  getFieldReplaceRules: (): FieldReplaceRule[] => {
+    const settings = SettingsManager.getCurrentSettings()
+    return settings.fieldReplaceRules || []
+  },
+
+  /** 添加字段替换规则 */
+  addFieldReplaceRule: (searchText: string, replaceText: string): void => {
+    if (!searchText.trim()) return
+
+    const settings = SettingsManager.getCurrentSettings()
+    const rules = settings.fieldReplaceRules || []
+    const newRule: FieldReplaceRule = {
+      id: Date.now().toString(),
+      searchText: searchText.trim(),
+      replaceText: replaceText
+    }
+
+    const updatedSettings = {
+      ...settings,
+      fieldReplaceRules: [...rules, newRule]
+    }
+    SettingsManager.saveSettings(updatedSettings)
+  },
+
+  /** 删除字段替换规则 */
+  removeFieldReplaceRule: (ruleId: string): void => {
+    const settings = SettingsManager.getCurrentSettings()
+    const rules: FieldReplaceRule[] = settings.fieldReplaceRules || []
+    const updatedRules = rules.filter((rule: FieldReplaceRule) => rule.id !== ruleId)
+
+    const updatedSettings = {
+      ...settings,
+      fieldReplaceRules: updatedRules
+    }
+    SettingsManager.saveSettings(updatedSettings)
+  },
+
+  /** 更新字段替换规则 */
+  updateFieldReplaceRule: (ruleId: string, searchText: string, replaceText: string): void => {
+    if (!searchText.trim()) return
+
+    const settings = SettingsManager.getCurrentSettings()
+    const rules: FieldReplaceRule[] = settings.fieldReplaceRules || []
+    const updatedRules = rules.map((rule: FieldReplaceRule) => (rule.id === ruleId ? { ...rule, searchText: searchText.trim(), replaceText } : rule))
+
+    const updatedSettings = {
+      ...settings,
+      fieldReplaceRules: updatedRules
+    }
+    SettingsManager.saveSettings(updatedSettings)
   }
 }
 

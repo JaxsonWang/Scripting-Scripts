@@ -1,8 +1,8 @@
-import { getEventsForDate } from './calendar-service'
+import { getEventsForDate, getWorkStatusForDate } from './calendar-service'
 import { getLunarInfoForDate } from './lunar-calendar'
 
 import type { Color, FontWeight, ShapeStyle } from 'scripting'
-import type { CalendarData } from './calendar-service'
+import type { CalendarData, WorkStatus } from './calendar-service'
 
 /**
  * 日历单元格显示信息
@@ -11,6 +11,7 @@ export interface CellDisplayInfo {
   displayText: string
   displayColor: ShapeStyle
   fontWeight: FontWeight
+  workStatus: WorkStatus // 工作状态
 }
 
 /**
@@ -54,13 +55,16 @@ export const calculateCellDisplayInfo = (calendar: CalendarData, cell: { day: nu
   const dayEvents = getEventsForDate(calendar.currentMonthEvents, cellDate)
   const primaryEvent = dayEvents.length > 0 ? dayEvents[0] : null // 取第一个事件作为主要事件
 
+  // 获取工作状态
+  const workStatus = getWorkStatusForDate(calendar.currentMonthEvents, cellDate)
+
   // 根据优先级确定显示内容：事件 > 节气 > 农历日期
   let displayText = lunarInfo.dayName // 默认显示农历日期
   let displayColor = 'tertiaryLabel' as ShapeStyle
   let fontWeight = 'regular' as FontWeight
 
-  if (primaryEvent) {
-    // 最高优先级：事件
+  if (primaryEvent && !primaryEvent.workStatus) {
+    // 最高优先级：事件（但排除有工作状态标识的事件，这些只显示点点）
     displayText = primaryEvent.title.replace(/节/g, '')
     // 事件颜色使用固定的系统颜色，因为目前不支持自定义颜色
     displayColor = primaryEvent.calendar.color
@@ -75,7 +79,8 @@ export const calculateCellDisplayInfo = (calendar: CalendarData, cell: { day: nu
   return {
     displayText,
     displayColor,
-    fontWeight
+    fontWeight,
+    workStatus
   }
 }
 
