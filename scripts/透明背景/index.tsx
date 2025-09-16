@@ -155,12 +155,24 @@ const App = () => {
 
           <Button
             action={async () => {
-              const [photo] = await Photos.pickPhotos(1)
-              const base64 = Data.fromJPEG(photo, 0.5)?.toBase64String()
-              setConfig({
-                ...config,
-                photo: `data:image/jpeg;base64,${base64}`
-              })
+              try {
+                const photos = await Photos.pickPhotos(1)
+                const photo = photos?.[0]
+
+                if (photo !== null) {
+                  const base64 = Data.fromJPEG(photo, 0.5)?.toBase64String()
+                  if (base64) {
+                    setConfig({
+                      ...config,
+                      photo: `data:image/jpeg;base64,${base64}`
+                    })
+                  }
+                } else {
+                  console.log('用户取消了选择图片')
+                }
+              } catch (error) {
+                console.log('选择图片时发生错误:', error)
+              }
             }}
           >
             <HStack>

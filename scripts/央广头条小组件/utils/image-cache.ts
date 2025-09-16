@@ -1,4 +1,4 @@
-import { Path, fetch } from 'scripting'
+import { fetch } from 'scripting'
 import { createStorageManager } from './storage'
 
 // 图片缓存存储管理
@@ -28,23 +28,39 @@ const CACHE_CONFIG = {
 }
 
 /**
- * 图片缓存管理器
+ * 图片缓存管理类
  */
 export class ImageCacheManager {
-  private static readonly CACHE_EXPIRE_DAYS = 7 // 缓存过期天数
+  /**
+   * 初始化缓存目录
+   */
+  private static async initCacheDirectory(): Promise<void> {
+    try {
+      await FileManager.createDirectory(CACHE_CONFIG.cacheDirectory, true)
+    } catch (error) {
+      console.error('创建缓存目录失败:', error)
+    }
+  }
 
   /**
-   * 获取缓存目录路径
+   * 获取图片缓存元数据
    */
-  private static getCacheDirectory(): string {
-    return CACHE_CONFIG.cacheDirectory
+  private static getImageMetadata(): Record<string, ImageCacheMetadata> {
+    return cacheStorageManager.storage.get<Record<string, ImageCacheMetadata>>(CACHE_STORAGE_KEYS.IMAGE_METADATA) || {}
+  }
+
+  /**
+   * 保存图片缓存元数据
+   */
+  private static saveImageMetadata(metadata: Record<string, ImageCacheMetadata>): void {
+    cacheStorageManager.storage.set(CACHE_STORAGE_KEYS.IMAGE_METADATA, metadata)
   }
 
   /**
    * 生成缓存文件名
    */
   private static generateCacheFileName(url: string): string {
-    // 使用URL的hash作为文件名，避免特殊字符
+    // 使用URL的hash作为文件名，避免特殊字符问题
     const hash = url.split('').reduce((a, b) => {
       a = (a << 5) - a + b.charCodeAt(0)
       return a & a
@@ -58,97 +74,182 @@ export class ImageCacheManager {
   }
 
   /**
-   * 获取缓存的图片路径
+   * 检查缓存是否有效（基于URL匹配，不再使用时间过期）
    */
-  static async getCachedImagePath(imageUrl: string): Promise<string | null> {
+  private static isCacheValid(metadata: ImageCacheMetadata, currentUrl: string): boolean {
+    return metadata.url === currentUrl
+  }
+
+  /**
+   * 获取缓存大小
+   */
+  private static async getCacheSize(): Promise<number> {
     try {
-      const fileName = ImageCacheManager.generateCacheFileName(imageUrl)
-      const cacheDir = ImageCacheManager.getCacheDirectory()
-      const filePath = Path.join(cacheDir, fileName)
+      const metadata = this.getImageMetadata()
+      return Object.values(metadata).reduce((total, item) => total + item.fileSize, 0)
+    } catch (error) {
+      console.error('获取缓存大小失败:', error)
+      return 0
+    }
+  }
 
-      // 检查文件是否存在
-      try {
-        await FileManager.stat(filePath)
-        // 检查缓存是否过期
-        const cacheInfo = cacheStorageManager.storage.get<any>(`cache_${fileName}`)
-        if (cacheInfo) {
-          const cacheTime = new Date(cacheInfo.timestamp)
-          const now = new Date()
-          const daysDiff = (now.getTime() - cacheTime.getTime()) / (1000 * 60 * 60 * 24)
+  /**
+   * 清理无效缓存（文件不存在的缓存记录）
+   */
+  private static async cleanupInvalidCache(): Promise<void> {
+    try {
+      const metadata = this.getImageMetadata()
+      const updatedMetadata: Record<string, ImageCacheMetadata> = {}
 
-          if (daysDiff < ImageCacheManager.CACHE_EXPIRE_DAYS) {
-            console.log(`使用缓存图片: ${fileName}`)
-            return filePath
-          } else {
-            // 缓存过期，删除文件
-            await FileManager.remove(filePath)
-            cacheStorageManager.storage.remove(`cache_${fileName}`)
-          }
+      for (const [key, item] of Object.entries(metadata)) {
+        // 检查文件是否仍然存在
+        try {
+          await FileManager.stat(item.localPath)
+          updatedMetadata[key] = item
+        } catch {
+          // 文件不存在，从元数据中移除
+          console.log('清理不存在的缓存文件记录:', item.localPath)
         }
-      } catch {
-        // 文件不存在，继续下载
       }
 
-      // 下载并缓存图片
-      return await ImageCacheManager.downloadAndCacheImage(imageUrl, fileName)
+      this.saveImageMetadata(updatedMetadata)
     } catch (error) {
-      console.error('获取缓存图片失败:', error)
-      return null
+      console.error('清理无效缓存失败:', error)
+    }
+  }
+
+  /**
+   * 清理最旧的缓存文件（当缓存空间不足时）
+   */
+  private static async cleanupOldestCache(targetSize: number): Promise<void> {
+    try {
+      const metadata = this.getImageMetadata()
+      const sortedItems = Object.entries(metadata).sort(([, a], [, b]) => a.cachedAt - b.cachedAt)
+
+      let currentSize = await this.getCacheSize()
+      const updatedMetadata = { ...metadata }
+
+      for (const [key, item] of sortedItems) {
+        if (currentSize <= targetSize) break
+
+        try {
+          await FileManager.remove(item.localPath)
+          delete updatedMetadata[key]
+          currentSize -= item.fileSize
+          console.log('清理最旧缓存:', item.localPath)
+        } catch (error) {
+          console.error('删除缓存文件失败:', error)
+        }
+      }
+
+      this.saveImageMetadata(updatedMetadata)
+    } catch (error) {
+      console.error('清理最旧缓存失败:', error)
     }
   }
 
   /**
    * 下载并缓存图片
    */
-  private static async downloadAndCacheImage(imageUrl: string, fileName: string): Promise<string | null> {
+  private static async downloadAndCacheImage(url: string, localPath: string): Promise<ImageCacheMetadata | null> {
     try {
-      // console.log(`下载图片: ${imageUrl}`)
+      console.log('开始下载图片:', url)
 
-      const response = await fetch(imageUrl)
+      const response = await fetch(url)
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`)
       }
 
       const imageData = await response.arrayBuffer()
-      const cacheDir = ImageCacheManager.getCacheDirectory()
+      const uint8Array = new Uint8Array(imageData)
 
-      // 确保缓存目录存在
-      await FileManager.createDirectory(cacheDir, true)
+      // 保存图片到本地
+      await FileManager.writeAsBytes(localPath, uint8Array)
 
-      const filePath = Path.join(cacheDir, fileName)
+      // 获取文件信息
+      const stat = await FileManager.stat(localPath)
+      const mimeType = FileManager.mimeType(localPath)
+      const etag = response.headers.get('etag') || undefined
 
-      // 写入文件
-      await FileManager.writeAsBytes(filePath, new Uint8Array(imageData))
-
-      // 保存缓存信息
-      const cacheInfo = {
-        url: imageUrl,
-        timestamp: new Date().toISOString(),
-        fileName: fileName
+      const metadata: ImageCacheMetadata = {
+        url,
+        localPath,
+        cachedAt: Date.now(),
+        fileSize: stat.size,
+        mimeType,
+        etag
       }
-      cacheStorageManager.storage.set(`cache_${fileName}`, cacheInfo)
 
-      console.log(`图片缓存成功: ${fileName}`)
-
-      // 清理过期缓存
-      ImageCacheManager.cleanExpiredCache()
-
-      return filePath
+      console.log('图片下载并缓存成功:', localPath)
+      return metadata
     } catch (error) {
-      console.error('下载并缓存图片失败:', error)
+      console.error('下载图片失败:', error)
       return null
     }
   }
 
   /**
-   * 清理过期缓存
+   * 获取缓存的图片路径，如果URL变化或不存在则下载并缓存
    */
-  private static cleanExpiredCache(): void {
+  static async getCachedImagePath(url: string): Promise<string | null> {
+    if (!url) return null
+
     try {
-      // Storage没有allKeys方法，这里简化处理
-      console.log('缓存清理功能暂不可用')
+      // 初始化缓存目录
+      await this.initCacheDirectory()
+
+      // 清理无效缓存
+      await this.cleanupInvalidCache()
+
+      const metadata = this.getImageMetadata()
+      const cacheKey = url
+      const cachedItem = metadata[cacheKey]
+
+      // 检查是否有有效缓存（URL匹配且文件存在）
+      if (cachedItem && this.isCacheValid(cachedItem, url)) {
+        try {
+          // 验证文件是否存在
+          await FileManager.stat(cachedItem.localPath)
+          console.log('使用缓存图片:', cachedItem.localPath)
+          return cachedItem.localPath
+        } catch {
+          // 文件不存在，从元数据中移除
+          delete metadata[cacheKey]
+          this.saveImageMetadata(metadata)
+        }
+      } else if (cachedItem && !this.isCacheValid(cachedItem, url)) {
+        // URL已变化，删除旧缓存
+        console.log('URL已变化，删除旧缓存:', cachedItem.localPath)
+        try {
+          await FileManager.remove(cachedItem.localPath)
+        } catch (error) {
+          console.error('删除旧缓存失败:', error)
+        }
+        delete metadata[cacheKey]
+        this.saveImageMetadata(metadata)
+      }
+
+      // 检查缓存空间
+      const currentCacheSize = await this.getCacheSize()
+      if (currentCacheSize > CACHE_CONFIG.maxCacheSize * CACHE_CONFIG.cleanupThreshold) {
+        await this.cleanupOldestCache(CACHE_CONFIG.maxCacheSize * 0.5) // 清理到50%
+      }
+
+      // 下载并缓存新图片
+      const fileName = this.generateCacheFileName(url)
+      const localPath = CACHE_CONFIG.cacheDirectory + '/' + fileName
+
+      const newMetadata = await this.downloadAndCacheImage(url, localPath)
+      if (newMetadata) {
+        metadata[cacheKey] = newMetadata
+        this.saveImageMetadata(metadata)
+        return localPath
+      }
+
+      return null
     } catch (error) {
-      console.error('清理缓存失败:', error)
+      console.error('获取缓存图片失败:', error)
+      return null
     }
   }
 
@@ -157,17 +258,53 @@ export class ImageCacheManager {
    */
   static async clearAllCache(): Promise<void> {
     try {
-      const cacheDir = ImageCacheManager.getCacheDirectory()
-      try {
-        await FileManager.stat(cacheDir)
-        await FileManager.remove(cacheDir)
-      } catch {
-        // 目录不存在，忽略
+      const metadata = this.getImageMetadata()
+
+      // 删除所有缓存文件
+      for (const item of Object.values(metadata)) {
+        try {
+          await FileManager.remove(item.localPath)
+        } catch (error) {
+          console.error('删除缓存文件失败:', error)
+        }
       }
-      cacheStorageManager.clearAllStorageData(true)
-      console.log('所有图片缓存已清空')
+
+      // 清空元数据
+      this.saveImageMetadata({})
+
+      console.log('已清空所有图片缓存')
     } catch (error) {
       console.error('清空缓存失败:', error)
+    }
+  }
+
+  /**
+   * 获取缓存统计信息
+   */
+  static async getCacheStats(): Promise<{
+    totalFiles: number
+    totalSize: number
+    oldestCache: number
+    newestCache: number
+  }> {
+    try {
+      const metadata = this.getImageMetadata()
+      const items = Object.values(metadata)
+
+      if (items.length === 0) {
+        return { totalFiles: 0, totalSize: 0, oldestCache: 0, newestCache: 0 }
+      }
+
+      const totalFiles = items.length
+      const totalSize = items.reduce((sum, item) => sum + item.fileSize, 0)
+      const cacheTimes = items.map(item => item.cachedAt)
+      const oldestCache = Math.min(...cacheTimes)
+      const newestCache = Math.max(...cacheTimes)
+
+      return { totalFiles, totalSize, oldestCache, newestCache }
+    } catch (error) {
+      console.error('获取缓存统计失败:', error)
+      return { totalFiles: 0, totalSize: 0, oldestCache: 0, newestCache: 0 }
     }
   }
 }
