@@ -79,7 +79,7 @@ export const SettingsPage = () => {
   const [bgPath, setBgPath] = useState<string>(() => calendarSettings.bgPath ?? '')
   const [lightModeColor, setLightModeColor] = useState<Color>(() => calendarSettings.lightModeColor || '#000000')
   const [darkModeColor, setDarkModeColor] = useState<Color>(() => calendarSettings.darkModeColor || '#FFFFFF')
-  const [workColor, setWorkColor] = useState<Color>(() => calendarSettings.workColor || '#666666')
+  const [workColor, setWorkColor] = useState<Color>(() => calendarSettings.workColor || '#999999')
   const [haltColor, setHaltColor] = useState<Color>(() => calendarSettings.haltColor || '#00CC00')
 
   // 字段替换规则状态
@@ -143,6 +143,20 @@ export const SettingsPage = () => {
   const handleDarkModeColorChange = (color: Color) => {
     setDarkModeColor(color)
     const newSettings = { ...calendarSettings, darkModeColor: color }
+    updateCalendarSettings(newSettings)
+  }
+
+  // 处理法定工作颜色变化
+  const handleWorkColorChange = (color: Color) => {
+    setWorkColor(color)
+    const newSettings = { ...calendarSettings, workColor: color }
+    updateCalendarSettings(newSettings)
+  }
+
+  // 处理法定休假颜色变化
+  const handleHaltColorChange = (color: Color) => {
+    setHaltColor(color)
+    const newSettings = { ...calendarSettings, haltColor: color }
     updateCalendarSettings(newSettings)
   }
 
@@ -238,8 +252,8 @@ export const SettingsPage = () => {
             </Text>
           }
         >
-          <ColorPicker title="法定工作" value={workColor} onChanged={setWorkColor} supportsOpacity={false} />
-          <ColorPicker title="法定休假" value={haltColor} onChanged={setHaltColor} supportsOpacity={false} />
+          <ColorPicker title="法定工作" value={workColor} onChanged={handleWorkColorChange} supportsOpacity={false} />
+          <ColorPicker title="法定休假" value={haltColor} onChanged={handleHaltColorChange} supportsOpacity={false} />
         </Section>
 
         {/* 字段替换规则设置 */}

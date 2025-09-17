@@ -49,7 +49,7 @@ const DEFAULT_SETTINGS = {
   bgPath: '', // 透明背景图片路径
   lightModeColor: '#000000', // 浅色模式字体颜色
   darkModeColor: '#FFFFFF', // 深色模式字体颜色
-  workColor: '#666666', // 工作状态颜色
+  workColor: '#999999', // 工作状态颜色
   haltColor: '#00CC00', // 休息状态颜色
   fieldReplaceRules: [] as FieldReplaceRule[] // 字段替换规则
 }
