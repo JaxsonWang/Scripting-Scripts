@@ -8,10 +8,6 @@ lerna-debug.log*
 node_modules
 dist
 dist-ssr
-simple
-dts
-docs
-demo
 stats.html
 *.local
 .vscode/*

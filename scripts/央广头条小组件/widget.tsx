@@ -8,17 +8,20 @@ let newsData: NewsData | null = null
 /**
  * 新闻项目组件
  * @param props 组件属性
+ * @param props.key 索引下标
  * @param props.item 新闻项目
  * @param props.showTime 是否显示时间
  * @param props.size 组件尺寸，影响字体大小
  * @param props.alignment 文本对齐方式
  */
 const NewsItemComponent = ({
+  key,
   item,
   showTime = false,
   size = 'large',
   alignment = 'leading'
 }: {
+  key: number
   item: NewsItem
   showTime?: boolean
   size?: 'small' | 'medium' | 'large'
@@ -33,7 +36,7 @@ const NewsItemComponent = ({
       case 'small':
         return 14
       case 'medium':
-        return 15
+        return 14
       case 'large':
       default:
         return 16
@@ -56,7 +59,7 @@ const NewsItemComponent = ({
             alignment: alignment
           }}
         >
-          {item.title}
+          {Number(key) + 1}. {item.title}
         </Text>
         {showTime && item.time ? (
           <Text font={getTimeFont()} foregroundStyle="secondaryLabel">
@@ -109,26 +112,35 @@ const WidgetView = ({ data }: { data: NewsData }) => {
   switch (Widget.family) {
     case 'systemSmall': {
       // 小号小组件 - 显示1条新闻
-      const firstNews = data.items[0]
+      const newsToShow = data.items.slice(0, 2)
 
       return (
-        <VStack padding={8} alignment="center" background={getWidgetBg ? <Image filePath={getWidgetBg} resizable={true} scaleToFill={true} /> : undefined}>
-          <HStack spacing={4} alignment="center">
-            <Image systemName="newspaper.fill" font="title2" foregroundStyle="systemRed" />
-            <Text font="caption" fontWeight="bold" foregroundStyle={textColor}>
+        <VStack
+          padding={{ horizontal: 12, vertical: 10 }}
+          background={getWidgetBg ? <Image filePath={getWidgetBg} resizable={true} scaleToFill={true} /> : undefined}
+        >
+          <HStack spacing={4}>
+            <Image systemName="newspaper.fill" font={14} foregroundStyle="systemRed" />
+            <Text font={14} fontWeight="bold" foregroundStyle={textColor}>
               央广头条
+            </Text>
+            <Spacer />
+            <Text font={10} foregroundStyle="secondaryLabel">
+              {data.source}
             </Text>
           </HStack>
 
           <Spacer />
 
-          <VStack alignment="center">
-            <NewsItemComponent item={firstNews} size="small" alignment="center" />
+          <VStack spacing={4} alignment="leading">
+            {newsToShow.map((item, index) => (
+              <NewsItemComponent key={index} item={item} size="small" />
+            ))}
           </VStack>
 
           <Spacer />
 
-          <Text font="caption2" foregroundStyle="secondaryLabel">
+          <Text font={10} foregroundStyle="secondaryLabel">
             {data.lastUpdated}
           </Text>
         </VStack>
@@ -141,7 +153,45 @@ const WidgetView = ({ data }: { data: NewsData }) => {
 
       return (
         <VStack
-          padding={{ horizontal: 12, vertical: 8 }}
+          padding={{ horizontal: 12, vertical: 12 }}
+          background={getWidgetBg ? <Image filePath={getWidgetBg} resizable={true} scaleToFill={true} /> : undefined}
+        >
+          <HStack spacing={4}>
+            <Image systemName="newspaper.fill" font="body" foregroundStyle="systemRed" />
+            <Text font="body" fontWeight="bold" foregroundStyle={textColor}>
+              央广头条
+            </Text>
+            <Spacer />
+            <Text font="caption2" foregroundStyle="secondaryLabel">
+              {data.source}
+            </Text>
+          </HStack>
+
+          <Spacer />
+
+          <VStack spacing={1} alignment="leading">
+            {newsToShow.map((item, index) => (
+              <NewsItemComponent key={index} item={item} size="medium" />
+            ))}
+          </VStack>
+
+          <Spacer />
+
+          <Text font="caption2" foregroundStyle="secondaryLabel">
+            {data.lastUpdated}更新
+          </Text>
+        </VStack>
+      )
+    }
+
+    case 'systemLarge':
+    case 'systemExtraLarge': {
+      // 大号小组件 - 显示8条新闻
+      const newsToShow = data.items.slice(0, 8)
+
+      return (
+        <VStack
+          padding={{ horizontal: 12, vertical: 20 }}
           background={getWidgetBg ? <Image filePath={getWidgetBg} resizable={true} scaleToFill={true} /> : undefined}
         >
           <HStack spacing={4} alignment="center">
@@ -154,43 +204,10 @@ const WidgetView = ({ data }: { data: NewsData }) => {
               {data.source}
             </Text>
           </HStack>
+
           <Spacer />
+
           <VStack spacing={4} alignment="leading">
-            {newsToShow.map((item, index) => (
-              <NewsItemComponent key={index} item={item} size="medium" />
-            ))}
-          </VStack>
-          <Spacer />
-          <HStack alignment="center">
-            <Text font="caption2" foregroundStyle="secondaryLabel">
-              {data.lastUpdated}更新
-            </Text>
-          </HStack>
-        </VStack>
-      )
-    }
-
-    case 'systemLarge':
-    case 'systemExtraLarge': {
-      // 大号小组件 - 显示6条新闻
-      const newsToShow = data.items.slice(0, 8)
-
-      return (
-        <VStack padding={20} background={getWidgetBg ? <Image filePath={getWidgetBg} resizable={true} scaleToFill={true} /> : undefined}>
-          <HStack spacing={4} alignment="center">
-            <Image systemName="newspaper.fill" font="title2" foregroundStyle="systemRed" />
-            <Text font="title2" fontWeight="bold" foregroundStyle={textColor}>
-              央广头条
-            </Text>
-            <Spacer />
-            <Text font="caption" foregroundStyle="secondaryLabel">
-              {data.source}
-            </Text>
-          </HStack>
-
-          <Spacer />
-
-          <VStack spacing={8} alignment="leading">
             {newsToShow.map((item, index) => (
               <NewsItemComponent key={index} item={item} showTime={false} size="large" />
             ))}

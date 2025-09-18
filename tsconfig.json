@@ -16,7 +16,6 @@
     "jsx": "react",
     "jsxFactory": "createElement",
     "jsxFragmentFactory": "Fragment",
-    "allowImportingTsExtensions": true,
     "paths": {
       "scripting": [
         "./dts/scripting.d.ts"
@@ -25,12 +24,6 @@
   },
   "include": [
     "./dts/global.d.ts",
-    "scripts",
-    "simple",
-    "demo"
-  ],
-  "exclude": [
-    "simple",
-    "demo"
+    "scripts"
   ]
 }
