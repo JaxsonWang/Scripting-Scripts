@@ -73,7 +73,12 @@ declare global {
      */
     readonly const systemLocale: string
     /**
+     * User preferred languages, such as `["en-US", "zh-Hans-CN"]`.
+     */
+    readonly const preferredLanguages: string[]
+    /**
      * User preferred locales, such as `["en-US", "zh-Hans-CN"]`.
+     * @deprecated Use `Device.preferredLanguages` instead.
      */
     readonly const systemLocales: string[]
     /**
@@ -106,6 +111,22 @@ declare global {
   }
 
   /**
+   * This enum represents the compression algorithms that can be used to compress data.
+   * It is used in the `Data` class to specify the compression algorithm to use when compressing data.
+   * The values are:
+   * - `lzfse`: LZFSE compression algorithm, which is a fast and efficient compression algorithm.
+   * - `lz4`: LZ4 compression algorithm, which is a fast and efficient compression algorithm.
+   * - `lzma`: LZMA compression algorithm, which is a high compression ratio algorithm.
+   * - `zlib`: Zlib compression algorithm, which is a widely used compression algorithm.
+   */
+  enum CompressionAlgorithm {
+    lzfse = 0,
+    lz4 = 1,
+    lzma = 2,
+    zlib = 3
+  }
+
+  /**
    * This class represents the binary data, it provides some methods to convert the data to different formats.
    * It is used to represent the data in a more convenient way, such as converting to base64 or hex string, or reading from a file.
    */
@@ -114,6 +135,20 @@ declare global {
      * The length of the data in bytes.
      */
     readonly size: number
+    /**
+     * Use this method to compress in-memory data when you want to reduce memory usage and can afford the time to compress and decompress it. If your data object is already in a compressed format, such as media formats like JPEG images or AAC audio, additional compression may provide minimal or no reduction in memory usage.
+     * @param algorithm An algorithm used to compress the data.
+     * @returns Returns a new data object by compressing the data object’s bytes. 
+     * @throws an error if the data is empty or cannot be compressed.
+     */
+    compressed(algorithm: CompressionAlgorithm): Data
+    /**
+     * Use this method to inflate in-memory data when you need uncompressed bytes. Specify the same algorithm used to compress the data to successfully decompress it.
+     * @param algorithm An algorithm used to decompress the data.
+     * @returns Returns a new data object by decompressing the data object’s bytes.
+     * @throws an error if the data is empty or cannot be decompressed.
+     */
+    decompressed(algorithm: CompressionAlgorithm): Data
     /**
      * Get a sub-data from the data.
      * @param start The start index of the sub-data, defaults to 0.
@@ -354,21 +389,21 @@ declare global {
     function string(): string
   }
 
-  /**
-   * A module for hashing messages with MD5
-   * @deprecated
-   * Use `Crypto.md5` instead.
-   */
-  declare namespace MD5 {
-    /**
-     * Create a MD5 hash with hex encoding.
-     */
-    function hex(str: string): string
-    /**
-     * Create a MD5 hash with base64 encoding.
-     */
-    function base64(str: string): string
-  }
+  // /**
+  //  * A module for hashing messages with MD5
+  //  * @deprecated
+  //  * Use `Crypto.md5` instead.
+  //  */
+  // declare namespace MD5 {
+  //   /**
+  //    * Create a MD5 hash with hex encoding.
+  //    */
+  //   function hex(str: string): string
+  //   /**
+  //    * Create a MD5 hash with base64 encoding.
+  //    */
+  //   function base64(str: string): string
+  // }
 
   /**
    * UIImage instance for displaying or saving an Image.
@@ -613,47 +648,47 @@ declare global {
   /**
    * Haptic feedback provides a tactile response, such as a tap, that draws attention and reinforces both actions and events.
    */
-  declare class HapticFeedback {
+  declare namespace HapticFeedback {
     /**
      * Invoke a brief vibration.
      */
-    static vibrate(): void
+    function vibrate(): void
     /**
      * A collision between small, light user interface elements.
      */
-    static lightImpact(): void
+    function lightImpact(): void
     /**
      * A collision between moderately sized user interface elements.
      */
-    static mediumImpact(): void
+    function mediumImpact(): void
     /**
      * A collision between large, heavy user interface elements.
      */
-    static heavyImpact(): void
+    function heavyImpact(): void
     /**
      * A collision between user interface elements that are soft, exhibiting a large amount of compression or elasticity.
      */
-    static softImpact(): void
+    function softImpact(): void
     /**
      * A collision between user interface elements that are rigid, exhibiting a small amount of compression or elasticity.
      */
-    static rigidImpact(): void
+    function rigidImpact(): void
     /**
      * Triggers selection feedback. This method tells the generator that the user has changed a selection. In response, the generator may play the appropriate haptics. Don’t use this feedback when the user makes or confirms a selection; use it only when the selection changes.
      */
-    static selection(): void
+    function selection(): void
     /**
      * A notification feedback type that indicates a task has completed successfully.
      */
-    static notificationSuccess(): void
+    function notificationSuccess(): void
     /**
      * A notification feedback type that indicates a task has failed.
      */
-    static notificationError(): void
+    function notificationError(): void
     /**
      * A notification feedback type that indicates a task has produced a warning.
      */
-    static notificationWarning(): void
+    function notificationWarning(): void
   }
 
   /**
@@ -731,29 +766,29 @@ declare global {
   /**
    * Getting the current location of your device.
    */
-  declare class Location {
+  declare namespace Location {
 
     /**
      * A Boolean value that indicates whether a widget is eligible to receive location updates.
      */
-    static get isAuthorizedForWidgetUpdates(): Promise<boolean>
+    const isAuthorizedForWidgetUpdates: Promise<boolean>
 
     /**
      * Set the accuracy of the location data that your app wants to receive.
      */
-    static setAccuracy(accuracy: LocationAccuracy): Promise<void>
+    function setAccuracy(accuracy: LocationAccuracy): Promise<void>
     /**
      * Requests the one-time delivery of the user’s current location.
      */
-    static requestCurrent(): Promise<LocationInfo | null>
+    function requestCurrent(): Promise<LocationInfo | null>
     /**
      * Pick a location from the iOS built-in map.
      */
-    static pickFromMap(): Promise<LocationInfo | null>
+    function pickFromMap(): Promise<LocationInfo | null>
     /**
      * Submits a reverse-geocoding request for the specified location and locale.
      */
-    static reverseGeocode(options: {
+    function reverseGeocode(options: {
       /**
        * The latitude in degrees.
        */
@@ -795,90 +830,90 @@ declare global {
   /**
    * A convenient interface to the contents of the file system, and the primary means of interacting with it.
    */
-  declare class FileManager {
+  declare namespace FileManager {
     /**
      * Directory where scripts are stored.
      */
-    static get scriptsDirectory(): string
+    const scriptsDirectory: string
     /**
      * Wether the iCloud is enabled.
      * If you are not logged into iCloud, or have not authorized the Scripting app to use iCloud features,
      * this method will return false.
      */
-    static get isiCloudEnabled(): boolean
+    const isiCloudEnabled: boolean
     /**
      * Returns the path to iCloud's `Documents` directory, if iCloud is disabled,
      * this method would throw an error, you should use `isiCloudEnabled` to check it.
      */
-    static get iCloudDocumentsDirectory(): string
+    const iCloudDocumentsDirectory: string
     /**
      * Returns a boolean value indicating whether the file is targeted for storage in iCloud.
      * @param filePath The path of the file
      */
-    static isFileStoredIniCloud(filePath: string): boolean
+    function isFileStoredIniCloud(filePath: string): boolean
     /**
      * Returns a boolean value indicating whether the file is downloaded from iCloud.
      * @param filePath  The path of the file
      */
-    static isiCloudFileDownloaded(filePath: string): boolean
+    function isiCloudFileDownloaded(filePath: string): boolean
     /**
      * Download a iCloud file.
      * @param filePath The path of the file
      * @returns Returns a boolean value indicating whether the file was downloaded successful.
      */
-    static downloadFileFromiCloud(filePath: string): Promise<boolean>
+    function downloadFileFromiCloud(filePath: string): Promise<boolean>
     /**
      * Returns the path to shared `App Group Documents` directory.
      * Files stored in this directory will not appear in the Files app,
      * but the script running in Widget can access these files.
      */
-    static get appGroupDocumentsDirectory(): string
+    const appGroupDocumentsDirectory: string
     /**
      * Returns the path to `Documents` directory, documents stored in ths directory can be
      * accessed using Files app, the script running in Widget cannot access these files.
      */
-    static get documentsDirectory(): string
+    const documentsDirectory: string
     /**
      * Returns the path to the temporary directory.
      */
-    static get temporaryDirectory(): string
+    const temporaryDirectory: string
     /**
      * Returns the mime type of the file.
      * @param path The path of the file
      */
-    static mimeType(path: string): string
+    function mimeType(path: string): string
     /**
      * Returns destination of a symbolic link.
      * @param path The path of the symbolic link
      */
-    static destinationOfSymbolicLink(path: string): string
+    function destinationOfSymbolicLink(path: string): string
     /**
      * Generates a shareable URL for an iCloud file, allowing users to download the file. You need to use `try-catch` to handle the situation where this method call fails.
      * @param path The file path of the item in the cloud that you want to share. The path must be prefixed with the base path `FileManager.iCloudDocumentsDirectory` that corresponds to the item’s location. The file must be a flat file, not a bundle. The file at the specified path must already be uploaded to iCloud when you call this method.
      * @param expiration The expiration timestamp, you may ignore this parameter if you are not interested in the expiration date.
      */
-    static getShareUrlOfiCloudFile(path: string, expiration?: number): string
+    function getShareUrlOfiCloudFile(path: string, expiration?: number): string
     /**
      * Creates a directory at the specified path string.
      * @param path The path of the directory.
      * @param recursive If `true`, this method creates any nonexistent parent directories as part of creating the directory in path. If `false`, this method fails if any of the intermediate parent directories does not exist.
      */
-    static createDirectory(path: string, recursive?: boolean): Promise<void>
-    static createDirectorySync(path: string, recursive?: boolean): void
+    function createDirectory(path: string, recursive?: boolean): Promise<void>
+    function createDirectorySync(path: string, recursive?: boolean): void
     /**
      * Creates a symbolic link at the specified path that points to an item at the given path.
      * @param path The file path at which to create the new symbolic link. The last path component of the path issued as the name of the link.
      * @param target The file path that contains the item to be pointed to by the link. In other words, this is the destination of the link.
      */
-    static createLink(path: string, target: string): Promise<void>
-    static createLinkSync(path: string, target: string): void
+    function createLink(path: string, target: string): Promise<void>
+    function createLinkSync(path: string, target: string): void
     /**
      * Copies the item at the specified path to a new location synchronously.
      * @param path The path to the file or directory you want to move.
      * @param newPath The path at which to place the copy of `path`. This path must include the name of the file or directory in its new location.
      */
-    static copyFile(path: string, newPath: string): Promise<void>
-    static copyFileSync(path: string, newPath: string): void
+    function copyFile(path: string, newPath: string): Promise<void>
+    function copyFileSync(path: string, newPath: string): void
     /**
      * Performs a shallow search of the specified directory and returns the paths of any contained items.
      * Optionally recurses into sub-directories.
@@ -886,24 +921,24 @@ declare global {
      * @param recursive Whether recurses into sub-directories.
      * @returns The result is a list of string for the directories, files, and links.
      */
-    static readDirectory(path: string, recursive?: boolean): Promise<string[]>
-    static readDirectorySync(path: string, recursive?: boolean): string[]
+    function readDirectory(path: string, recursive?: boolean): Promise<string[]>
+    function readDirectorySync(path: string, recursive?: boolean): string[]
     /**
      * Returns a boolean value that indicates whether a file or directory exists at a specified path.
      * @param path The path of the file or directory
      */
-    static exists(path: string): Promise<boolean>
-    static existsSync(path: string): boolean
+    function exists(path: string): Promise<boolean>
+    function existsSync(path: string): boolean
     /**
      * Get path to a bookmarked file or folder.
      * @param name Name of a bookmark.
      */
-    static bookmarkExists(name: string): boolean
+    function bookmarkExists(name: string): boolean
     /**
      * Get all file bookmarks. File bookmarks are used to bookmark a file or a folder and read or write to it late in your script.
      * They can be created from File Bookmarks tool, they also were automatic created by Intent for Shortcuts app or Share Sheet.
      */
-    static getAllFileBookmarks(): Array<{
+    function getAllFileBookmarks(): Array<{
       /**
        * Name of the bookmark.
        */
@@ -917,64 +952,64 @@ declare global {
      * Try to get the path of a bookmarked file or folder by a given name, if the bookmark of the name is not exists, returns `null`.
      * @param name Name of a bookmark.
      */
-    static bookmarkedPath(name: string): string | null
+    function bookmarkedPath(name: string): string | null
     /**
      * Whether path refers to a file.
      */
-    static isFile(path: string): Promise<boolean>
-    static isFileSync(path: string): boolean
+    function isFile(path: string): Promise<boolean>
+    function isFileSync(path: string): boolean
     /**
      * Whether path refers to a directory.
      */
-    static isDirectory(path: string): Promise<boolean>
-    static isDirectorySync(path: string): boolean
-    static isLink(path: string): Promise<boolean>
-    static isLinkSync(path: string): boolean
+    function isDirectory(path: string): Promise<boolean>
+    function isDirectorySync(path: string): boolean
+    function isLink(path: string): Promise<boolean>
+    function isLinkSync(path: string): boolean
 
-    static isBinaryFileSync(path: string): boolean
-    static isBinaryFile(path: string): Promise<boolean>
+    function isBinaryFileSync(path: string): boolean
+    function isBinaryFile(path: string): Promise<boolean>
     /**
      * Reads the entire file contents as a string using the given `Encoding`.
      * @param path The path of the file
      * @param encoding
      * @returns String contents.
      */
-    static readAsString(path: string, encoding?: Encoding): Promise<string>
-    static readAsStringSync(path: string, encoding?: Encoding): string
+    function readAsString(path: string, encoding?: Encoding): Promise<string>
+    function readAsStringSync(path: string, encoding?: Encoding): string
     /**
      * Reads the entire file contents as a Uint8Array.
      * @param path The path of the file
      */
-    static readAsBytes(path: string): Promise<Uint8Array>
-    static readAsBytesSync(path: string): Uint8Array
+    function readAsBytes(path: string): Promise<Uint8Array>
+    function readAsBytesSync(path: string): Uint8Array
     /**
      * Reads the entire file contents as a Data object.
      * @param path The path of the file
      */
-    static readAsData(path: string): Promise<Data>
-    static readAsDataSync(path: string): Data
+    function readAsData(path: string): Promise<Data>
+    function readAsDataSync(path: string): Data
     /**
      * Writes a string to a file.
      * @param path The path of the file
      * @param contents String contents.
      * @param encoding
      */
-    static writeAsString(path: string, contents: string, encoding?: Encoding): Promise<void>
-    static writeAsStringSync(path: string, contents: string, encoding?: Encoding): void
+    function writeAsString(path: string, contents: string, encoding?: Encoding): Promise<void>
+    function writeAsStringSync(path: string, contents: string, encoding?: Encoding): void
     /**
      *  Writes a Uint8Array data to a file.
      * @param path The path of the file
      * @param data A `Uint8Array` object.
      */
-    static writeAsBytes(path: string, data: Uint8Array): Promise<void>
-    static writeAsBytesSync(path: string, data: Uint8Array): void
+    function writeAsBytes(path: string, data: Uint8Array): Promise<void>
+    function writeAsBytesSync(path: string, data: Uint8Array): void
     /**
      *  Writes the data to a file.
      * @param path The path of the file
      * @param data A `Data` object.
      */
-    static writeAsData(path: string, data: Data): Promise<void>
-    static writeAsDataSync(path: string, data: Data): void
+    function writeAsData(path: string, data: Data): Promise<void>
+    function writeAsDataSync(path: string, data: Data): void
 
     /**
      * Append the given text to a file at the specified file path, creating the file and its directory if they do not already exist. 
@@ -983,8 +1018,8 @@ declare global {
      * @param encoding The string encoding used to convert `text` into `Data`. Defaults to `.utf8`.
      * @returns A promise that resolve after the operation is successful.
      */
-    static appendText(path: string, text: string, encoding?: Encoding): Promise<void>
-    static appendTextSync(path: string, text: string, encoding?: Encoding): void
+    function appendText(path: string, text: string, encoding?: Encoding): Promise<void>
+    function appendTextSync(path: string, text: string, encoding?: Encoding): void
 
     /**
      * Append the given data to a file at the specified file path, creating the file and its directory if they do not already exist. 
@@ -992,29 +1027,29 @@ declare global {
      * @param data The data to append.
      * @returns A promise that resolve after the operation is successful.
      */
-    static appendData(path: string, data: Data): Promise<void>
-    static appendDataSync(path: string, data: Data): void
+    function appendData(path: string, data: Data): Promise<void>
+    function appendDataSync(path: string, data: Data): void
 
     /**
      * If `path` is a symbolic link then it is resolved and results for the resulting file are returned.
      * @param path
      * @returns FileStat object
      */
-    static stat(path: string): Promise<FileStat>
-    static statSync(path: string): FileStat
+    function stat(path: string): Promise<FileStat>
+    function statSync(path: string): FileStat
     /**
      * Moves the file or directory at the specified path to a new location synchronously.
      * @param path The path to the file or directory you want to move.
      * @param newPath The new path for the item in `path`. This path must include the name of the file or directory in its new location.
      */
-    static rename(path: string, newPath: string): Promise<void>
-    static renameSync(path: string, newPath: string): void
+    function rename(path: string, newPath: string): Promise<void>
+    function renameSync(path: string, newPath: string): void
     /**
      * Removes the file or directory at the specified path.
      * @param path A path string indicating the file or directory to remove. If the path specifies a directory, the contents of that directory are recursively removed.
      */
-    static remove(path: string): Promise<void>
-    static removeSync(path: string): void
+    function remove(path: string): Promise<void>
+    function removeSync(path: string): void
     /**
      * Zips the file or directory contents at the specified `srcPath` to the `destPath`.
      * `shouldKeepParent` indicates that the directory name of a source item should be used as root element
@@ -1037,8 +1072,8 @@ declare global {
      * )
      * ```
      */
-    static zip(srcPath: string, destPath: string, shouldKeepParent?: boolean): Promise<void>
-    static zipSync(srcPath: string, destPath: string, shouldKeepParent?: boolean): void
+    function zip(srcPath: string, destPath: string, shouldKeepParent?: boolean): Promise<void>
+    function zipSync(srcPath: string, destPath: string, shouldKeepParent?: boolean): void
     /**
      * Unzips the contents at the specified `srcPath` to the `destPath`.
      *
@@ -1050,8 +1085,8 @@ declare global {
      * )
      * ```
      */
-    static unzip(srcPath: string, destPath: string): Promise<void>
-    static unzipSync(srcPath: string, destPath: string): void
+    function unzip(srcPath: string, destPath: string): Promise<void>
+    function unzipSync(srcPath: string, destPath: string): void
   }
 
 
@@ -1063,19 +1098,19 @@ declare global {
   /**
    * You can share data from your script using this interface.
    */
-  declare class ShareSheet {
+  declare namespace ShareSheet {
     /**
      * Present a ShareSheet UI.
      * @param items The array of data on which to perform the activity. You can share text, url, or UIImage.
      * @returns Returns a promise, it is fulfilled with a boolean value indicates that whether the share is completed when the sheet is dismissed.
      */
-    static present(items: ActivityItem[]): Promise<boolean>
+    function present(items: ActivityItem[]): Promise<boolean>
   }
 
   /**
    * Parse the QR code image file, or open the scan code page to scan.
    */
-  declare class QRCode {
+  declare namespace QRCode {
     /**
      * Parse QRCode file.
      * @example
@@ -1087,7 +1122,7 @@ declare global {
      * }
      * ```
      */
-    static parse(filePath: string): Promise<string | null>
+    function parse(filePath: string): Promise<string | null>
     /**
      * Open the QRCode scan page and scan.
      * @example
@@ -1096,31 +1131,31 @@ declare global {
      *   // handle result
      * }
      */
-    static scan(): Promise<string | null>
+    function scan(): Promise<string | null>
   }
 
   /**
    * The interface that manages access and changes to the user’s photo library.
    */
-  declare class Photos {
+  declare namespace Photos {
     /**
      * Get the latest specified number of photos from the Photos app.
      * @param count The number of photos you want.
      */
-    static getLatestPhotos(count: number): Promise<UIImage[] | null>
+    function getLatestPhotos(count: number): Promise<UIImage[] | null>
     /**
      * Present a photo picker dialog and pick limited number of photos.
      * @param count The limited number of photos.
      */
-    static pickPhotos(count: number): Promise<UIImage[]>
+    function pickPhotos(count: number): Promise<UIImage[]>
     /**
      * Take a photo, returns a Promise provides a UIImage  when fulfilled.
      */
-    static takePhoto(): Promise<UIImage | null>
+    function takePhoto(): Promise<UIImage | null>
     /**
      * Save an image data to the Photos app. Returns a boolean value indicates that whether the operation is successful.
      */
-    static savePhoto(image: Data, options?: {
+    function savePhoto(image: Data, options?: {
       /**
        * The optional photo name.
        */
@@ -1315,7 +1350,7 @@ declare global {
   /**
    * Pick files from Files app.
    */
-  declare class DocumentPicker {
+  declare namespace DocumentPicker {
     /**
      * Pick files from documents.
      * @example
@@ -1329,7 +1364,7 @@ declare global {
      * run()
      * ```
      */
-    static pickFiles(options?: PickFilesOption): Promise<string[]>
+    function pickFiles(options?: PickFilesOption): Promise<string[]>
     /**
      * Pick a directory.
      * @param initialDirectory The initial directory that the document picker displays.
@@ -1341,7 +1376,7 @@ declare global {
      * }
      * ```
      */
-    static pickDirectory(initialDirectory?: string): Promise<string | null>
+    function pickDirectory(initialDirectory?: string): Promise<string | null>
     /**
      * Exports files.
      * @example
@@ -1364,15 +1399,15 @@ declare global {
      * run()
      * ```
      */
-    static exportFiles(options: ExportFilesOptions): Promise<string[]>
+    function exportFiles(options: ExportFilesOptions): Promise<string[]>
     /**
      * When you no longer need access to the files or directories those pick by `DocumentPicker` and automatic make the resource available to your script, such as one returned by resolving a security-scoped bookmark, call this method to relinquish access.
      */
-    static stopAcessingSecurityScopedResources(): void
+    function stopAcessingSecurityScopedResources(): void
   }
 
   /**
-   * Providing a persistent store for simple data.
+   * Providing a persistent store for simple data. All data is stored in current script's private domain.
    *
    * Data is persisted to disk asynchronously.
    *
@@ -1383,32 +1418,40 @@ declare global {
    *  - `JSON`
    *  - `Data` (use `setData` or `getData` methods)
    */
-  declare class Storage {
+  declare namespace Storage {
     /**
      * Saves a `value` to persistent storage in the background.
      * @returns A boolean indicates whether the operation was successful.
      */
-    static set<T>(key: string, value: T): boolean
+    function set<T>(key: string, value: T): boolean
     /**
      * Reads a value from persistent storage, if the value of the key is not exists, returns `null`.
      */
-    static get<T>(key: string): T | null
+    function get<T>(key: string): T | null
     /**
      * Saves a `Data` to persistent storage in the background.
      */
-    static setData(key: string, data: Data): void
+    function setData(key: string, data: Data): void
     /**
      * Reads a `Data` from persistent storage, if the value of the key is not exists, returns `null`.
      */
-    static getData(key: string): Data | null
+    function getData(key: string): Data | null
     /**
      * Removes an entry from persistent storage.
      */
-    static remove(key: string): void
+    function remove(key: string): void
     /**
      * Returns true if the persistent storage contains the given `key`.
      */
-    static contains(key: string): boolean
+    function contains(key: string): boolean
+    /**
+     * Removes all entries from the persistent storage.
+     */
+    function clear(): void
+    /**
+     * Returns an array of all keys in the persistent storage.
+     */
+    function keys(): string[]
   }
 
   /**
@@ -1515,6 +1558,23 @@ declare global {
       fullscreen?: boolean
       navigationTitle?: string
     }): Promise<void>
+    /**
+     * Get the custom user agent string of the WebView, returns a Promise that resolves with the custom user agent string or `null` if it is not set.
+     */
+    getCustomUserAgent(): Promise<string | null>
+    /**
+     * Set the custom user agent string of the WebView, returns a Promise that resolves with a boolean value indicates whether the operation is successful.
+     * @param userAgent The custom user agent string, or `null` to reset to the default user agent.
+     * @returns A Promise that resolves with a boolean value indicates whether the operation is successful.
+     * @example
+     * ```ts
+     * const webView = new WebViewController()
+     * await webView.setCustomUserAgent("MyCustomUserAgent/1.0")
+     * const userAgent = await webView.getCustomUserAgent()
+     * console.log(userAgent) // "MyCustomUserAgent/1.0"
+     * ```
+     */
+    setCustomUserAgent(userAgent: string | null): Promise<boolean>
     /**
      * Check whether there is a valid back item in the back-forward list.
      */
@@ -2162,86 +2222,86 @@ declare global {
    * The shared audio session instance.
    * An audio session acts as an intermediary between your app and the operating system — and, in turn, the underlying audio hardware.
    */
-  declare class SharedAudioSession {
+  declare namespace SharedAudioSession {
     /**
      * Get session category.
      * An audio session category defines a set of audio behaviors for your app. The default category assigned to an audio session is soloAmbient.
      */
-    static get category(): Promise<AudioSessionCategory>
+    const category: Promise<AudioSessionCategory>
     /**
      * The set of options associated with the current audio session category.
      * You use category options to tailor the behavior of the active audio session category. See `AudioSessionCategoryOptions` for the supported values.
      */
-    static get categoryOptions(): Promise<AudioSessionCategoryOptions[]>
+    const categoryOptions: Promise<AudioSessionCategoryOptions[]>
     /**
      * The current audio session’s mode.
      * The audio session mode, together with the audio session category, indicates to the system how you intend to use audio in your app. You can use a mode to configure the audio system for specific use cases such as video recording, voice or video chat, or audio analysis.
      * `AudioSessionMode` discusses the values available for this property. The default value is `default`.
      */
-    static get mode(): Promise<AudioSessionMode>
+    const mode: Promise<AudioSessionMode>
     /**
      * The preferred sample rate, in hertz.
      */
-    static get preferredSampleRate(): Promise<number>
+    const preferredSampleRate: Promise<number>
     /**
      * This property returns true if any other audio is playing, including audio from an app using the ambient category. Most apps should instead use the `secondaryAudioShouldBeSilencedHint` property, because it’s more restrictive when considering whether primary audio from another app is playing.
      */
-    static get isOtherAudioPlaying(): Promise<boolean>
+    const isOtherAudioPlaying: Promise<boolean>
     /**
      * A Boolean value that indicates whether another app, with a nonmixable audio session, is playing audio.
      * Use this property as a hint to silence audio that’s secondary to the functionality of the app. For example, in a game that uses the ambient category, you can use this property to mute the soundtrack while leaving sound effects unmuted.
      */
-    static get secondaryAudioShouldBeSilencedHint(): Promise<boolean>
+    const secondaryAudioShouldBeSilencedHint: Promise<boolean>
     /**
      * A Boolean value that indicates a preference for not interrupting the session with system alerts.
      */
-    static get prefersNoInterruptionsFromSystemAlerts(): Promise<boolean>
+    const prefersNoInterruptionsFromSystemAlerts: Promise<boolean>
     /**
      * Not every device supports every audio session category. For instance, the record category isn’t available on a device that doesn’t support audio input.
      * Query this property to determine if the category you’d like to use is available on the current device.
      */
-    static get availableCategories(): Promise<AudioSessionCategory[]>
+    const availableCategories: Promise<AudioSessionCategory[]>
     /**
      * Not every device supports every audio session mode. For example, the videoRecording mode isn’t available on a device that doesn’t support video recording.
      * Query this property to determine if the mode you’d like to use is available on the current device.
      */
-    static get availableModes(): Promise<AudioSessionMode[]>
+    const availableModes: Promise<AudioSessionMode[]>
     /**
      * A boolean value that indicates whether system sounds and haptics play while recording from audio input.
      */
-    static get allowHapticsAndSystemSoundsDuringRecording(): Promise<boolean>
+    const allowHapticsAndSystemSoundsDuringRecording: Promise<boolean>
     /**
      * Activates or deactivates the shared audio session.
      */
-    static setActive(active: boolean): Promise<void>
+    function setActive(active: boolean): Promise<void>
     /**
      * Sets the audio session’s category with the specified options.
      * @param category The category to apply to the audio session.
      * @param options A mask of additional options for handling audio.
      */
-    static setCategory(category: AudioSessionCategory, options: AudioSessionCategoryOptions[]): Promise<void>
+    function setCategory(category: AudioSessionCategory, options: AudioSessionCategoryOptions[]): Promise<void>
     /**
      * Sets the audio session’s mode.
      */
-    static setMode(mode: AudioSessionMode): Promise<void>
+    function setMode(mode: AudioSessionMode): Promise<void>
     /**
      * Sets the preferred sample rate for audio input and output.
      * @param sampleRate The hardware sample rate to use. The available range is device dependent and is typically from 8000 through 48000 hertz.
      */
-    static setPreferredSampleRate(sampleRate: number): Promise<void>
+    function setPreferredSampleRate(sampleRate: number): Promise<void>
     /**
      * The listener is called when an audio interruption occurs.
      */
-    static addInterruptionListener(listener: AudioSessionInterruptionListener): void
-    static removeInterruptionListener(listener: AudioSessionInterruptionListener): void
+    function addInterruptionListener(listener: AudioSessionInterruptionListener): void
+    function removeInterruptionListener(listener: AudioSessionInterruptionListener): void
     /**
      * Sets a boolean value that indicates whether system sounds and haptics play while recording from audio input.
      */
-    static setAllowHapticsAndSystemSoundsDuringRecording(value: boolean): Promise<void>
+    function setAllowHapticsAndSystemSoundsDuringRecording(value: boolean): Promise<void>
     /**
      * Sets the preference for not interrupting the audio session with system alerts.
      */
-    static setPrefersNoInterruptionsFromSystemAlerts(valiue: boolean): Promise<void>
+    function setPrefersNoInterruptionsFromSystemAlerts(valiue: boolean): Promise<void>
   }
   /**
   * The type of an audio interruption.
@@ -2366,62 +2426,62 @@ declare global {
   /**
    * Text To Speech.
    */
-  declare class Speech {
+  declare namespace Speech {
     /**
      * The default pitch value.
      * Set this property to a value within the range of 0.5 for lower pitch to 2.0 for higher pitch. The default value is 1.0.
      */
-    static pitch: number
+    var pitch: number
     /**
      * The rate the speech synthesizer uses when speaking the utterance.
      * The speech rate is a decimal representation within the range of `Speech.minSpeechRate` and `Speech.maxSpeechRate`. Lower values correspond to slower speech, and higher values correspond to faster speech. The default value is `Speech.defaultSpeechRate`.
      */
-    static rate: number
+    var rate: number
     /**
      * The minimum rate the speech synthesizer uses when speaking an utterance.
      */
-    static readonly minSpeechRate: number
+    const minSpeechRate: number
     /**
      * The maximum rate the speech synthesizer uses when speaking an utterance.
      */
-    static readonly maxSpeechRate: number
+    const maxSpeechRate: number
     /**
      * The default rate the speech synthesizer uses when speaking an utterance.
      */
-    static readonly defaultSpeechRate: number
+    const defaultSpeechRate: number
     /**
      * The default volume value.
      * Set this property to a value within the range of 0.0 for silent to 1.0 for loudest volume. The default value is 1.0.
      */
-    static volume: number
+    var volume: number
     /**
      * The amount of time the speech synthesizer pauses before speaking the utterance.
      * When multiple utterances exist in the queue, the speech synthesizer pauses a minimum amount of time equal to the sum of the current utterance’s postUtteranceDelay and the next utterance’s preUtteranceDelay.
      */
-    static preUtteranceDelay: number
+    var preUtteranceDelay: number
     /**
      * The amount of time the speech synthesizer pauses after speaking an utterance before handling the next utterance in the queue.
      * When multiple utterances exist in the queue, the speech synthesizer pauses a minimum amount of time equal to the sum of the current utterance’s postUtteranceDelay and the next utterance’s preUtteranceDelay.
      */
-    static postUtteranceDelay: number
+    var postUtteranceDelay: number
     /**
      * Retrieves all available voices on the device.
      */
-    static get speechVoices(): Promise<SpeechSynthesisVoice[]>
+    const speechVoices: Promise<SpeechSynthesisVoice[]>
     /**
      * A string that contains the BCP 47 language and locale code for the user’s current locale.
      */
-    static get currentLanguageCode(): Promise<string>
+    const currentLanguageCode: Promise<string>
 
     /**
      * A Boolean value that specifies whether the app manages the audio session.
      * If you set this value to false, the system creates a separate audio session to automatically manage speech, interruptions, and mixing and ducking the speech with other audio sources.
      */
-    static usesApplicationAudioSession: boolean
+    var usesApplicationAudioSession: boolean
     /**
      * Speak a text, it will add the utterance to the speech synthesizer’s queue.
      */
-    static speak(text: string, options?: SpeechSynthesisOptions): Promise<void>
+    function speak(text: string, options?: SpeechSynthesisOptions): Promise<void>
     /**
      * Synthesize text to the file stored in local documents directory.
      * @param text Text to synthesize
@@ -2437,68 +2497,68 @@ declare global {
      * )
      * ```
      */
-    static synthesizeToFile(text: string, filePath: string, options?: SpeechSynthesisOptions): Promise<void>
+    function synthesizeToFile(text: string, filePath: string, options?: SpeechSynthesisOptions): Promise<void>
     /**
      * Pauses speech at the boundary you specify.
      * @param at A string that describes whether to pause speech immediately or only after the synthesizer finishes speaking the current word. Defaults to 'immediate'.
      */
-    static pause(at?: SpeechBoundary): Promise<boolean>
+    function pause(at?: SpeechBoundary): Promise<boolean>
     /**
      * Resumes speech from its paused point.
      */
-    static resume(): Promise<boolean>
+    function resume(): Promise<boolean>
     /**
      * Stops speech at the boundary you specify.
      * @param at A string that describes whether to stop speech immediately or only after the synthesizer finishes speaking the current word. Defaults to 'immediate'.
      */
-    static stop(at?: SpeechBoundary): Promise<boolean>
+    function stop(at?: SpeechBoundary): Promise<boolean>
     /**
      * A Boolean value that indicates whether the speech synthesizer is speaking or is in a paused state and has utterances to speak.
      */
-    static get isSpeaking(): Promise<boolean>
+    const isSpeaking: Promise<boolean>
     /**
      * A Boolean value that indicates whether a speech synthesizer is in a paused state.
      * If true, the speech synthesizer is in a paused state after beginning to speak an utterance; otherwise, false.
      */
-    static get isPaused(): Promise<boolean>
+    const isPaused: Promise<boolean>
     /**
      * Set speech voice by identifier.
      */
-    static setVoiceByIdentifier(identifier: string): Promise<boolean>
+    function setVoiceByIdentifier(identifier: string): Promise<boolean>
     /**
      * Set speech voice by language.
      */
-    static setVoiceByLanguage(language: string): Promise<boolean>
-    static addListener(event: 'start', listener: () => void): void
-    static addListener(event: 'pause', listener: () => void): void
-    static addListener(event: 'continue', listener: () => void): void
-    static addListener(event: 'finish', listener: () => void): void
-    static addListener(event: 'cancel', listener: () => void): void
-    static addListener(event: 'progress', listener: (details: SpeechProgressDetails) => void): void
-    static removeListener(event: 'start', listener: () => void): void
-    static removeListener(event: 'pause', listener: () => void): void
-    static removeListener(event: 'continue', listener: () => void): void
-    static removeListener(event: 'finish', listener: () => void): void
-    static removeListener(event: 'cancel', listener: () => void): void
-    static removeListener(event: 'progress', listener: (details: SpeechProgressDetails) => void): void
+    function setVoiceByLanguage(language: string): Promise<boolean>
+    function addListener(event: 'start', listener: () => void): void
+    function addListener(event: 'pause', listener: () => void): void
+    function addListener(event: 'continue', listener: () => void): void
+    function addListener(event: 'finish', listener: () => void): void
+    function addListener(event: 'cancel', listener: () => void): void
+    function addListener(event: 'progress', listener: (details: SpeechProgressDetails) => void): void
+    function removeListener(event: 'start', listener: () => void): void
+    function removeListener(event: 'pause', listener: () => void): void
+    function removeListener(event: 'continue', listener: () => void): void
+    function removeListener(event: 'finish', listener: () => void): void
+    function removeListener(event: 'cancel', listener: () => void): void
+    function removeListener(event: 'progress', listener: (details: SpeechProgressDetails) => void): void
   }
 
   /**
    * The interface for managing the speech recognizer process.
    */
-  declare class SpeechRecognition {
+  declare namespace SpeechRecognition {
     /**
      * Returns the list of locales that are supported by the speech recognizer.
      */
-    static get supportedLocales(): string[]
+    const supportedLocales: string[]
     /**
      * Returns a boolean that indicates whether the recognizer is running.
      */
-    static get isRecognizing(): boolean
+    const isRecognizing: boolean
     /**
      * Start a speech audio buffer recognition request. Return a boolean value that indicates whether the operation was successfully.
      */
-    static start(options: {
+    function start(options: {
       /**
        * The locale string representing the language you want to use for speech recognition. For a list of languages supported by the speech recognizer, see `supportedLocales`.
        */
@@ -2537,7 +2597,7 @@ declare global {
     /**
      * Start a request to recognize speech in a recorded audio file.
      */
-    static recognizeFile(options: {
+    function recognizeFile(options: {
       filePath: string
       /**
        * The locale string representing the language you want to use for speech recognition. For a list of languages supported by the speech recognizer, see `supportedLocales`.
@@ -2569,7 +2629,7 @@ declare global {
     /**
      * Stop speech recognition request. Return a boolean value that indicates whether the operation was successfully.
      */
-    static stop(): Promise<void>
+    function stop(): Promise<void>
   }
   /**
   * The type of task for which you are using speech recognition.
@@ -3335,13 +3395,13 @@ declare global {
    * Represents an SSH authentication method.
    * This class provides static methods to create various types of SSH authentication methods, such as password-based and private key-based authentication.
    */
-  declare class SSHAuthenticationMethod {
+  declare namespace SSHAuthenticationMethod {
     /**
      * Creates a password based authentication method.
      * @param username The username to authenticate with.
      * @param password The password to authenticate with.
      */
-    static passwordBased(username: string, password: string): SSHAuthenticationMethod
+    function passwordBased(username: string, password: string): SSHAuthenticationMethod
     /**
      * Creates a private key based authentication method.
      * @param username The username to authenticate with.
@@ -3349,11 +3409,11 @@ declare global {
      * @param decryptionKey An optional decryption key for the private key, if it is encrypted.
      * @returns An SSHAuthenticationMethod instance
      */
-    static ras(username: string, sshRsa: Data, decryptionKey?: Data): SSHAuthenticationMethod | null
-    static ed25519(username: string, sshEd25519: Data, decryptionKey?: Data): SSHAuthenticationMethod | null
-    static p256(username: string, pemRepresentation: string): SSHAuthenticationMethod | null
-    static p384(username: string, pemRepresentation: string): SSHAuthenticationMethod | null
-    static p521(username: string, pemRepresentation: string): SSHAuthenticationMethod | null
+    function ras(username: string, sshRsa: Data, decryptionKey?: Data): SSHAuthenticationMethod | null
+    function ed25519(username: string, sshEd25519: Data, decryptionKey?: Data): SSHAuthenticationMethod | null
+    function p256(username: string, pemRepresentation: string): SSHAuthenticationMethod | null
+    function p384(username: string, pemRepresentation: string): SSHAuthenticationMethod | null
+    function p521(username: string, pemRepresentation: string): SSHAuthenticationMethod | null
   }
 
   /**
@@ -7240,6 +7300,59 @@ declare global {
      * @throws An error if the preferred units cannot be retrieved.
      */
     function preferredUnits(quantityTypes: HealthQuantityType[]): Promise<Record<HealthQuantityType, HealthUnit>>
+  }
+
+  /**
+   * This namespace provides functions for translating text between different languages.
+   * It includes methods for translating individual texts as well as batches of texts.
+   * Requires iOS 18.0 or later.
+   */
+  declare class Translation {
+
+    /**
+     * The shared instance of the Translation class for convenient access to translation methods.
+     * This instance has been bind to a shared `translationHost` of the app, so you can use it directly when your script has no user interface.
+     * @example
+     * ```ts
+     * const translatedText = await Translation.shared.translate({
+     *   text: "Hello, world!",
+     *   target: "es",
+     *   source: "en"
+     * })
+     * console.log(translatedText) // "¡Hola, mundo!"
+     * ```
+     */
+    static const shared: Translation
+    
+    /**
+     * Translates a single text from the source language to the target language.
+     * @param options An object containing the text to be translated, the target language, and optionally the source language.
+     * @param options.text The text to be translated.
+     * @param options.source The language the source content is in. If this is null, the session tries to identify the language and prompts the person to pick the source language if it’s unclear.
+     * @param options.target The language to translate content into. A null value means the session picks a target according to the person’s `Device.preferredLanguages` and the source. 
+     * @returns A promise that resolves to the translated text.
+     * @throws An error if the translation fails.
+     */
+    translate(options: {
+      text: string
+      source?: string
+      target?: string
+    }): Promise<string>
+
+    /**
+     * Translates a batch of texts from the source language to the target language.
+     * @param options An object containing the array of texts to be translated, the target language, and optionally the source language.
+     * @param options.texts An array of texts to be translated.
+     * @param options.source The language the source content is in. If this is null, the session tries to identify the language and prompts the person to pick the source language if it’s unclear.
+     * @param options.target The language to translate content into. A null value means the session picks a target according to the person’s `Device.preferredLanguages` and the source. 
+     * @returns A promise that resolves to an array of translated texts, in the same order as the input texts.
+     * @throws An error if the translation fails.
+     */
+    translateBatch(options: {
+      texts: string[]
+      source?: string
+      target?: string
+    }): Promise<string[]>
   }
 }
 

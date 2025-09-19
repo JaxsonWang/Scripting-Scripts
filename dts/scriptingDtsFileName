@@ -1808,7 +1808,7 @@ type CommonViewProps = {
             /**
              * Extra distance placed between the two views, or nil to use the default amount of spacing.
              */
-            sapcing?: number;
+            spacing?: number;
             /**
              * The view to display in the inset space of the modified view.
              */
@@ -1822,7 +1822,7 @@ type CommonViewProps = {
             /**
              * Extra distance placed between the two views, or nil to use the default amount of spacing.
              */
-            sapcing?: number;
+            spacing?: number;
             /**
              * The view to display in the inset space of the modified view.
              */
@@ -2532,6 +2532,49 @@ type CommonViewProps = {
      * If true, removes any reason to apply a redaction to this view hierarchy.
      */
     unredacted?: boolean;
+    /**
+     * Provides a host for translation service. This should be applied to the root view of your current page.
+     *
+     * Why use a translation host?
+     *
+     * - If the source or target language aren’t installed, the framework asks the person for permission to download the languages.
+     * - If the source parameter is null and the framework can’t detect the source language from the content, the framework prompts the person to choose the source language.
+     *
+     * @example
+     * ```tsx
+     * function View() {
+     *   const translation = useMemo(() => new Translation(), [])
+     *   const [translated, setTranslated] = useState<{[key: string]: string}>({})
+     *   const texts = ["Hello", "Goodbye"]
+     *
+     *   useEffect(() => {
+     *     translation.translateBatch({
+     *       texts,
+     *       target: "fr",
+     *       source: "en"
+     *     }).then(result => {
+     *       const map: {[key: string]: string} = {}
+     *       result.forEach((item, index) => {
+     *         map[texts[index]] = item
+     *       })
+     *       setTranslated(map)
+     *     })
+     *   }, [])
+     *
+     *
+     *   return <VStack
+     *     translationHost={translation}
+     *   >
+     *    {texts.map(text => (
+     *       <Text key={text}>
+     *         {translated[text] || text}
+     *       </Text>
+     *     ))}
+     *   </VStack>
+     * }
+     * ```
+     */
+    translationHost?: Translation;
 };
 /**
  * A kind for the content shape of a view.
@@ -3671,7 +3714,9 @@ declare const TimerIntervalLabel: FunctionComponent<TimerIntervalLabelProps>;
 type DatePickerComponents = 'hourAndMinute' | 'date' | 'hourMinuteAndSecond';
 type DatePickerProps = ({
     title: string;
+    children?: never;
 } | {
+    title?: never;
     children: (VirtualNode | undefined | null | (VirtualNode | undefined | null)[])[] | VirtualNode;
 }) & {
     /**
@@ -5275,11 +5320,7 @@ declare class AppEventListenerManager<R> {
 /**
  *
  */
-declare class AppEvents {
-    /**
-     * @internal
-     */
-    constructor();
+declare namespace AppEvents {
     /**
      * Observe scene phase changed.
      *
@@ -5290,7 +5331,7 @@ declare class AppEvents {
      * })
      * ```
      */
-    static scenePhase: AppEventListenerManager<ScenePhase>;
+    const scenePhase: AppEventListenerManager<ScenePhase>;
     /**
      * Observe color scheme changed.
      * @example
@@ -5300,7 +5341,7 @@ declare class AppEvents {
      * })
      * ```
      */
-    static colorScheme: AppEventListenerManager<ColorScheme>;
+    const colorScheme: AppEventListenerManager<ColorScheme>;
 }
 
 /**
@@ -5416,26 +5457,26 @@ declare class IntentFileURLValue extends IntentValue<'fileURL', string> {
  * You can create a script with `intent.tsx` file to handle a user request, which you can run in the Scripting app, or as a Shortcuts action, or to handle share sheet input.
  *
  */
-declare class Intent {
+declare namespace Intent {
     /**
      * The `intent.tsx` script can run by Shortcuts app, you can read this parameter when you has passed an input parameter.
      *
      * This parameter can be a JSON object, any text, or a file URL string, when you passing a file, the action will attemp to read the file as JSON or a text string. If the file cannot be read as JSON or a text string, the file URL string will be passed as the input parameter.
      * You can check `ShortcutParameter.type` to know the type of the value.
      */
-    static get shortcutParameter(): ShortcutParameter | undefined;
+    const shortcutParameter: ShortcutParameter | undefined;
     /**
      * The text string array passed from a share sheet or a shortcut action.
      *
      * If you have enabled `Text` as a intent input from the Intent Settings, when the system shares text, the script will be displayed in the share sheet and can be selected to run.
      */
-    static get textsParameter(): string[] | undefined;
+    const textsParameter: string[] | undefined;
     /**
      * The URL string array passed from a share sheet or a shortcut action.
      *
      * If you have enabled `URLs` as a intent input from the Intent Settings, when the system shares URLs, the script will be displayed in the share sheet and can be selected to run.
      */
-    static get urlsParameter(): string[] | undefined;
+    const urlsParameter: string[] | undefined;
     /**
      * The image file path string array passed from a share sheet or a shortcut action.
      *
@@ -5443,7 +5484,7 @@ declare class Intent {
      *
      * When large images are passed from a share sheet or a shortcut action, the system may terminate the process due to memory constraints. In this case you should use `Run Script in App` action in Shortcuts app or enable the `Run in App` option in `Intent Inputs` settings.
      */
-    static get imagesParameter(): UIImage[] | undefined;
+    const imagesParameter: UIImage[] | undefined;
     /**
      * The file path string array passed from a share sheet or a shortcut action.
      *
@@ -5451,36 +5492,36 @@ declare class Intent {
      *
      * When large files are passed from a share sheet or a shortcut action, the system may terminate the process due to memory constraints. In this case you should use `Run Script in App` action in Shortcuts app or enable the `Run in App` option in `Intent Settings`.
      */
-    static get fileURLsParameter(): string[] | undefined;
+    const fileURLsParameter: string[] | undefined;
     /**
      * Wrap a `text` value for intent result.
      * @param value A text string.
      */
-    static text(value: string | number | boolean): IntentTextValue;
+    function text(value: string | number | boolean): IntentTextValue;
     /**
      * Wrap a `attributedText` value for intent result.
      * @param value A text string.
      */
-    static attributedText(value: string): IntentAttributedTextValue;
+    function attributedText(value: string): IntentAttributedTextValue;
     /**
      * Wrap a `text` value for intent result.
      * @param value A text string.
      */
-    static url(value: string): IntentURLValue;
+    function url(value: string): IntentURLValue;
     /**
      * Wrap a `JSON` value for the intent result.
      */
-    static json(value: Record<string, any> | any[]): IntentJsonValue;
+    function json(value: Record<string, any> | any[]): IntentJsonValue;
     /**
      * Wrap a `file` value for intent result.
      * @param filePath  A file path pointing to a file stored in iCloud or App Group Documents folder.
      */
-    static file(filePath: string): IntentFileValue;
+    function file(filePath: string): IntentFileValue;
     /**
      * Wrap a `fileURL` value for intent result.
      * @param filePath A file path pointing to a file stored in iCloud or App Group Documents folder.
      */
-    static fileURL(filePath: string): IntentFileURLValue;
+    function fileURL(filePath: string): IntentFileURLValue;
 }
 
 type ImageRenderOptions = {
@@ -5497,32 +5538,24 @@ type ImageRenderOptions = {
  * The interface that creates images from views.
  *
  */
-declare class ImageRenderer {
-    /**
-     * @internal
-     */
-    constructor();
+declare namespace ImageRenderer {
     /**
      * Render view to an image.
      */
-    static toUIImage(element: VirtualNode, options?: ImageRenderOptions): Promise<UIImage>;
+    function toUIImage(element: VirtualNode, options?: ImageRenderOptions): Promise<UIImage>;
     /**
      * Render view to a PNG data.
      */
-    static toPNGData(element: VirtualNode, options?: ImageRenderOptions): Promise<Data>;
+    function toPNGData(element: VirtualNode, options?: ImageRenderOptions): Promise<Data>;
     /**
      * Render view to a JPEG data.
      */
-    static toJPEGData(element: VirtualNode, options?: ImageRenderOptions & {
+    function toJPEGData(element: VirtualNode, options?: ImageRenderOptions & {
         /**
          * A number value between 0.0 and 1.0, representing the compression level the JPEG encoder should use. A value of 1.0 specifies lossless compression, and a value of 0.0 specifies maximum compression. Defaults to 1.0.
          */
         compressionQuality?: number;
     }): Promise<Data>;
-    /**
-     * @internal
-     */
-    private static render;
 }
 
 /**
@@ -5882,11 +5915,11 @@ interface NotificationInfo {
 /**
  * The interface for managing notification-related activities.
  */
-declare class Notification {
+declare namespace Notification {
     /**
      * If the script is opened by tapping on a notification, you can access this property to get information about the notification.
      */
-    static get current(): NotificationInfo | undefined;
+    const current: NotificationInfo | null;
     /**
      * Schedules the delivery of a local notification.
      * When the user directly taps on the notification, the Scripting app will be opened and the script that invokes the notification will be run. You can access the notification information through `Notification.current` when the script starts.
@@ -5894,43 +5927,37 @@ declare class Notification {
      * When the user long presses or pulls down the notification, if you set `actions`, the action button will be displayed. After the user taps on an action button, the URL you provided will be redirected. You can provide the URL scheme of the Scripting app or an accessible https link.
      *
      * If `customUI` is set to true, long press or pull down the notification and the `notification.tsx` under the script will be run. You can use `Notification.present` to display the custom UI in this file, and provide interactive components such as buttons or input boxes for users to complete specific functions.
+     *
+     * @param options The options for scheduling the notification.
+     * @param options.title The title of the notification.
+     * @param options.subtitle The subtitle of the notification.
+     * @param options.body The body of the notification.
+     * @param options.badge The badge count for the app icon.
+     * @param options.silent If true, the notification will be delivered silently without sound. Defaults to false.
+     * @param options.interruptionLevel The importance and delivery timing of the notification.
+     * @param options.userInfo Custom information associated with the notification.
+     * @param options.threadIdentifier A string to group related notifications.
+     * @param options.trigger The trigger that determines when the system delivers the notification.
+     * @param options.triggerTime A timestamp in milliseconds that causes the system to deliver the notification. Specify null to deliver the notification right away. (Deprecated, use `trigger` instead)
+     * @param options.repeatsType Specify a type to reschedule the notification request each time the system delivers the notification with a given `triggerTime` value. If `triggerTime` is not null, specify this property to null to deliver the notification one time. (Deprecated, use `trigger` instead)
+     * @param options.actions The actions to display when the system delivers notifications of this type.
+     * @param options.customUI Specify true to run the `notification.tsx` file of the current script when user long press or drag down the notification.
+     * @param options.tapAction The action to perform when the user taps the notification. If not specified, the default behavior is to run the current script.
+     *  - `"none"`: Do nothing when the user taps the notification.
+     *  - `{ type: "runScript", scriptName: string }`: Run the specified script when the user taps the notification.
+     *  - `{ type: "openURL", url: string }`: Open the specified URL when the user taps the notification. You can provide a deeplink to open another app, or a https:// link to open system browser.
+     * @param options.avoidRunningCurrentScriptWhenTapped Specify true to avoid running the current script when user tap the notification. The default is false. (Deprecated, use `tapAction` instead, set `tapAction` to `"none"`)
+     * @returns A promise that resolves to true if the notification was successfully scheduled, or false otherwise.
      */
-    static schedule(options: {
-        /**
-         * Use this property to specify the title of your notification alert.
-         */
+    function schedule(options: {
         title: string;
-        /**
-         * Use this property to specify additional context about the purpose of the notification. Subtitles offer additional context in cases where the title alone isn’t clear. Subtitles aren’t displayed in all cases.
-         */
         subtitle?: string;
-        /**
-         * Use this property to specify the body of the notification alert.
-         */
         body?: string;
-        /**
-         * The number that your app’s icon displays.
-         */
         badge?: number;
-        /**
-         * If the value is true, when the system delivers the notification and would not play the system default sound. Defaults to true.
-         */
         silent?: boolean;
-        /**
-         * The notification’s importance and required delivery timing.
-         */
         interruptionLevel?: NotificationInterruptionLevel;
-        /**
-         * Use this property to associate custom information with the notification. The contents of the dictionary aren’t seen by the user, but are accessible to your script.
-         */
         userInfo?: Record<string, any>;
-        /**
-         * You may specify any value for the string, but assign the same thread identifier string to all notifications that you want to group together visually.
-         */
         threadIdentifier?: string;
-        /**
-         * The trigger that determines when the system delivers the notification.
-         */
         trigger?: CalendarNotificationTrigger | LocationNotificationTrigger | TimeIntervalNotificationTrigger | null;
         /**
          * The trigger time is a specified timestamp in milliseconds that causes the system to deliver the notification. Specify null to deliver the notification right away.
@@ -5942,86 +5969,84 @@ declare class Notification {
          * @deprecated Use `trigger` instead.
          */
         repeatsType?: 'hourly' | 'daily' | 'weekly' | 'monthly';
-        /**
-         * The actions to display when the system delivers notifications of this type.
-         */
         actions?: NotificationAction[];
-        /**
-         * Specify true to run the `notification.tsx` file of the current script when user long press or drag down the notification.
-         */
         customUI?: boolean;
+        tapAction?: "none" | {
+            type: "runScript";
+            scriptName: string;
+        } | {
+            type: "openURL";
+            url: string;
+        };
         /**
          * Specify true to avoid running the current script when user tap the notification. The default is false.
+         * @deprecated Use `tapAction` instead, set `tapAction` to `"none"`.
          */
         avoidRunningCurrentScriptWhenTapped?: boolean;
     }): Promise<boolean>;
     /**
      * Fetches all delivered notifications that are still present in Notification Center.
      */
-    static getAllDelivereds(): Promise<NotificationInfo[]>;
+    function getAllDelivereds(): Promise<NotificationInfo[]>;
     /**
      * Fetches all local notifications that are pending delivery.
      */
-    static getAllPendings(): Promise<NotificationRequest[]>;
+    function getAllPendings(): Promise<NotificationRequest[]>;
     /**
      * Removes all delivered notifications from Notification Center.
      */
-    static removeAllDelivereds(): Promise<void>;
+    function removeAllDelivereds(): Promise<void>;
     /**
      * Removes all pending local notifications.
      */
-    static removeAllPendings(): Promise<void>;
+    function removeAllPendings(): Promise<void>;
     /**
      * Removes notifications from Notification Center that match the specified identifiers.
      */
-    static removeDelivereds(identifiers: string[]): Promise<void>;
+    function removeDelivereds(identifiers: string[]): Promise<void>;
     /**
      * Removes local notifications that are pending and match the specified identifiers.
      */
-    static removePendings(identifiers: string[]): Promise<void>;
+    function removePendings(identifiers: string[]): Promise<void>;
     /**
      * Fetches all of the current script's delivered notifications that are still present in Notification Center.
      */
-    static getAllDeliveredsOfCurrentScript(): Promise<NotificationInfo[]>;
+    function getAllDeliveredsOfCurrentScript(): Promise<NotificationInfo[]>;
     /**
      * Fetches all of the current script's local notifications that are pending delivery.
      */
-    static getAllPendingsOfCurrentScript(): Promise<NotificationRequest[]>;
+    function getAllPendingsOfCurrentScript(): Promise<NotificationRequest[]>;
     /**
      * Removes all of the current script's notifications from Notification Center that match the specified identifiers.
      */
-    static removeAllDeliveredsOfCurrentScript(): Promise<void>;
+    function removeAllDeliveredsOfCurrentScript(): Promise<void>;
     /**
      * Removes all of the current script's pending local notifications.
      */
-    static removeAllPendingsOfCurrentScript(): Promise<void>;
+    function removeAllPendingsOfCurrentScript(): Promise<void>;
     /**
      * Updates the badge count for the Scripting app’s icon.
      */
-    static setBadgeCount(count: number): Promise<boolean>;
+    function setBadgeCount(count: number): Promise<boolean>;
     /**
      * Present a custom UI for rich notification. This method should only use in `notification.tsx` of the script.
      */
-    static present(node: VirtualNode): void;
+    function present(node: VirtualNode): void;
 }
 
 /**
  * Modal presentation styles available when presenting view controllers.
  */
 type ModalPresentationStyle = 'automatic' | 'currentContext' | 'formSheet' | 'fullScreen' | 'overCurrentContext' | 'overFullScreen' | 'popover' | 'pageSheet';
-declare class Navigation {
-    /**
-     * @internal
-     */
-    constructor();
+declare namespace Navigation {
     /**
      * Presents a view controller modally. The promise will be fulfilled after the view controller dismissed.
      */
-    static present<T = any>(options: VirtualNode | {
+    function present<T = any>(options: VirtualNode | {
         element: VirtualNode;
         modalPresentationStyle?: ModalPresentationStyle;
     }): Promise<T>;
-    static useDismiss(): (result?: any) => void;
+    function useDismiss(): (result?: any) => void;
 }
 
 /**
@@ -6030,13 +6055,9 @@ declare class Navigation {
  * See also:
  * * https://nodejs.org/docs/v10.3.0/api/path.html
  */
-declare class Path {
-    /**
-     * @internal
-     */
-    constructor();
-    static sep: string;
-    static delimiter: string;
+declare namespace Path {
+    const sep = "/";
+    const delimiter = ":";
     /**
      * The `Path.normalize()` method normalizes the given path, resolving '..' and '.' segments.
      * @example
@@ -6045,13 +6066,13 @@ declare class Path {
      * // Returns: '/foo/bar/baz/asdf'
      * ```
      */
-    static normalize(path: string): string;
+    function normalize(path: string): string;
     /**
      * The `Path.isAbsolute()` method determines if path is an absolute path.
      *
      * If the given path is a zero-length string, false will be returned.
      */
-    static isAbsolute(path: string): boolean;
+    function isAbsolute(path: string): boolean;
     /**
      * The `Path.join()` method joins all given path segments together using the platform
      * specific separator as a delimiter, then normalizes the resulting path.
@@ -6059,7 +6080,7 @@ declare class Path {
      * Zero-length path segments are ignored. If the joined path string is a zero-length
      * string then '.' will be returned, representing the current working directory.
      */
-    static join(...args: string[]): string;
+    function join(...args: string[]): string;
     /**
      * The path.dirname() method returns the directory name of a path.
      * @example
@@ -6068,23 +6089,23 @@ declare class Path {
      * // Returns: '/foo/bar/baz/asdf'
      * ```
      */
-    static dirname(path: string): string;
+    function dirname(path: string): string;
     /**
      * The `Path.basename()` methods returns the last portion of a path, similar to the Unix basename command.
      * Trailing directory separators are ignored, see `Path.sep`.
      */
-    static basename(path: string, ext?: string): string;
+    function basename(path: string, ext?: string): string;
     /**
      * The `Path.extname()` method returns the extension of the path, from the last occurrence
      * of the . (period) character to end of string in the last portion of the path.
      * If there is no . in the last portion of the path, or if the first character of
      * the basename of path (see `Path.basename()`) is ., then an empty string is returned.
      */
-    static extname(path: string): string;
+    function extname(path: string): string;
     /**
      * The `Path.parse()` method returns an object whose properties represent significant elements of the path.
      */
-    static parse(path: string): {
+    function parse(path: string): {
         root: string;
         dir: string;
         base: string;
@@ -6354,21 +6375,13 @@ type RequestInit = {
     headers?: HeadersInit;
     body?: Data | FormData | string | ArrayBuffer;
     /**
+     * A function that is called when a redirect response is received. The function receives the new Request as an argument and should return a Promise that resolves to a boolean indicating whether to allow the redirect. If the function is not provided, all redirects will be allowed by default.
+     */
+    shouldAllowRedirect?: (newRequest: Request) => Promise<boolean>;
+    /**
      * Request timeout in seconds.
      */
     timeout?: DurationInSeconds;
-    /**
-     * Request timeout in milliseconds.
-     * @deprecated
-     * Use `timeout` instead.
-     */
-    connectTimeout?: DurationInMilliseconds;
-    /**
-     * Response timeout in milliseconds.
-     * @deprecated
-     * Use `timeout` instead.
-     */
-    receiveTimeout?: DurationInMilliseconds;
     /**
      * If this option is set, the request can be canceled by calling abort() on the corresponding AbortController.
      */
@@ -6393,21 +6406,13 @@ declare class Request {
     headers: Headers;
     body?: Data | FormData | string | ArrayBuffer;
     /**
+     * A function that is called when a redirect response is received. The function receives the new Request as an argument and should return a Promise that resolves to a boolean indicating whether to allow the redirect. If the function is not provided, all redirects will be allowed by default.
+     */
+    shouldAllowRedirect?: (newRequest: Request) => Promise<boolean>;
+    /**
      * Request timeout in seconds.
      */
     timeout?: DurationInSeconds;
-    /**
-     * Request timeout in milliseconds.
-     * @deprecated
-     * Use `timeout` instead.
-     */
-    connectTimeout?: DurationInMilliseconds;
-    /**
-     * Response timeout in milliseconds.
-     * @deprecated
-     * Use `timeout` instead.
-     */
-    receiveTimeout?: DurationInMilliseconds;
     /**
      * If this option is set, the request can be canceled by calling abort() on the corresponding AbortController.
      */
@@ -6444,7 +6449,7 @@ declare function fetch(request: Request): Promise<Response>;
  * Access information about the script, and provides convenient methods to control the scripts.
  *
  */
-declare class Script {
+declare namespace Script {
     /**
      * The environment in which the script is running.
      *  - `"index"`: The script is running in the main app, "index.tsx" is the entry point.
@@ -6454,38 +6459,82 @@ declare class Script {
      *  - `"app_intents"`: The script is running in the app intents extension, "app_intents.tsx" is the entry point.
      *  - `"assistant_tool"`: The script is running for the Assistant Tool, "assistant_tool.tsx" is the entry point.
      */
-    static get env(): "index" | "widget" | "intent" | "app_intents" | "notification" | "assistant_tool";
+    const env: "index" | "widget" | "intent" | "app_intents" | "notification" | "assistant_tool";
     /**
      * Name of the current script.
      */
-    static get name(): string;
+    const name: string;
+    /**
+     * Metadata of the current script.
+     *
+     * - `icon`: The icon of the script, it can be a SFSymbol name.
+     * - `color`: The color of the script, it can be a hex color string like `#FF0000` or a CSS color name like `red`.
+     * - `localizedName`: The localized name of the script in the current system language.
+     * - `localizedNames`: The localized names of the script in different languages, the key is the language code, the value is the localized name.
+     * - `description`: The description of the script in English.
+     * - `localizedDescription`: The localized description of the script in the current system language.
+     * - `localizedDescriptions`: The localized descriptions of the script in different languages, the key is the language code, the value is the localized description.
+     * - `version`: The version of the script.
+     * - `author`: The author information of the script.
+     *    - `name`: The name of the author.
+     *    - `email`: The email of the author.
+     *    - `homepage`: The homepage of the author.
+     * - `contributors`: The contributors information of the script, it is an array of objects with the same structure as `author`.
+     * - `remoteResource`: The remote resource information of the script.
+     *    - `url`: The URL of the remote resource, it can be a zip file or a git repository.
+     *    - `autoUpdateInterval`: The interval for auto-updating the remote resource, in seconds. If not specified, the remote resource will not be auto-updated.
+     */
+    const metadata: {
+        icon: string;
+        color: string;
+        localizedName: string;
+        localizedNames?: Record<string, string>;
+        description?: string;
+        localizedDescription: string;
+        localizedDescriptions?: Record<string, string>;
+        version: string;
+        author?: {
+            name: string;
+            email: string;
+            homepage?: string;
+        };
+        contributors?: {
+            name: string;
+            email: string;
+            homepage?: string;
+        }[];
+        remoteResource?: {
+            url: string;
+            autoUpdateInterval?: number | null;
+        };
+    };
     /**
      * The directory path of the current script.
      */
-    static get directory(): string;
+    const directory: string;
     /**
      * If a widget on home screen has set the `Parameter` field, and the current script is opened and run
      * after clicking the widget, you can access the configuration from this property.
      */
-    static get widgetParameter(): string;
+    const widgetParameter: string;
     /**
      * If the current script is opened and run by the `run URL scheme`(
      * like `"scripting://run/{script_name}?a=1&b=2"`).
      */
-    static get queryParameters(): Record<string, string>;
+    const queryParameters: Record<string, string>;
     /**
      * Creates a URL scheme for opening the Scripting's documentation page.
      * @param title The title of the documentation page, if not specified, it will open the documentation homepage.
      * @returns `"scripting://doc?title=Quick%20Start"`
      */
-    static createDocumentationURLScheme(title?: string): string;
+    function createDocumentationURLScheme(title?: string): string;
     /**
      * Creates a URL scheme for opening a specified script.
      *
      * @param scriptName
      * @returns `"scripting://open/example_script"`
      */
-    static createOpenURLScheme(scriptName: string): string;
+    function createOpenURLScheme(scriptName: string): string;
     /**
      * Creates a URL scheme for running a specified script.
      *
@@ -6519,7 +6568,7 @@ declare class Script {
      * // output: {"param1": 1, "param2": 2}
      * ```
      */
-    static createRunURLScheme(scriptName: string, queryParameters?: Record<string, string>): string;
+    function createRunURLScheme(scriptName: string, queryParameters?: Record<string, string>): string;
     /**
      * Create a URL scheme for running a specified script in single mode. Only one instance of the script can be run at the same time.
      *
@@ -6553,7 +6602,7 @@ declare class Script {
      * // output: {"param1": 1, "param2": 2}
      * ```
      */
-    static createRunSingleURLScheme(scriptName: string, queryParameters?: Record<string, string>): string;
+    function createRunSingleURLScheme(scriptName: string, queryParameters?: Record<string, string>): string;
     /**
      * Creates a URL scheme for the OAuth callback URL. This string used to register the OAuth callback URL in the OAuth provider's settings.
      * @param uniqueID A unique identifier for the OAuth callback URL, it can be any string that uniquely identifies the OAuth flow.
@@ -6572,7 +6621,7 @@ declare class Script {
      * })
      * ```
      */
-    static createOAuthCallbackURLScheme(uniqueID: string): string;
+    function createOAuthCallbackURLScheme(uniqueID: string): string;
     /**
      * Creates a URL scheme for importing scripts from the specified URLs.
      *
@@ -6587,7 +6636,7 @@ declare class Script {
      * console.log(urlScheme) // "scripting://import_scripts?urls=[...]"
      * ```
      */
-    static createImportScriptsURLScheme(urls: string[]): string;
+    function createImportScriptsURLScheme(urls: string[]): string;
     /**
      * Run a script of Scripting.
      *
@@ -6622,7 +6671,7 @@ declare class Script {
      * run()
      * ```
      */
-    static run<T>(options: {
+    function run<T>(options: {
         name: string;
         queryParameters?: Record<string, string>;
         singleMode?: boolean;
@@ -6634,7 +6683,7 @@ declare class Script {
      *  - When a script is run by a shortcut action or share sheet, it can return an `IntentValue` as a processing result.
      * @param result The result to deliver back to the initiator.
      */
-    static exit(result?: any | IntentTextValue | IntentJsonValue | IntentFileURLValue | IntentFileValue | IntentURLValue | IntentAttributedTextValue): void;
+    function exit(result?: any | IntentTextValue | IntentJsonValue | IntentFileURLValue | IntentFileValue | IntentURLValue | IntentAttributedTextValue): void;
 }
 
 /**
@@ -6668,20 +6717,20 @@ type WidgetReloadPolicy = {
 /**
  * This interface provides some operations for Widget.
  */
-declare class Widget {
+declare namespace Widget {
     /**
      * The user-configured family of the widget.
      */
-    static get family(): WidgetFamily;
+    const family: WidgetFamily;
     /**
      * The size, in points, of the widget.
      */
-    static get displaySize(): WidgetDisplaySize;
+    const displaySize: WidgetDisplaySize;
     /**
      * If a widget on home screen has set the `Parameter` field, and the current script is opened and run
      * after clicking the widget, you can access the configuration from this property.
      */
-    static get parameter(): string;
+    const parameter: string;
     /**
      * Present the widget UI.
      * @param element UI for rendering widget content.
@@ -6710,7 +6759,7 @@ declare class Widget {
      * })
      * ```
      */
-    static present(element: VirtualNode, reloadPolicy?: WidgetReloadPolicy): void;
+    function present(element: VirtualNode, reloadPolicy?: WidgetReloadPolicy): void;
     /**
      * Previews the widget with the specified parameters. This method allows you to preview how the widget will look with different parameters. You should only call this method in the `index.tsx` context, it's not available in other environments like `widget.tsx` or `intent.tsx`.
      * @param options The options for previewing the widget.
@@ -6739,7 +6788,7 @@ declare class Widget {
      * console.log("Widget preview dismissed")
      * ```
      */
-    static preview<K extends string>(options?: {
+    function preview<K extends string>(options?: {
         family?: WidgetFamily;
         parameters?: {
             options: Record<K, string>;
@@ -6749,7 +6798,7 @@ declare class Widget {
     /**
      * Reloads the timelines for all configured widgets.
      */
-    static reloadAll(): void;
+    function reloadAll(): void;
 }
 
 declare const Device: typeof globalThis.Device;
