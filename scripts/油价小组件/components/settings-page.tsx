@@ -1,4 +1,4 @@
-import { Button, ColorPicker, List, Navigation, NavigationStack, Picker, Section, Text, TextField, useEffect, useState, VStack } from 'scripting'
+import { Button, ColorPicker, List, Navigation, NavigationStack, Picker, Section, Text, TextField, VStack, useEffect, useState } from 'scripting'
 import type { Color } from 'scripting'
 import {
   areaOptions,

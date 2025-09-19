@@ -3,13 +3,13 @@ import type { CompleteOilData } from './utils/oil-price-service'
 import {
   formatForecastPrice,
   getCompleteOilData,
+  getCurrentSettings,
+  getDynamicTextColor,
   getPriceByOilType,
   getSelectedOilType,
   getTrendColor,
   getTrendSymbol,
-  oilTypeOptions,
-  getDynamicTextColor,
-  getCurrentSettings
+  oilTypeOptions
 } from './utils/oil-price-service'
 
 // 全局数据变量
