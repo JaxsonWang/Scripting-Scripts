@@ -23,7 +23,7 @@ const STORAGE_KEYS = {
 
 // 默认设置
 export const DEFAULT_SETTINGS: SettingsData = {
-  smallStatusText: 'ALL GOOD',
+  smallStatusText: 'ALL\nGOOD',
   smallStatusColor: '#ffffff'
 }
 
@@ -32,7 +32,7 @@ export const DEFAULT_SETTINGS: SettingsData = {
  */
 export const getCurrentSmallWidgetSettings = () => {
   return {
-    smallStatusText: storageManager.storage.get<string>(STORAGE_KEYS.SMALL_STATUS_TEXT),
+    smallStatusText: storageManager.storage.get<string>(STORAGE_KEYS.SMALL_STATUS_TEXT) || DEFAULT_SETTINGS.smallStatusText,
     smallStatusColor: storageManager.storage.get<string>(STORAGE_KEYS.SMALL_STATUS_COLOR) || DEFAULT_SETTINGS.smallStatusColor
   } as SettingsData
 }
@@ -65,7 +65,7 @@ export const SmallWidgetSettingsPage = () => {
           footer={
             <Text font="footnote" foregroundStyle="secondaryLabel">
               自定义小号汽车小组件显示的状态文本，如：“ALL GOOD”、“车况 良好”等 {'\n'}
-              中间空格会换行，建议一个空格
+              带“\n”会自动换行
             </Text>
           }
         >

@@ -1,6 +1,8 @@
 import { HStack, Image, Path, Script, Spacer, Text, VStack, Widget } from 'scripting'
 import { DEFAULT_SETTINGS as DEFAULT_GLOBAL_SETTINGS, carFileName, carLogoName, getCurrentGlobalSettings } from './components/global-settings-page'
 import { DEFAULT_SETTINGS as DEFAULT_SMALL_WIDGET_SETTINGS, getCurrentSmallWidgetSettings } from './components/small-widget-settings-page'
+import { getCurrentMediumWidgetSettings } from './components/medium-widget-settings-page'
+import { getCurrentLargeWidgetSettings } from './components/large-widget-settings-page'
 import { ImageCacheManager } from './utils/image-cache'
 import type { Color } from 'scripting'
 
@@ -44,6 +46,93 @@ const formatCurrentTime = (format = 'YYYY-MM-dd HH:mm:ss'): string => {
   const seconds = String(now.getSeconds()).padStart(2, '0')
 
   return format.replace('YYYY', String(year)).replace('MM', month).replace('dd', day).replace('HH', hours).replace('mm', minutes).replace('ss', seconds)
+}
+
+/**
+ * 获取背景图片路径
+ */
+const getWidgetBackgroundImagePath = (settings: any) => {
+  return settings.transparentBg && Widget.parameter ? Path.join(settings.transparentBg, Widget.parameter) : undefined
+}
+
+/**
+ * 生成背景样式
+ */
+const generateWidgetBackground = (settings: any) => {
+  // 如果开启了颜色背景，优先使用颜色背景
+  if (settings.enableColorBackground && settings.backgroundColors && settings.backgroundColors.length > 0) {
+    const colors = settings.backgroundColors
+
+    if (colors.length === 1) {
+      // 单个颜色，使用纯色背景
+      return colors[0]
+    } else {
+      // 多个颜色，使用渐变背景
+      return {
+        gradient: colors.map((color: any, index: number) => ({
+          color: color,
+          location: index / (colors.length - 1)
+        })),
+        startPoint: { x: 0, y: 0 },
+        endPoint: { x: 1, y: 1 }
+      }
+    }
+  }
+
+  return undefined
+}
+
+/**
+ * 渲染里程信息
+ */
+const renderMileageInfo = (settings: any, fontSize: number) => {
+  return (
+    <HStack spacing={3}>
+      <Image systemName="flag" font={fontSize} foregroundStyle={getDynamicTextColor()} />
+      <Text font={fontSize} foregroundStyle={getDynamicTextColor()}>
+        {settings.totalMileage}km
+      </Text>
+    </HStack>
+  )
+}
+
+/**
+ * 渲染时间信息
+ */
+const renderTimeInfo = (currentTime: string, fontSize: number) => {
+  return (
+    <HStack spacing={3}>
+      <Image systemName="clock" font={fontSize} foregroundStyle={getDynamicTextColor()} />
+      <Text font={fontSize} foregroundStyle={getDynamicTextColor()}>
+        {currentTime}
+      </Text>
+    </HStack>
+  )
+}
+
+/**
+ * 渲染状态文本
+ */
+const renderStatusText = (statusText: string, statusColor: Color, fontSize: number, enableSplit: boolean = true) => {
+  if (!enableSplit) {
+    // 小号组件：单行显示
+    return (
+      <Text font={fontSize} fontWeight="bold" foregroundStyle={statusColor}>
+        {statusText}
+      </Text>
+    )
+  }
+
+  // 大号组件：按空格分割多行显示
+  return (
+    <VStack alignment="leading" spacing={-15}>
+      {statusText.split(' ').map((line: string, index: number) => (
+        <Text key={index} font={fontSize} fontWeight="bold" foregroundStyle={statusColor}>
+          {line}
+        </Text>
+      ))}
+    </VStack>
+  )
 }
 
 /**
@@ -113,37 +202,9 @@ const SmallWidgetView = () => {
   const settings = getCurrentSettings()
   const currentTime = formatCurrentTime('HH:mm:ss')
 
-  const smallStatusText = settings.smallStatusText || DEFAULT_SMALL_WIDGET_SETTINGS.smallStatusText
-
-  // 获取背景图片路径
-  const getWidgetBg = settings.transparentBg && Widget.parameter ? Path.join(settings.transparentBg, Widget.parameter) : undefined
-
-  // 生成背景样式
-  const getWidgetBackground = () => {
-    // 如果开启了颜色背景，优先使用颜色背景
-    if (settings.enableColorBackground && settings.backgroundColors && settings.backgroundColors.length > 0) {
-      const colors = settings.backgroundColors
-
-      if (colors.length === 1) {
-        // 单个颜色，使用纯色背景
-        return colors[0]
-      } else {
-        // 多个颜色，使用渐变背景
-        return {
-          gradient: colors.map((color, index) => ({
-            color: color,
-            location: index / (colors.length - 1)
-          })),
-          startPoint: { x: 0, y: 0 },
-          endPoint: { x: 1, y: 1 }
-        }
-      }
-    }
-
-    return undefined
-  }
-
-  const widgetBackground = getWidgetBackground()
+  // 获取背景图片路径和背景样式
+  const getWidgetBg = getWidgetBackgroundImagePath(settings)
+  const widgetBackground = generateWidgetBackground(settings)
 
   return (
     <VStack
@@ -163,12 +224,7 @@ const SmallWidgetView = () => {
           content: (
             <HStack>
               <VStack alignment="leading" spacing={-8}>
-                <Text font={28} fontWeight="bold" foregroundStyle={settings.smallStatusColor}>
-                  {smallStatusText.split(' ')[0]}
-                </Text>
-                <Text font={28} fontWeight="bold" foregroundStyle={settings.smallStatusColor}>
-                  {smallStatusText.split(' ')[1]}
-                </Text>
+                {renderStatusText(settings.smallStatusText, settings.smallStatusColor, 28, false)}
               </VStack>
               <Spacer />
             </HStack>
@@ -223,38 +279,12 @@ const SmallWidgetView = () => {
  */
 const MediumWidgetView = () => {
   const settings = getCurrentSettings()
-
+  const mediumSettings = getCurrentMediumWidgetSettings()
   const currentTime = formatCurrentTime('HH:mm:ss')
 
-  // 获取背景图片路径
-  const getWidgetBg = settings.transparentBg && Widget.parameter ? Path.join(settings.transparentBg, Widget.parameter) : undefined
-
-  // 生成背景样式
-  const getWidgetBackground = () => {
-    // 如果开启了颜色背景，优先使用颜色背景
-    if (settings.enableColorBackground && settings.backgroundColors && settings.backgroundColors.length > 0) {
-      const colors = settings.backgroundColors
-
-      if (colors.length === 1) {
-        // 单个颜色，使用纯色背景
-        return colors[0]
-      } else {
-        // 多个颜色，使用渐变背景
-        return {
-          gradient: colors.map((color, index) => ({
-            color: color,
-            location: index / (colors.length - 1)
-          })),
-          startPoint: { x: 0, y: 0 },
-          endPoint: { x: 1, y: 1 }
-        }
-      }
-    }
-
-    return undefined
-  }
-
-  const widgetBackground = getWidgetBackground()
+  // 获取背景图片路径和背景样式
+  const getWidgetBg = getWidgetBackgroundImagePath(settings)
+  const widgetBackground = generateWidgetBackground(settings)
 
   return (
     <HStack
@@ -267,10 +297,7 @@ const MediumWidgetView = () => {
         content: (
           <VStack alignment="leading" offset={{ x: 16, y: 16 }}>
             <Text font={20} fontWeight="bold" foregroundStyle={getDynamicTextColor()}>
-              Audi RS7
-            </Text>
-            <Text font={20} fontWeight="bold" foregroundStyle={getDynamicTextColor()}>
-              您配坐得上？
+              {mediumSettings.mediumCarModel}
             </Text>
           </VStack>
         )
@@ -278,18 +305,8 @@ const MediumWidgetView = () => {
     >
       <VStack alignment="leading">
         <Spacer />
-        <HStack spacing={3}>
-          <Image systemName="flag" font={14} foregroundStyle={getDynamicTextColor()} />
-          <Text font={14} foregroundStyle={getDynamicTextColor()}>
-            59036km
-          </Text>
-        </HStack>
-        <HStack spacing={3}>
-          <Image systemName="clock" font={14} foregroundStyle={getDynamicTextColor()} />
-          <Text font={14} foregroundStyle={getDynamicTextColor()}>
-            {currentTime}
-          </Text>
-        </HStack>
+        {renderMileageInfo(settings, 14)}
+        {renderTimeInfo(currentTime, 14)}
       </VStack>
       <VStack
         spacing={0}
@@ -334,38 +351,12 @@ const MediumWidgetView = () => {
  */
 const LargeWidgetView = () => {
   const settings = getCurrentSettings()
-
+  const largeSettings = getCurrentLargeWidgetSettings()
   const currentTime = formatCurrentTime('HH:mm:ss')
 
-  // 获取背景图片路径
-  const getWidgetBg = settings.transparentBg && Widget.parameter ? Path.join(settings.transparentBg, Widget.parameter) : undefined
-
-  // 生成背景样式
-  const getWidgetBackground = () => {
-    // 如果开启了颜色背景，优先使用颜色背景
-    if (settings.enableColorBackground && settings.backgroundColors && settings.backgroundColors.length > 0) {
-      const colors = settings.backgroundColors
-
-      if (colors.length === 1) {
-        // 单个颜色，使用纯色背景
-        return colors[0]
-      } else {
-        // 多个颜色，使用渐变背景
-        return {
-          gradient: colors.map((color, index) => ({
-            color: color,
-            location: index / (colors.length - 1)
-          })),
-          startPoint: { x: 0, y: 0 },
-          endPoint: { x: 1, y: 1 }
-        }
-      }
-    }
-
-    return undefined
-  }
-
-  const widgetBackground = getWidgetBackground()
+  // 获取背景图片路径和背景样式
+  const getWidgetBg = getWidgetBackgroundImagePath(settings)
+  const widgetBackground = generateWidgetBackground(settings)
 
   return (
     <VStack
@@ -384,16 +375,7 @@ const LargeWidgetView = () => {
           overlay={{
             alignment: 'topLeading',
             // 顶部状态文本
-            content: (
-              <VStack alignment="leading" spacing={-15}>
-                <Text font={48} fontWeight="bold" foregroundStyle={getDynamicTextColor()}>
-                  ALL
-                </Text>
-                <Text font={48} fontWeight="bold" foregroundStyle={getDynamicTextColor()}>
-                  GOOD
-                </Text>
-              </VStack>
-            )
+            content: renderStatusText(largeSettings.largeStatusText, largeSettings.largeStatusColor, 48, true)
           }}
         />
         <VStack
@@ -421,7 +403,7 @@ const LargeWidgetView = () => {
                 </Text>
               </HStack>
               <Text offset={{ x: 0, y: -15 }} font={28} fontWeight="semibold" foregroundStyle={getDynamicTextColor()}>
-                Audi RS7 2024
+                {largeSettings.largeCarModel}
               </Text>
             </>
           )
@@ -439,25 +421,15 @@ const LargeWidgetView = () => {
       </VStack>
       <HStack alignment="center">
         <Spacer />
-        <HStack spacing={3}>
-          <Image systemName="flag" font={16} foregroundStyle={getDynamicTextColor()} />
-          <Text font={16} foregroundStyle={getDynamicTextColor()}>
-            59036km
-          </Text>
-        </HStack>
+        {renderMileageInfo(settings, 16)}
         <Spacer />
-        <HStack spacing={3}>
-          <Image systemName="clock" font={16} foregroundStyle={getDynamicTextColor()} />
-          <Text font={16} foregroundStyle={getDynamicTextColor()}>
-            {currentTime}
-          </Text>
-        </HStack>
+        {renderTimeInfo(currentTime, 16)}
         <Spacer />
       </HStack>
       <HStack alignment="center">
         <Spacer />
         <Text font={14} foregroundStyle={getDynamicTextColor()}>
-          世间美好与你环环相扣
+          {largeSettings.largeQuoteText}
         </Text>
         <Spacer />
       </HStack>

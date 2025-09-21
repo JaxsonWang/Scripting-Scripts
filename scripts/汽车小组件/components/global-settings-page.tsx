@@ -18,6 +18,7 @@ export type SettingsData = {
   carLogoHeight: number
   enableColorBackground: boolean
   backgroundColors: Color[]
+  totalMileage: string
 }
 
 // 存储键
@@ -29,7 +30,8 @@ const STORAGE_KEYS = {
   CAR_LOGO_URL: 'carLogoUrl',
   CAR_LOGO_HEIGHT: 'carLogoHeight',
   ENABLE_COLOR_BACKGROUND: 'enableColorBackground',
-  BACKGROUND_COLORS: 'backgroundColors'
+  BACKGROUND_COLORS: 'backgroundColors',
+  TOTAL_MILEAGE: 'totalMileage'
 }
 
 // 默认设置
@@ -41,7 +43,8 @@ export const DEFAULT_SETTINGS = {
   carLogoUrl: 'https://img.alicdn.com/imgextra/i1/2038135983/O1CN01vwxt9y1u4Gkmj3KOx_!!2038135983.png',
   carLogoHeight: 15,
   enableColorBackground: false,
-  backgroundColors: ['#999999', '#444444'] // 默认灰色渐变
+  backgroundColors: ['#999999', '#444444'], // 默认灰色渐变
+  totalMileage: '59036'
 }
 
 // 固定车辆文件名
@@ -60,7 +63,8 @@ export const getCurrentGlobalSettings = () => {
     carLogoUrl: storageManager.storage.get<string>(STORAGE_KEYS.CAR_LOGO_URL) || DEFAULT_SETTINGS.carLogoUrl,
     carLogoHeight: storageManager.storage.get<number>(STORAGE_KEYS.CAR_LOGO_HEIGHT) || DEFAULT_SETTINGS.carLogoHeight,
     enableColorBackground: storageManager.storage.get<boolean>(STORAGE_KEYS.ENABLE_COLOR_BACKGROUND) || DEFAULT_SETTINGS.enableColorBackground,
-    backgroundColors: storageManager.storage.get<Color[]>(STORAGE_KEYS.BACKGROUND_COLORS) || DEFAULT_SETTINGS.backgroundColors
+    backgroundColors: storageManager.storage.get<Color[]>(STORAGE_KEYS.BACKGROUND_COLORS) || DEFAULT_SETTINGS.backgroundColors,
+    totalMileage: storageManager.storage.get<string>(STORAGE_KEYS.TOTAL_MILEAGE) || DEFAULT_SETTINGS.totalMileage
   } as SettingsData
 }
 
@@ -353,6 +357,23 @@ export const GlobalSettingsPage = () => {
               <Text foregroundStyle="label">{settings.carLogoHeight}</Text>
             </HStack>
           </Button>
+        </Section>
+
+        {/* 总里程设置 */}
+        <Section
+          header={<Text font="headline">总里程</Text>}
+          footer={
+            <Text font="footnote" foregroundStyle="secondaryLabel">
+              设置车辆的总里程数值（纯数字），将显示在中号和大号组件中
+            </Text>
+          }
+        >
+          <TextField
+            title="总里程"
+            value={settings.totalMileage}
+            onChanged={value => updateSetting(STORAGE_KEYS.TOTAL_MILEAGE, value)}
+            prompt="请输入里程数值"
+          />
         </Section>
       </List>
     </NavigationStack>

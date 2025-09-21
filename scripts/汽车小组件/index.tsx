@@ -2,6 +2,8 @@ import { Button, HStack, Image, List, Navigation, NavigationStack, Script, Secti
 import { useEffect, useState } from 'scripting'
 import { GlobalSettingsPage, getCurrentGlobalSettings } from './components/global-settings-page'
 import { SmallWidgetSettingsPage, getCurrentSmallWidgetSettings } from './components/small-widget-settings-page'
+import { MediumWidgetSettingsPage, getCurrentMediumWidgetSettings } from './components/medium-widget-settings-page'
+import { LargeWidgetSettingsPage, getCurrentLargeWidgetSettings } from './components/large-widget-settings-page'
 import { ImageCacheManager } from './utils/image-cache'
 import { createStorageManager } from './utils/storage'
 import pkg from './script.json'
@@ -32,6 +34,8 @@ const MainPage = () => {
   const dismiss = Navigation.useDismiss()
   const [globalSettings, setGlobalSettings] = useState(getCurrentGlobalSettings())
   const [smallSettings, setSmallSettings] = useState(getCurrentSmallWidgetSettings())
+  const [mediumSettings, setMediumSettings] = useState(getCurrentMediumWidgetSettings())
+  const [largeSettings, setLargeSettings] = useState(getCurrentLargeWidgetSettings())
   const [bannerImagePath, setBannerImagePath] = useState<string>('')
   const [versionInfo, setVersionInfo] = useState<any>(null)
   const [hasCheckedUpdate, setHasCheckedUpdate] = useState(false)
@@ -137,6 +141,8 @@ const MainPage = () => {
   const refreshData = async () => {
     setGlobalSettings(getCurrentGlobalSettings())
     setSmallSettings(getCurrentSmallWidgetSettings())
+    setMediumSettings(getCurrentMediumWidgetSettings())
+    setLargeSettings(getCurrentLargeWidgetSettings())
     await loadBannerImage()
     Widget.reloadAll()
   }
@@ -238,9 +244,12 @@ const MainPage = () => {
 
           {/* 中号组件设置 */}
           <Button
-            action={() => {
-              // 暂时显示开发中提示
-              console.log('中号组件设置正在开发中')
+            action={async () => {
+              await Navigation.present({
+                element: <MediumWidgetSettingsPage />,
+                modalPresentationStyle: 'pageSheet'
+              })
+              await refreshData()
             }}
           >
             <HStack alignment="center">
@@ -248,20 +257,20 @@ const MainPage = () => {
                 <Text font="body" foregroundStyle="label">
                   中号组件设置
                 </Text>
-                <Text font="caption" foregroundStyle="secondaryLabel">
-                  正在开发中...
-                </Text>
               </VStack>
               <Spacer />
-              <Image systemName="chevron.right" foregroundStyle="systemGray" frame={{ width: 16, height: 16 }} />
+              <Image systemName="chevron.right" foregroundStyle="systemBlue" frame={{ width: 16, height: 16 }} />
             </HStack>
           </Button>
 
           {/* 大号组件设置 */}
           <Button
-            action={() => {
-              // 暂时显示开发中提示
-              console.log('大号组件设置正在开发中')
+            action={async () => {
+              await Navigation.present({
+                element: <LargeWidgetSettingsPage />,
+                modalPresentationStyle: 'pageSheet'
+              })
+              await refreshData()
             }}
           >
             <HStack alignment="center">
@@ -269,12 +278,9 @@ const MainPage = () => {
                 <Text font="body" foregroundStyle="label">
                   大号组件设置
                 </Text>
-                <Text font="caption" foregroundStyle="secondaryLabel">
-                  正在开发中...
-                </Text>
               </VStack>
               <Spacer />
-              <Image systemName="chevron.right" foregroundStyle="systemGray" frame={{ width: 16, height: 16 }} />
+              <Image systemName="chevron.right" foregroundStyle="systemBlue" frame={{ width: 16, height: 16 }} />
             </HStack>
           </Button>
         </Section>
