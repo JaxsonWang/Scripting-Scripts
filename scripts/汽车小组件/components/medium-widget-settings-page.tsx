@@ -20,7 +20,7 @@ const STORAGE_KEYS = {
 
 // 默认设置
 const DEFAULT_SETTINGS: SettingsData = {
-  mediumCarModel: 'Audi RS7\n你好，座驾'
+  mediumCarModel: 'Audi RS7|你好，座驾'
 }
 
 /**
@@ -61,7 +61,7 @@ export const MediumWidgetSettingsPage = () => {
           header={<Text font="headline">汽车型号</Text>}
           footer={
             <Text font="footnote" foregroundStyle="secondaryLabel">
-              设置中号组件显示的汽车型号文本，带“\n”会自动换行
+              设置中号组件显示的汽车型号文本，带“|”会自动换行
             </Text>
           }
         >

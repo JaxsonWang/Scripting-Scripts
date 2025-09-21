@@ -27,7 +27,7 @@ const STORAGE_KEYS = {
 
 // 默认设置
 const DEFAULT_SETTINGS: SettingsData = {
-  largeStatusText: 'ALL\nGOOD',
+  largeStatusText: 'ALL|GOOD',
   largeStatusColor: '#ffffff',
   largeCarModel: 'Audi RS7 2024',
   largeQuoteText: '世间美好与你环环相扣'
@@ -77,7 +77,7 @@ export const LargeWidgetSettingsPage = () => {
           header={<Text font="headline">状态文本</Text>}
           footer={
             <Text font="footnote" foregroundStyle="secondaryLabel">
-              设置大号组件左上角显示的状态文本，带“\n”会自动换行
+              设置大号组件左上角显示的状态文本，带“|”会自动换行
             </Text>
           }
         >

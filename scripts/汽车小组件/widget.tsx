@@ -8,6 +8,8 @@ import type { Color } from 'scripting'
 
 let carImagePath = ''
 let carLogoPath = ''
+let fullLocationAddress = '' // 完整地址（大号组件用）
+let shortLocationAddress = '' // 精简地址（中号组件用）
 
 /**
  * 获取所有设置
@@ -113,26 +115,106 @@ const renderTimeInfo = (currentTime: string, fontSize: number) => {
 /**
  * 渲染状态文本
  */
-const renderStatusText = (statusText: string, statusColor: Color, fontSize: number, enableSplit: boolean = true) => {
-  if (!enableSplit) {
-    // 小号组件：单行显示
-    return (
-      <Text font={fontSize} fontWeight="bold" foregroundStyle={statusColor}>
-        {statusText}
-      </Text>
-    )
-  }
-
-  // 大号组件：按空格分割多行显示
+const renderStatusText = (statusText: string, statusColor: Color, fontSize: number, spacing: number) => {
   return (
-    <VStack alignment="leading" spacing={-15}>
-      {statusText.split(' ').map((line: string, index: number) => (
+    <VStack alignment="leading" spacing={spacing}>
+      {statusText.split('|').map((line: string, index: number) => (
         <Text key={index} font={fontSize} fontWeight="bold" foregroundStyle={statusColor}>
           {line}
         </Text>
       ))}
     </VStack>
   )
+}
+
+/**
+ * 获取当前位置信息
+ */
+const getCurrentLocationInfo = async (): Promise<{ full: string; short: string }> => {
+  try {
+    // 设置位置精度
+    await Location.setAccuracy('hundredMeters')
+
+    // 获取当前位置
+    const location = await Location.requestCurrent()
+    if (!location) {
+      return {
+        full: '无法获取位置信息',
+        short: '位置未知'
+      }
+    }
+
+    // 反向地理编码获取地址信息
+    const placemarks = await Location.reverseGeocode({
+      latitude: location.latitude,
+      longitude: location.longitude,
+      locale: 'zh-CN'
+    })
+
+    if (placemarks && placemarks.length > 0) {
+      const place = placemarks[0]
+      return {
+        full: formatFullLocationAddress(place),
+        short: formatShortLocationAddress(place)
+      }
+    }
+
+    const coordinates = `${location.latitude.toFixed(4)}, ${location.longitude.toFixed(4)}`
+    return {
+      full: coordinates,
+      short: coordinates
+    }
+  } catch (error) {
+    console.error('获取位置信息失败:', error)
+    return {
+      full: '',
+      short: ''
+    }
+  }
+}
+
+/**
+ * 格式化完整位置地址（大号组件用）
+ */
+const formatFullLocationAddress = (placemark: any): string => {
+  const addressParts = [
+    // placemark.country,
+    placemark.administrativeArea,
+    placemark.locality,
+    placemark.subLocality,
+    placemark.thoroughfare,
+    placemark.subThoroughfare
+  ].filter(Boolean)
+
+  return addressParts.join('') || '位置信息不完整'
+}
+
+/**
+ * 格式化精简位置地址（中号组件用）
+ */
+const formatShortLocationAddress = (placemark: any): string => {
+  const addressParts = [
+    placemark.locality, // 城市
+    placemark.subLocality, // 区/县
+    placemark.thoroughfare // 街道（不包含门牌号）
+  ].filter(Boolean)
+
+  return addressParts.join('') || '位置信息不完整'
+}
+
+/**
+ * 初始化位置信息
+ */
+const initializeLocation = async () => {
+  try {
+    // 直接使用动态位置
+    const locationInfo = await getCurrentLocationInfo()
+    fullLocationAddress = locationInfo.full
+    shortLocationAddress = locationInfo.short
+  } catch (error) {
+    console.error('初始化位置失败:', error)
+    // 保持默认地址
+  }
 }
 
 /**
@@ -224,7 +306,7 @@ const SmallWidgetView = () => {
           content: (
             <HStack>
               <VStack alignment="leading" spacing={-8}>
-                {renderStatusText(settings.smallStatusText, settings.smallStatusColor, 28, false)}
+                {renderStatusText(settings.smallStatusText, settings.smallStatusColor, 28, -8)}
               </VStack>
               <Spacer />
             </HStack>
@@ -296,9 +378,13 @@ const MediumWidgetView = () => {
         alignment: 'topLeading',
         content: (
           <VStack alignment="leading" offset={{ x: 16, y: 16 }}>
-            <Text font={20} fontWeight="bold" foregroundStyle={getDynamicTextColor()}>
-              {mediumSettings.mediumCarModel}
-            </Text>
+            <VStack alignment="leading" spacing={-5}>
+              {mediumSettings.mediumCarModel.split('|').map((line: string, index: number) => (
+                <Text key={index} font={20} fontWeight="bold" foregroundStyle={getDynamicTextColor()}>
+                  {line}
+                </Text>
+              ))}
+            </VStack>
           </VStack>
         )
       }}
@@ -335,7 +421,7 @@ const MediumWidgetView = () => {
               <HStack spacing={2}>
                 <Image systemName="clock" font={11} foregroundStyle={getDynamicTextColor()} />
                 <Text font={11} foregroundStyle={getDynamicTextColor()}>
-                  山东省威海市荣成市石岛镇 12 号
+                  {shortLocationAddress}
                 </Text>
               </HStack>
             )
@@ -375,7 +461,7 @@ const LargeWidgetView = () => {
           overlay={{
             alignment: 'topLeading',
             // 顶部状态文本
-            content: renderStatusText(largeSettings.largeStatusText, largeSettings.largeStatusColor, 48, true)
+            content: renderStatusText(largeSettings.largeStatusText, largeSettings.largeStatusColor, 48, -15)
           }}
         />
         <VStack
@@ -399,7 +485,7 @@ const LargeWidgetView = () => {
               <HStack offset={{ x: 0, y: -50 }} spacing={2}>
                 <Image systemName="clock" font={11} foregroundStyle={getDynamicTextColor()} />
                 <Text font={11} foregroundStyle={getDynamicTextColor()}>
-                  山东省威海市荣成市石岛镇 12 号
+                  {fullLocationAddress}
                 </Text>
               </HStack>
               <Text offset={{ x: 0, y: -15 }} font={28} fontWeight="semibold" foregroundStyle={getDynamicTextColor()}>
@@ -460,6 +546,7 @@ const main = async () => {
   try {
     await getImagePath('car')
     await getImagePath('logo')
+    await initializeLocation()
     // 渲染组件
     Widget.present(<WidgetView />)
   } catch (error) {

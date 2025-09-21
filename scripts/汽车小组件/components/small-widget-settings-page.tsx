@@ -23,7 +23,7 @@ const STORAGE_KEYS = {
 
 // 默认设置
 export const DEFAULT_SETTINGS: SettingsData = {
-  smallStatusText: 'ALL\nGOOD',
+  smallStatusText: 'ALL|GOOD',
   smallStatusColor: '#ffffff'
 }
 
@@ -64,8 +64,8 @@ export const SmallWidgetSettingsPage = () => {
           header={<Text font="headline">状态文本</Text>}
           footer={
             <Text font="footnote" foregroundStyle="secondaryLabel">
-              自定义小号汽车小组件显示的状态文本，如：“ALL GOOD”、“车况 良好”等 {'\n'}
-              带“\n”会自动换行
+              自定义小号汽车小组件显示的状态文本{'\n'}
+              带“|”会自动换行
             </Text>
           }
         >
