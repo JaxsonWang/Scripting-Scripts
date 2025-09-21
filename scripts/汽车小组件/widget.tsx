@@ -1,8 +1,11 @@
-import type { Color } from 'scripting'
 import { HStack, Image, Path, Script, Spacer, Text, VStack, Widget } from 'scripting'
-import { getCurrentGlobalSettings } from './components/global-settings-page'
-import { DEFAULT_SETTINGS, getCurrentSmallWidgetSettings } from './components/small-widget-settings-page'
+import { DEFAULT_SETTINGS as DEFAULT_GLOBAL_SETTINGS, carFileName, carLogoName, getCurrentGlobalSettings } from './components/global-settings-page'
+import { DEFAULT_SETTINGS as DEFAULT_SMALL_WIDGET_SETTINGS, getCurrentSmallWidgetSettings } from './components/small-widget-settings-page'
 import { ImageCacheManager } from './utils/image-cache'
+import type { Color } from 'scripting'
+
+let carImagePath = ''
+let carLogoPath = ''
 
 /**
  * 获取所有设置
@@ -22,15 +25,16 @@ const getCurrentSettings = () => {
  */
 const getDynamicTextColor = () => {
   const settings = getCurrentSettings()
-  // 根据系统主题返回对应颜色
-  // 这里简化处理，实际可以根据系统主题动态选择
-  return (settings.lightFontColor || '#000000') as Color
+  return {
+    light: settings.lightFontColor,
+    dark: settings.darkFontColor
+  }
 }
 
 /**
  * 格式化当前时间
  */
-const formatCurrentTime = (format = 'yyyy-MM-dd HH:mm:ss'): string => {
+const formatCurrentTime = (format = 'YYYY-MM-dd HH:mm:ss'): string => {
   const now = new Date()
   const year = now.getFullYear()
   const month = String(now.getMonth() + 1).padStart(2, '0')
@@ -39,47 +43,77 @@ const formatCurrentTime = (format = 'yyyy-MM-dd HH:mm:ss'): string => {
   const minutes = String(now.getMinutes()).padStart(2, '0')
   const seconds = String(now.getSeconds()).padStart(2, '0')
 
-  return format.replace('yyyy', String(year)).replace('MM', month).replace('dd', day).replace('HH', hours).replace('mm', minutes).replace('ss', seconds)
+  return format.replace('YYYY', String(year)).replace('MM', month).replace('dd', day).replace('HH', hours).replace('mm', minutes).replace('ss', seconds)
 }
 
 /**
- * 获取车辆图片路径
+ * 获取图片路径
  */
-const getCarImagePath = async (): Promise<string> => {
+const getImagePath = async (type: 'car' | 'logo') => {
   const settings = getCurrentSettings()
-  const carImageUrl = settings.carImageUrl
 
-  // 如果没有设置图片URL，返回默认图片URL
-  if (!carImageUrl) {
-    return 'https://img.alicdn.com/imgextra/i4/2038135983/O1CN01zEbwxy1u4Gkjp7IW3_!!2038135983.png'
+  const imageConfig = {
+    car: {
+      url: settings.carImageUrl,
+      fileName: carFileName,
+      defaultUrl: DEFAULT_GLOBAL_SETTINGS.carImageUrl,
+      pathVar: () => carImagePath,
+      setPath: (path: string) => {
+        carImagePath = path
+      }
+    },
+    logo: {
+      url: settings.carLogoUrl,
+      fileName: carLogoName,
+      defaultUrl: DEFAULT_GLOBAL_SETTINGS.carLogoUrl,
+      pathVar: () => carLogoPath,
+      setPath: (path: string) => {
+        carLogoPath = path
+      }
+    }
+  }
+
+  const config = imageConfig[type]
+  const { url: currentImageUrl, fileName, defaultUrl: defaultImageUrl, setPath } = config
+
+  // 如果没有设置图片URL，使用默认图片
+  if (!currentImageUrl) {
+    setPath(defaultImageUrl)
+    return defaultImageUrl
   }
 
   // 如果是本地路径（用户选择的图片），直接返回
-  if (carImageUrl.startsWith('/') || carImageUrl.includes('car_image.png')) {
-    console.log('使用本地图片路径:', carImageUrl)
-    return carImageUrl
+  if (currentImageUrl.startsWith('/') || currentImageUrl.includes(fileName)) {
+    console.log('使用本地图片路径:', currentImageUrl)
+    setPath(currentImageUrl)
+    return currentImageUrl
   }
 
   // 如果是网络URL，使用缓存管理器获取缓存路径
   try {
-    const cachedPath = await ImageCacheManager.getCachedImagePath(carImageUrl)
-    console.log('使用缓存图片路径:', cachedPath)
-    return cachedPath || carImageUrl // 如果缓存失败，返回原始URL
+    const cachedPath = await ImageCacheManager.getCachedImagePath(currentImageUrl)
+    const finalPath = cachedPath || currentImageUrl || defaultImageUrl
+
+    setPath(finalPath)
+    console.log('使用缓存图片路径:', finalPath)
+    return finalPath
   } catch (error) {
     console.error('获取车辆图片失败:', error)
-    return carImageUrl // 如果出错，返回原始URL
+    const finalPath = currentImageUrl || defaultImageUrl
+
+    setPath(finalPath)
+    return finalPath
   }
 }
 
 /**
  * 小号组件视图
  */
-const SmallWidgetView = ({ carImagePath }: { carImagePath: string }) => {
+const SmallWidgetView = () => {
   const settings = getCurrentSettings()
-  const smallSettings = getCurrentSmallWidgetSettings()
   const currentTime = formatCurrentTime('HH:mm:ss')
 
-  const smallStatusText = smallSettings.smallStatusText || DEFAULT_SETTINGS.smallStatusText
+  const smallStatusText = settings.smallStatusText || DEFAULT_SMALL_WIDGET_SETTINGS.smallStatusText
 
   // 获取背景图片路径
   const getWidgetBg = settings.transparentBg && Widget.parameter ? Path.join(settings.transparentBg, Widget.parameter) : undefined
@@ -87,8 +121,8 @@ const SmallWidgetView = ({ carImagePath }: { carImagePath: string }) => {
   // 生成背景样式
   const getWidgetBackground = () => {
     // 如果开启了颜色背景，优先使用颜色背景
-    if (smallSettings.enableColorBackground && smallSettings.backgroundColors && smallSettings.backgroundColors.length > 0) {
-      const colors = smallSettings.backgroundColors
+    if (settings.enableColorBackground && settings.backgroundColors && settings.backgroundColors.length > 0) {
+      const colors = settings.backgroundColors
 
       if (colors.length === 1) {
         // 单个颜色，使用纯色背景
@@ -115,7 +149,7 @@ const SmallWidgetView = ({ carImagePath }: { carImagePath: string }) => {
     <VStack
       spacing={4}
       padding={16}
-      background={!smallSettings.enableColorBackground && getWidgetBg ? <Image filePath={getWidgetBg} resizable scaleToFit /> : undefined}
+      background={!settings.enableColorBackground && getWidgetBg ? <Image filePath={getWidgetBg} resizable scaleToFit /> : undefined}
       widgetBackground={widgetBackground}
     >
       <VStack
@@ -139,6 +173,16 @@ const SmallWidgetView = ({ carImagePath }: { carImagePath: string }) => {
               <Spacer />
             </HStack>
           )
+        }}
+      />
+      <VStack
+        frame={{
+          maxWidth: 'infinity',
+          maxHeight: 'infinity'
+        }}
+        overlay={{
+          alignment: 'topTrailing',
+          content: <Image filePath={carLogoPath} resizable scaleToFit frame={{ height: settings.carLogoHeight }} />
         }}
       />
       <Spacer />
@@ -177,20 +221,111 @@ const SmallWidgetView = ({ carImagePath }: { carImagePath: string }) => {
 /**
  * 中号组件视图
  */
-const MediumWidgetView = ({ carImagePath }: { carImagePath: string | null }) => {
+const MediumWidgetView = () => {
+  const settings = getCurrentSettings()
+
+  const currentTime = formatCurrentTime('HH:mm:ss')
+
+  // 获取背景图片路径
+  const getWidgetBg = settings.transparentBg && Widget.parameter ? Path.join(settings.transparentBg, Widget.parameter) : undefined
+
+  // 生成背景样式
+  const getWidgetBackground = () => {
+    // 如果开启了颜色背景，优先使用颜色背景
+    if (settings.enableColorBackground && settings.backgroundColors && settings.backgroundColors.length > 0) {
+      const colors = settings.backgroundColors
+
+      if (colors.length === 1) {
+        // 单个颜色，使用纯色背景
+        return colors[0]
+      } else {
+        // 多个颜色，使用渐变背景
+        return {
+          gradient: colors.map((color, index) => ({
+            color: color,
+            location: index / (colors.length - 1)
+          })),
+          startPoint: { x: 0, y: 0 },
+          endPoint: { x: 1, y: 1 }
+        }
+      }
+    }
+
+    return undefined
+  }
+
+  const widgetBackground = getWidgetBackground()
+
   return (
-    <VStack spacing={20} padding={16}>
-      <Image
-        filePath={Path.join(Script.directory, 'assets', 'material-symbols-light--shield-locked-rounded.png')}
-        resizable
-        scaleToFit
-        frame={{
-          width: 129,
-          height: 53
+    <HStack
+      spacing={20}
+      padding={16}
+      background={!settings.enableColorBackground && getWidgetBg ? <Image filePath={getWidgetBg} resizable scaleToFit /> : undefined}
+      widgetBackground={widgetBackground}
+      overlay={{
+        alignment: 'topLeading',
+        content: (
+          <VStack alignment="leading" offset={{ x: 16, y: 16 }}>
+            <Text font={20} fontWeight="bold" foregroundStyle={getDynamicTextColor()}>
+              Audi RS7
+            </Text>
+            <Text font={20} fontWeight="bold" foregroundStyle={getDynamicTextColor()}>
+              您配坐得上？
+            </Text>
+          </VStack>
+        )
+      }}
+    >
+      <VStack alignment="leading">
+        <Spacer />
+        <HStack spacing={3}>
+          <Image systemName="flag" font={14} foregroundStyle={getDynamicTextColor()} />
+          <Text font={14} foregroundStyle={getDynamicTextColor()}>
+            59036km
+          </Text>
+        </HStack>
+        <HStack spacing={3}>
+          <Image systemName="clock" font={14} foregroundStyle={getDynamicTextColor()} />
+          <Text font={14} foregroundStyle={getDynamicTextColor()}>
+            {currentTime}
+          </Text>
+        </HStack>
+      </VStack>
+      <VStack
+        spacing={0}
+        overlay={{
+          alignment: 'topTrailing',
+          content: <Image filePath={carLogoPath} resizable scaleToFit frame={{ height: settings.carLogoHeight + 5 }} />
         }}
-        foregroundStyle="systemRed"
-      />
-    </VStack>
+        alignment="center"
+      >
+        <Image
+          filePath={carImagePath}
+          resizable
+          scaleToFit
+          frame={{
+            idealWidth: 'infinity',
+            maxHeight: 'infinity'
+          }}
+        />
+        <HStack
+          frame={{
+            maxWidth: 'infinity'
+          }}
+          overlay={{
+            alignment: 'bottom',
+            content: (
+              <HStack spacing={2}>
+                <Image systemName="clock" font={11} foregroundStyle={getDynamicTextColor()} />
+                <Text font={11} foregroundStyle={getDynamicTextColor()}>
+                  山东省威海市荣成市石岛镇 12 号
+                </Text>
+              </HStack>
+            )
+          }}
+        />
+      </VStack>
+    </HStack>
   )
 }
 
@@ -198,14 +333,134 @@ const MediumWidgetView = ({ carImagePath }: { carImagePath: string | null }) => 
  * 大号组件视图
  */
 const LargeWidgetView = () => {
+  const settings = getCurrentSettings()
+
+  const currentTime = formatCurrentTime('HH:mm:ss')
+
+  // 获取背景图片路径
+  const getWidgetBg = settings.transparentBg && Widget.parameter ? Path.join(settings.transparentBg, Widget.parameter) : undefined
+
+  // 生成背景样式
+  const getWidgetBackground = () => {
+    // 如果开启了颜色背景，优先使用颜色背景
+    if (settings.enableColorBackground && settings.backgroundColors && settings.backgroundColors.length > 0) {
+      const colors = settings.backgroundColors
+
+      if (colors.length === 1) {
+        // 单个颜色，使用纯色背景
+        return colors[0]
+      } else {
+        // 多个颜色，使用渐变背景
+        return {
+          gradient: colors.map((color, index) => ({
+            color: color,
+            location: index / (colors.length - 1)
+          })),
+          startPoint: { x: 0, y: 0 },
+          endPoint: { x: 1, y: 1 }
+        }
+      }
+    }
+
+    return undefined
+  }
+
+  const widgetBackground = getWidgetBackground()
+
   return (
-    <VStack spacing={20} padding={16}>
-      <Text font="title" fontWeight="bold" foregroundStyle={getDynamicTextColor()}>
-        大号组件
-      </Text>
-      <Text font="body" foregroundStyle={getDynamicTextColor()}>
-        正在开发中...
-      </Text>
+    <VStack
+      alignment="leading"
+      spacing={10}
+      padding={16}
+      background={!settings.enableColorBackground && getWidgetBg ? <Image filePath={getWidgetBg} resizable scaleToFit /> : undefined}
+      widgetBackground={widgetBackground}
+    >
+      <HStack spacing={0} frame={{ maxWidth: 'infinity', maxHeight: 0 }}>
+        <VStack
+          frame={{
+            maxWidth: 'infinity',
+            maxHeight: 'infinity'
+          }}
+          overlay={{
+            alignment: 'topLeading',
+            // 顶部状态文本
+            content: (
+              <VStack alignment="leading" spacing={-15}>
+                <Text font={48} fontWeight="bold" foregroundStyle={getDynamicTextColor()}>
+                  ALL
+                </Text>
+                <Text font={48} fontWeight="bold" foregroundStyle={getDynamicTextColor()}>
+                  GOOD
+                </Text>
+              </VStack>
+            )
+          }}
+        />
+        <VStack
+          frame={{
+            maxWidth: 'infinity',
+            maxHeight: 'infinity'
+          }}
+          overlay={{
+            alignment: 'topTrailing',
+            // 顶部状态文本
+            content: <Image filePath={carLogoPath} resizable scaleToFit frame={{ height: settings.carLogoHeight + 10 }} />
+          }}
+        />
+      </HStack>
+      <VStack
+        offset={{ x: 0, y: -25 }}
+        overlay={{
+          alignment: 'bottom',
+          content: (
+            <>
+              <HStack offset={{ x: 0, y: -50 }} spacing={2}>
+                <Image systemName="clock" font={11} foregroundStyle={getDynamicTextColor()} />
+                <Text font={11} foregroundStyle={getDynamicTextColor()}>
+                  山东省威海市荣成市石岛镇 12 号
+                </Text>
+              </HStack>
+              <Text offset={{ x: 0, y: -15 }} font={28} fontWeight="semibold" foregroundStyle={getDynamicTextColor()}>
+                Audi RS7 2024
+              </Text>
+            </>
+          )
+        }}
+      >
+        <Image
+          filePath={carImagePath}
+          resizable
+          scaleToFit
+          frame={{
+            idealWidth: 'infinity',
+            maxHeight: 'infinity'
+          }}
+        />
+      </VStack>
+      <HStack alignment="center">
+        <Spacer />
+        <HStack spacing={3}>
+          <Image systemName="flag" font={16} foregroundStyle={getDynamicTextColor()} />
+          <Text font={16} foregroundStyle={getDynamicTextColor()}>
+            59036km
+          </Text>
+        </HStack>
+        <Spacer />
+        <HStack spacing={3}>
+          <Image systemName="clock" font={16} foregroundStyle={getDynamicTextColor()} />
+          <Text font={16} foregroundStyle={getDynamicTextColor()}>
+            {currentTime}
+          </Text>
+        </HStack>
+        <Spacer />
+      </HStack>
+      <HStack alignment="center">
+        <Spacer />
+        <Text font={14} foregroundStyle={getDynamicTextColor()}>
+          世间美好与你环环相扣
+        </Text>
+        <Spacer />
+      </HStack>
     </VStack>
   )
 }
@@ -213,16 +468,16 @@ const LargeWidgetView = () => {
 /**
  * 主组件视图
  */
-const WidgetView = ({ carImagePath }: { carImagePath: string }) => {
+const WidgetView = () => {
   switch (Widget.family) {
     case 'systemSmall':
-      return <SmallWidgetView carImagePath={carImagePath} />
+      return <SmallWidgetView />
     case 'systemMedium':
-      return <MediumWidgetView carImagePath={carImagePath} />
+      return <MediumWidgetView />
     case 'systemLarge':
       return <LargeWidgetView />
     default:
-      return <SmallWidgetView carImagePath={carImagePath} />
+      return <SmallWidgetView />
   }
 }
 
@@ -231,12 +486,10 @@ const WidgetView = ({ carImagePath }: { carImagePath: string }) => {
  */
 const main = async () => {
   try {
-    // 获取车辆图片路径
-    const carImagePath = await getCarImagePath()
-    console.log('车辆图片路径:', carImagePath)
-
+    await getImagePath('car')
+    await getImagePath('logo')
     // 渲染组件
-    Widget.present(<WidgetView carImagePath={carImagePath} />)
+    Widget.present(<WidgetView />)
   } catch (error) {
     console.error('小组件渲染失败:', error)
 
