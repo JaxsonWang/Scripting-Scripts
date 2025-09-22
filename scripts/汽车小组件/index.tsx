@@ -1,5 +1,6 @@
 import { Button, HStack, Image, List, Navigation, NavigationStack, Script, Section, Spacer, Text, VStack, Widget } from 'scripting'
 import { useEffect, useState } from 'scripting'
+import { fetch } from 'scripting'
 import { GlobalSettingsPage, getCurrentGlobalSettings } from './components/global-settings-page'
 import { SmallWidgetSettingsPage, getCurrentSmallWidgetSettings } from './components/small-widget-settings-page'
 import { MediumWidgetSettingsPage, getCurrentMediumWidgetSettings } from './components/medium-widget-settings-page'

@@ -222,8 +222,8 @@ const getCurrentLocationInfo = async (): Promise<{ full: string; short: string }
   } catch (error) {
     console.error('获取位置信息失败:', error)
     return {
-      full: '山东省威海市荣成市石岛镇 12 号',
-      short: '威海市石岛镇'
+      full: '暂无信息',
+      short: '暂无信息'
     }
   }
 }
