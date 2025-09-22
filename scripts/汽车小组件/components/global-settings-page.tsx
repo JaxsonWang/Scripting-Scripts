@@ -19,6 +19,10 @@ export type SettingsData = {
   enableColorBackground: boolean
   backgroundColors: Color[]
   totalMileage: string
+  enableDynamicMileage: boolean
+  dailyMileageIncrement: string
+  lastMileageUpdateDate: string
+  locationTimeout: string
 }
 
 // 存储键
@@ -31,7 +35,11 @@ const STORAGE_KEYS = {
   CAR_LOGO_HEIGHT: 'carLogoHeight',
   ENABLE_COLOR_BACKGROUND: 'enableColorBackground',
   BACKGROUND_COLORS: 'backgroundColors',
-  TOTAL_MILEAGE: 'totalMileage'
+  TOTAL_MILEAGE: 'totalMileage',
+  ENABLE_DYNAMIC_MILEAGE: 'enableDynamicMileage',
+  DAILY_MILEAGE_INCREMENT: 'dailyMileageIncrement',
+  LAST_MILEAGE_UPDATE_DATE: 'lastMileageUpdateDate',
+  LOCATION_TIMEOUT: 'locationTimeout'
 }
 
 // 默认设置
@@ -44,7 +52,11 @@ export const DEFAULT_SETTINGS = {
   carLogoHeight: 15,
   enableColorBackground: false,
   backgroundColors: ['#999999', '#444444'], // 默认灰色渐变
-  totalMileage: '59036'
+  totalMileage: '59036',
+  enableDynamicMileage: false,
+  dailyMileageIncrement: '50',
+  lastMileageUpdateDate: '',
+  locationTimeout: '3'
 }
 
 // 固定车辆文件名
@@ -64,7 +76,11 @@ export const getCurrentGlobalSettings = () => {
     carLogoHeight: storageManager.storage.get<number>(STORAGE_KEYS.CAR_LOGO_HEIGHT) || DEFAULT_SETTINGS.carLogoHeight,
     enableColorBackground: storageManager.storage.get<boolean>(STORAGE_KEYS.ENABLE_COLOR_BACKGROUND) || DEFAULT_SETTINGS.enableColorBackground,
     backgroundColors: storageManager.storage.get<Color[]>(STORAGE_KEYS.BACKGROUND_COLORS) || DEFAULT_SETTINGS.backgroundColors,
-    totalMileage: storageManager.storage.get<string>(STORAGE_KEYS.TOTAL_MILEAGE) || DEFAULT_SETTINGS.totalMileage
+    totalMileage: storageManager.storage.get<string>(STORAGE_KEYS.TOTAL_MILEAGE) || DEFAULT_SETTINGS.totalMileage,
+    enableDynamicMileage: storageManager.storage.get<boolean>(STORAGE_KEYS.ENABLE_DYNAMIC_MILEAGE) || DEFAULT_SETTINGS.enableDynamicMileage,
+    dailyMileageIncrement: storageManager.storage.get<string>(STORAGE_KEYS.DAILY_MILEAGE_INCREMENT) || DEFAULT_SETTINGS.dailyMileageIncrement,
+    lastMileageUpdateDate: storageManager.storage.get<string>(STORAGE_KEYS.LAST_MILEAGE_UPDATE_DATE) || DEFAULT_SETTINGS.lastMileageUpdateDate,
+    locationTimeout: storageManager.storage.get<string>(STORAGE_KEYS.LOCATION_TIMEOUT) || DEFAULT_SETTINGS.locationTimeout
   } as SettingsData
 }
 
@@ -83,6 +99,13 @@ export const GlobalSettingsPage = () => {
   const updateSetting = (key: string, value: any) => {
     storageManager.storage.set(key, value)
     setSettings(getCurrentGlobalSettings())
+  }
+
+  // 清除位置缓存
+  const clearLocationCache = () => {
+    storageManager.storage.remove('cachedLocationInfo')
+    storageManager.storage.remove('cachedLocationTime')
+    console.log('位置缓存已清除')
   }
 
   // 选择车辆图片
@@ -265,7 +288,9 @@ export const GlobalSettingsPage = () => {
               settings.backgroundColors.map((color, index) => (
                 <HStack key={index}>
                   <VStack spacing={4} alignment="leading">
-                    <Text font="body">颜色 {index + 1}</Text>
+                    <Text font="body" foregroundStyle={{ primary: color, secondary: 'white' }}>
+                      颜色 {index + 1}
+                    </Text>
                     <Text font="caption" foregroundStyle="secondaryLabel">
                       {color}
                     </Text>
@@ -374,6 +399,45 @@ export const GlobalSettingsPage = () => {
             onChanged={value => updateSetting(STORAGE_KEYS.TOTAL_MILEAGE, value)}
             prompt="请输入里程数值"
           />
+        </Section>
+
+        {/* 动态里程设置 */}
+        <Section
+          header={<Text font="headline">动态里程</Text>}
+          footer={
+            <Text font="footnote" foregroundStyle="secondaryLabel">
+              开启后每天自动增加里程数值。增加的数值在设定值的±10%范围内随机变化，让里程增长更加真实
+            </Text>
+          }
+        >
+          <Toggle title="动态里程" value={settings.enableDynamicMileage} onChanged={value => updateSetting(STORAGE_KEYS.ENABLE_DYNAMIC_MILEAGE, value)} />
+
+          {settings.enableDynamicMileage ? (
+            <TextField
+              title="增加里程值"
+              value={settings.dailyMileageIncrement}
+              onChanged={value => updateSetting(STORAGE_KEYS.DAILY_MILEAGE_INCREMENT, value)}
+              prompt="请输入每日增加的里程数值"
+            />
+          ) : null}
+        </Section>
+
+        {/* 位置缓存管理 */}
+        <Section
+          header={<Text font="headline">位置缓存</Text>}
+          footer={
+            <Text font="footnote" foregroundStyle="secondaryLabel">
+              位置信息会缓存30分钟以提高加载速度。超时时间控制位置获取的最长等待时间，超时后使用缓存
+            </Text>
+          }
+        >
+          <TextField
+            title="位置获取超时时间（秒）"
+            value={settings.locationTimeout}
+            onChanged={value => updateSetting(STORAGE_KEYS.LOCATION_TIMEOUT, value)}
+            prompt="请输入超时时间（1-10秒）"
+          />
+          <Button title="清除位置缓存" action={clearLocationCache} />
         </Section>
       </List>
     </NavigationStack>

@@ -4,12 +4,13 @@ import { DEFAULT_SETTINGS as DEFAULT_SMALL_WIDGET_SETTINGS, getCurrentSmallWidge
 import { getCurrentMediumWidgetSettings } from './components/medium-widget-settings-page'
 import { getCurrentLargeWidgetSettings } from './components/large-widget-settings-page'
 import { ImageCacheManager } from './utils/image-cache'
+import { createStorageManager } from './utils/storage'
 import type { Color } from 'scripting'
 
 let carImagePath = ''
 let carLogoPath = ''
-let fullLocationAddress = '' // 完整地址（大号组件用）
-let shortLocationAddress = '' // 精简地址（中号组件用）
+let fullLocationAddress = '暂无位置信息' // 完整地址（大号组件用）
+let shortLocationAddress = '暂无位置信息' // 精简地址（中号组件用）
 
 /**
  * 获取所有设置
@@ -131,17 +132,71 @@ const renderStatusText = (statusText: string, statusColor: Color, fontSize: numb
  * 获取当前位置信息
  */
 const getCurrentLocationInfo = async (): Promise<{ full: string; short: string }> => {
+  const LOCATION_CACHE_KEY = 'cachedLocationInfo'
+  const LOCATION_CACHE_TIME_KEY = 'cachedLocationTime'
+  const CACHE_DURATION = 30 * 60 * 1000 // 30分钟缓存时间
+  const storageManager = createStorageManager('ScriptPie.CarWidgetSettings')
+
+  // 获取用户设置的超时时间
+  const globalSettings = getCurrentGlobalSettings()
+  const timeoutSeconds = parseInt(globalSettings.locationTimeout) || Number(DEFAULT_GLOBAL_SETTINGS.locationTimeout)
+  const timeoutMs = Math.max(1, Math.min(10, timeoutSeconds)) * 1000 // 限制在1-10秒之间
+
   try {
     // 设置位置精度
     await Location.setAccuracy('hundredMeters')
 
-    // 获取当前位置
-    const location = await Location.requestCurrent()
-    if (!location) {
-      return {
-        full: '无法获取位置信息',
-        short: '位置未知'
+    // 检查缓存是否有效
+    const cachedTime = storageManager.storage.get<number>(LOCATION_CACHE_TIME_KEY)
+    const now = Date.now()
+    const isCacheValid = cachedTime && now - cachedTime < CACHE_DURATION
+
+    let location: any = null
+
+    if (isCacheValid) {
+      // 使用有效的缓存
+      location = storageManager.storage.get<any>(LOCATION_CACHE_KEY)
+      if (location) {
+        console.log('使用缓存的位置信息')
       }
+    }
+
+    // 如果没有有效缓存，尝试获取新位置
+    if (!location) {
+      console.log(`缓存无效或不存在，尝试获取新位置（${timeoutSeconds}秒超时）`)
+      try {
+        // 创建动态超时的Promise
+        const timeoutPromise = new Promise<null>((_, reject) => {
+          setTimeout(() => reject(new Error('位置获取超时')), timeoutMs)
+        })
+
+        // 使用Promise.race来实现超时控制
+        const startTime = Date.now()
+        location = await Promise.race([Location.requestCurrent(), timeoutPromise])
+        const endTime = Date.now()
+
+        if (location) {
+          // 保存新的位置信息和时间戳到缓存
+          storageManager.storage.set(LOCATION_CACHE_KEY, location)
+          storageManager.storage.set(LOCATION_CACHE_TIME_KEY, now)
+          console.log(`获取新位置成功，耗时${endTime - startTime}ms，已缓存`)
+        }
+      } catch (locationError) {
+        const isTimeout = (locationError as Error)?.message?.includes('超时')
+        console.log(`获取新位置${isTimeout ? '超时' : '失败'}，尝试使用缓存`)
+
+        // 如果获取新位置失败或超时，尝试使用缓存（包括过期缓存）
+        location = storageManager.storage.get<any>(LOCATION_CACHE_KEY)
+        if (location) {
+          const cacheAge = cachedTime ? Math.round((now - cachedTime) / 1000 / 60) : '未知'
+          console.log(`使用缓存的位置信息（缓存时间：${cacheAge}分钟前）`)
+        }
+      }
+    }
+
+    // 如果仍然没有位置信息，抛出错误
+    if (!location) {
+      throw new Error('请先授权定位')
     }
 
     // 反向地理编码获取地址信息
@@ -167,8 +222,8 @@ const getCurrentLocationInfo = async (): Promise<{ full: string; short: string }
   } catch (error) {
     console.error('获取位置信息失败:', error)
     return {
-      full: '',
-      short: ''
+      full: '山东省威海市荣成市石岛镇 12 号',
+      short: '威海市石岛镇'
     }
   }
 }
@@ -214,6 +269,48 @@ const initializeLocation = async () => {
   } catch (error) {
     console.error('初始化位置失败:', error)
     // 保持默认地址
+  }
+}
+
+/**
+ * 更新动态里程
+ */
+const updateDynamicMileage = () => {
+  try {
+    const globalSettings = getCurrentGlobalSettings()
+
+    // 如果未启用动态里程，直接返回
+    if (!globalSettings.enableDynamicMileage) {
+      return
+    }
+
+    const today = new Date().toDateString() // 获取今天的日期字符串
+    const lastUpdateDate = globalSettings.lastMileageUpdateDate
+
+    // 如果今天已经更新过，直接返回
+    if (lastUpdateDate === today) {
+      return
+    }
+
+    // 计算随机增量（±10%范围）
+    const baseIncrement = parseInt(globalSettings.dailyMileageIncrement) || Number(DEFAULT_GLOBAL_SETTINGS.dailyMileageIncrement)
+    const variation = baseIncrement * 0.1 // 10%的变化范围
+    const minIncrement = Math.max(1, baseIncrement - variation)
+    const maxIncrement = baseIncrement + variation
+    const randomIncrement = Math.floor(Math.random() * (maxIncrement - minIncrement + 1)) + minIncrement
+
+    // 更新总里程
+    const currentMileage = parseInt(globalSettings.totalMileage) || 0
+    const newMileage = currentMileage + randomIncrement
+
+    // 保存新的里程和更新日期
+    const storageManager = createStorageManager('ScriptPie.CarWidgetSettings')
+    storageManager.storage.set('totalMileage', newMileage.toString())
+    storageManager.storage.set('lastMileageUpdateDate', today)
+
+    console.log(`动态里程更新: ${currentMileage} -> ${newMileage} (+${randomIncrement})`)
+  } catch (error) {
+    console.error('动态里程更新失败:', error)
   }
 }
 
@@ -547,6 +644,7 @@ const main = async () => {
     await getImagePath('car')
     await getImagePath('logo')
     await initializeLocation()
+    updateDynamicMileage()
     // 渲染组件
     Widget.present(<WidgetView />)
   } catch (error) {
