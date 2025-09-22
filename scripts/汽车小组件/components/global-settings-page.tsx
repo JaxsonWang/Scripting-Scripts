@@ -22,7 +22,6 @@ export type SettingsData = {
   enableDynamicMileage: boolean
   dailyMileageIncrement: string
   lastMileageUpdateDate: string
-  locationTimeout: string
 }
 
 // 存储键
@@ -38,8 +37,7 @@ const STORAGE_KEYS = {
   TOTAL_MILEAGE: 'totalMileage',
   ENABLE_DYNAMIC_MILEAGE: 'enableDynamicMileage',
   DAILY_MILEAGE_INCREMENT: 'dailyMileageIncrement',
-  LAST_MILEAGE_UPDATE_DATE: 'lastMileageUpdateDate',
-  LOCATION_TIMEOUT: 'locationTimeout'
+  LAST_MILEAGE_UPDATE_DATE: 'lastMileageUpdateDate'
 }
 
 // 默认设置
@@ -55,8 +53,7 @@ export const DEFAULT_SETTINGS = {
   totalMileage: '59036',
   enableDynamicMileage: false,
   dailyMileageIncrement: '50',
-  lastMileageUpdateDate: '',
-  locationTimeout: '3'
+  lastMileageUpdateDate: ''
 }
 
 // 固定车辆文件名
@@ -79,8 +76,7 @@ export const getCurrentGlobalSettings = () => {
     totalMileage: storageManager.storage.get<string>(STORAGE_KEYS.TOTAL_MILEAGE) || DEFAULT_SETTINGS.totalMileage,
     enableDynamicMileage: storageManager.storage.get<boolean>(STORAGE_KEYS.ENABLE_DYNAMIC_MILEAGE) || DEFAULT_SETTINGS.enableDynamicMileage,
     dailyMileageIncrement: storageManager.storage.get<string>(STORAGE_KEYS.DAILY_MILEAGE_INCREMENT) || DEFAULT_SETTINGS.dailyMileageIncrement,
-    lastMileageUpdateDate: storageManager.storage.get<string>(STORAGE_KEYS.LAST_MILEAGE_UPDATE_DATE) || DEFAULT_SETTINGS.lastMileageUpdateDate,
-    locationTimeout: storageManager.storage.get<string>(STORAGE_KEYS.LOCATION_TIMEOUT) || DEFAULT_SETTINGS.locationTimeout
+    lastMileageUpdateDate: storageManager.storage.get<string>(STORAGE_KEYS.LAST_MILEAGE_UPDATE_DATE) || DEFAULT_SETTINGS.lastMileageUpdateDate
   } as SettingsData
 }
 
@@ -101,11 +97,23 @@ export const GlobalSettingsPage = () => {
     setSettings(getCurrentGlobalSettings())
   }
 
-  // 清除位置缓存
+  // 清除位置缓存（使用封装的持久化库）
   const clearLocationCache = () => {
-    storageManager.storage.remove('cachedLocationInfo')
-    storageManager.storage.remove('cachedLocationTime')
+    storageManager.storage.remove('Location')
     console.log('位置缓存已清除')
+  }
+
+  // 获取经纬度
+  const getLocationCoordinates = async () => {
+    let location = await Location.pickFromMap()
+
+    const key = 'Location'
+    if (location) {
+      storageManager.storage.set(key, location)
+    } else {
+      location = await Location.requestCurrent()
+      storageManager.storage.set(key, location)
+    }
   }
 
   // 选择车辆图片
@@ -422,21 +430,16 @@ export const GlobalSettingsPage = () => {
           ) : null}
         </Section>
 
-        {/* 位置缓存管理 */}
+        {/* 位置管理 */}
         <Section
-          header={<Text font="headline">位置缓存</Text>}
+          header={<Text font="headline">位置管理</Text>}
           footer={
             <Text font="footnote" foregroundStyle="secondaryLabel">
-              位置信息会缓存30分钟以提高加载速度。超时时间控制位置获取的最长等待时间，超时后使用缓存
+              获取经纬度后可填入桌面小组件参数栏，为小组件设定固定位置。
             </Text>
           }
         >
-          <TextField
-            title="位置获取超时时间（秒）"
-            value={settings.locationTimeout}
-            onChanged={value => updateSetting(STORAGE_KEYS.LOCATION_TIMEOUT, value)}
-            prompt="请输入超时时间（1-10秒）"
-          />
+          <Button title="获取经纬度" action={getLocationCoordinates} />
           <Button title="清除位置缓存" action={clearLocationCache} />
         </Section>
       </List>

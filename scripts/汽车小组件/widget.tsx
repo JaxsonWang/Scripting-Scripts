@@ -129,80 +129,42 @@ const renderStatusText = (statusText: string, statusColor: Color, fontSize: numb
 }
 
 /**
- * 获取当前位置信息
+ * 获取位置信息
  */
-const getCurrentLocationInfo = async (): Promise<{ full: string; short: string }> => {
-  const LOCATION_CACHE_KEY = 'cachedLocationInfo'
-  const LOCATION_CACHE_TIME_KEY = 'cachedLocationTime'
-  const CACHE_DURATION = 30 * 60 * 1000 // 30分钟缓存时间
+const getLocation = async () => {
+  let location: any
+  const key = 'Location'
   const storageManager = createStorageManager('ScriptPie.CarWidgetSettings')
 
-  // 获取用户设置的超时时间
-  const globalSettings = getCurrentGlobalSettings()
-  const timeoutSeconds = parseInt(globalSettings.locationTimeout) || Number(DEFAULT_GLOBAL_SETTINGS.locationTimeout)
-  const timeoutMs = Math.max(1, Math.min(10, timeoutSeconds)) * 1000 // 限制在1-10秒之间
+  location = await Location.requestCurrent()
+  if (!location) {
+    location = storageManager.storage.get(key)
+    if (!location) throw new Error('请先授权定位')
+  } else {
+    storageManager.storage.set(key, location)
+  }
 
+  return {
+    latitude: location?.latitude,
+    longitude: location?.longitude
+  }
+}
+
+/**
+ * 获取当前位置信息并格式化地址
+ */
+const getCurrentLocationInfo = async (): Promise<{ full: string; short: string }> => {
   try {
-    // 设置位置精度
-    await Location.setAccuracy('hundredMeters')
+    const { latitude, longitude } = await getLocation()
 
-    // 检查缓存是否有效
-    const cachedTime = storageManager.storage.get<number>(LOCATION_CACHE_TIME_KEY)
-    const now = Date.now()
-    const isCacheValid = cachedTime && now - cachedTime < CACHE_DURATION
-
-    let location: any = null
-
-    if (isCacheValid) {
-      // 使用有效的缓存
-      location = storageManager.storage.get<any>(LOCATION_CACHE_KEY)
-      if (location) {
-        console.log('使用缓存的位置信息')
-      }
-    }
-
-    // 如果没有有效缓存，尝试获取新位置
-    if (!location) {
-      console.log(`缓存无效或不存在，尝试获取新位置（${timeoutSeconds}秒超时）`)
-      try {
-        // 创建动态超时的Promise
-        const timeoutPromise = new Promise<null>((_, reject) => {
-          setTimeout(() => reject(new Error('位置获取超时')), timeoutMs)
-        })
-
-        // 使用Promise.race来实现超时控制
-        const startTime = Date.now()
-        location = await Promise.race([Location.requestCurrent(), timeoutPromise])
-        const endTime = Date.now()
-
-        if (location) {
-          // 保存新的位置信息和时间戳到缓存
-          storageManager.storage.set(LOCATION_CACHE_KEY, location)
-          storageManager.storage.set(LOCATION_CACHE_TIME_KEY, now)
-          console.log(`获取新位置成功，耗时${endTime - startTime}ms，已缓存`)
-        }
-      } catch (locationError) {
-        const isTimeout = (locationError as Error)?.message?.includes('超时')
-        console.log(`获取新位置${isTimeout ? '超时' : '失败'}，尝试使用缓存`)
-
-        // 如果获取新位置失败或超时，尝试使用缓存（包括过期缓存）
-        location = storageManager.storage.get<any>(LOCATION_CACHE_KEY)
-        if (location) {
-          const cacheAge = cachedTime ? Math.round((now - cachedTime) / 1000 / 60) : '未知'
-          console.log(`使用缓存的位置信息（缓存时间：${cacheAge}分钟前）`)
-        }
-      }
-    }
-
-    // 如果仍然没有位置信息，抛出错误
-    if (!location) {
-      throw new Error('请先授权定位')
+    if (!latitude || !longitude) {
+      throw new Error('位置信息无效')
     }
 
     // 反向地理编码获取地址信息
     const placemarks = await Location.reverseGeocode({
-      latitude: location.latitude,
-      longitude: location.longitude,
+      latitude,
+      longitude,
       locale: 'zh-CN'
     })
 
@@ -214,7 +176,7 @@ const getCurrentLocationInfo = async (): Promise<{ full: string; short: string }
       }
     }
 
-    const coordinates = `${location.latitude.toFixed(4)}, ${location.longitude.toFixed(4)}`
+    const coordinates = `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`
     return {
       full: coordinates,
       short: coordinates
