@@ -16,6 +16,40 @@ import {
 let oilData: CompleteOilData | null = null
 
 /**
+ * 获取背景图片路径
+ */
+const getWidgetBackgroundImagePath = (settings: any) => {
+  return settings.bgPath && Widget.parameter ? Path.join(settings.bgPath, Widget.parameter) : undefined
+}
+
+/**
+ * 生成背景样式
+ */
+const generateWidgetBackground = (settings: any) => {
+  // 如果开启了颜色背景，优先使用颜色背景
+  if (settings.enableColorBackground && settings.backgroundColors && settings.backgroundColors.length > 0) {
+    const colors = settings.backgroundColors
+
+    if (colors.length === 1) {
+      // 单个颜色，使用纯色背景
+      return colors[0]
+    } else {
+      // 多个颜色，使用渐变背景
+      return {
+        gradient: colors.map((color: any, index: number) => ({
+          color: color,
+          location: index / (colors.length - 1)
+        })),
+        startPoint: { x: 0, y: 0 },
+        endPoint: { x: 1, y: 1 }
+      }
+    }
+  }
+
+  return undefined
+}
+
+/**
  * 油价项目组件
  * @param props 组件属性
  * @param props.type 油品类型
@@ -93,7 +127,10 @@ const WidgetView = ({ data }: { data: CompleteOilData }) => {
   // 获取动态字体颜色和背景图片设置
   const textColor = getDynamicTextColor()
   const oilSettings = getCurrentSettings()
-  const getWidgetBg = oilSettings.bgPath && Widget.parameter ? Path.join(oilSettings.bgPath, Widget.parameter) : undefined
+
+  // 获取背景图片路径和背景样式
+  const getWidgetBg = getWidgetBackgroundImagePath(oilSettings)
+  const widgetBackground = generateWidgetBackground(oilSettings)
 
   switch (Widget.family) {
     case 'systemSmall': {
@@ -106,7 +143,8 @@ const WidgetView = ({ data }: { data: CompleteOilData }) => {
           spacing={6}
           padding={16}
           alignment="center"
-          background={getWidgetBg ? <Image filePath={getWidgetBg} resizable={true} scaleToFill={true} /> : undefined}
+          background={!oilSettings.enableColorBackground && getWidgetBg ? <Image filePath={getWidgetBg} resizable={true} scaleToFill={true} /> : undefined}
+          widgetBackground={widgetBackground}
         >
           <Image systemName="fuelpump.fill" font="title2" foregroundStyle="systemOrange" />
           <Spacer />
@@ -139,7 +177,10 @@ const WidgetView = ({ data }: { data: CompleteOilData }) => {
       }
 
       return (
-        <VStack background={getWidgetBg ? <Image filePath={getWidgetBg} resizable={true} scaleToFill={true} /> : undefined}>
+        <VStack
+          background={!oilSettings.enableColorBackground && getWidgetBg ? <Image filePath={getWidgetBg} resizable={true} scaleToFill={true} /> : undefined}
+          widgetBackground={widgetBackground}
+        >
           <VStack padding={{ vertical: 14 }}>
             <HStack spacing={4} alignment="bottom" padding={{ horizontal: 16 }}>
               <Image systemName="fuelpump.fill" font="body" foregroundStyle="systemOrange" />
@@ -228,7 +269,12 @@ const WidgetView = ({ data }: { data: CompleteOilData }) => {
     case 'systemLarge':
     case 'systemExtraLarge': {
       return (
-        <VStack spacing={16} padding={16} background={getWidgetBg ? <Image filePath={getWidgetBg} resizable={true} scaleToFill={true} /> : undefined}>
+        <VStack
+          spacing={16}
+          padding={16}
+          background={!oilSettings.enableColorBackground && getWidgetBg ? <Image filePath={getWidgetBg} resizable={true} scaleToFill={true} /> : undefined}
+          widgetBackground={widgetBackground}
+        >
           <HStack spacing={4} alignment="top">
             <Image systemName="fuelpump.fill" font="body" foregroundStyle="systemOrange" />
             <Text font="body" fontWeight="bold" foregroundStyle={textColor}>

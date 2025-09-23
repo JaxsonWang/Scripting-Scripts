@@ -1,4 +1,4 @@
-import { Button, ColorPicker, Form, HStack, List, Navigation, NavigationStack, Picker, Section, Spacer, Text, TextField, VStack, useState } from 'scripting'
+import { Button, ColorPicker, Form, HStack, List, Navigation, NavigationStack, Picker, Section, Spacer, Text, TextField, Toggle, VStack, useState } from 'scripting'
 import type { Color } from 'scripting'
 import { createStorageManager } from '../utils/storage'
 import { SettingsManager, getCurrentSettings as getCalendarSettings, saveSettings as saveCalendarSettings } from '../utils/calendar-service'
@@ -87,6 +87,12 @@ export const SettingsPage = () => {
   const [showAddRuleModal, setShowAddRuleModal] = useState<boolean>(false)
   const [newSearchText, setNewSearchText] = useState<string>('')
   const [newReplaceText, setNewReplaceText] = useState<string>('')
+
+  // 颜色背景相关状态
+  const [enableColorBackground, setEnableColorBackground] = useState<boolean>(() => calendarSettings.enableColorBackground ?? true)
+  const [backgroundColors, setBackgroundColors] = useState<Color[]>(() => calendarSettings.backgroundColors ?? ['#999999', '#444444'])
+  const [showAddColorModal, setShowAddColorModal] = useState(false)
+  const [newColor, setNewColor] = useState<Color>('#007AFF')
 
   // 更新设置的通用函数
   const updateSetting = <K extends keyof SettingsData>(key: K, value: SettingsData[K]) => {
@@ -182,6 +188,34 @@ export const SettingsPage = () => {
     setFieldReplaceRules(SettingsManager.getFieldReplaceRules())
   }
 
+  // 颜色背景管理函数
+  const handleEnableColorBackgroundChange = (value: boolean) => {
+    setEnableColorBackground(value)
+    const newSettings = { ...calendarSettings, enableColorBackground: value }
+    updateCalendarSettings(newSettings)
+  }
+
+  const handleAddColor = () => {
+    const updatedColors = [...backgroundColors, newColor]
+    setBackgroundColors(updatedColors)
+    const newSettings = { ...calendarSettings, backgroundColors: updatedColors }
+    updateCalendarSettings(newSettings)
+    setNewColor('#007AFF')
+    setShowAddColorModal(false)
+  }
+
+  const handleRemoveColor = (index: number) => {
+    const updatedColors = backgroundColors.filter((_, i) => i !== index)
+    setBackgroundColors(updatedColors)
+    const newSettings = { ...calendarSettings, backgroundColors: updatedColors }
+    updateCalendarSettings(newSettings)
+  }
+
+  const handleCancelAddColor = () => {
+    setNewColor('#007AFF')
+    setShowAddColorModal(false)
+  }
+
   return (
     <NavigationStack>
       <List
@@ -211,6 +245,78 @@ export const SettingsPage = () => {
             />
           </VStack>
         </Section>
+
+        {/* 颜色背景设置 */}
+        <Section
+          header={<Text font="headline">颜色背景</Text>}
+          footer={
+            <Text font="footnote" foregroundStyle="secondaryLabel">
+              开启后将强制显示颜色背景，即使设置了透明背景也会被覆盖
+            </Text>
+          }
+        >
+          <Toggle title="开启颜色背景" value={enableColorBackground} onChanged={handleEnableColorBackgroundChange} />
+        </Section>
+
+        {/* 背景颜色列表设置 */}
+        {enableColorBackground ? (
+          <Section
+            header={<Text font="headline">背景颜色列表</Text>}
+            footer={
+              <Text font="footnote" foregroundStyle="secondaryLabel">
+                单个颜色显示纯色背景，多个颜色显示渐变背景
+              </Text>
+            }
+          >
+            {/* 添加颜色按钮 */}
+            <Button
+              title="添加颜色"
+              action={() => setShowAddColorModal(true)}
+              sheet={{
+                isPresented: showAddColorModal,
+                onChanged: setShowAddColorModal,
+                content: (
+                  <NavigationStack>
+                    <List
+                      navigationTitle="添加颜色"
+                      navigationBarTitleDisplayMode="inline"
+                      toolbar={{
+                        topBarLeading: <Button title="取消" action={handleCancelAddColor} />,
+                        topBarTrailing: <Button title="保存" action={handleAddColor} fontWeight="medium" />
+                      }}
+                    >
+                      <Section>
+                        <ColorPicker title="选择颜色" value={newColor} onChanged={setNewColor} supportsOpacity={false} />
+                      </Section>
+                    </List>
+                  </NavigationStack>
+                )
+              }}
+            />
+
+            {/* 显示现有颜色列表 */}
+            {backgroundColors && backgroundColors.length > 0 ? (
+              backgroundColors.map((color, index) => (
+                <VStack key={index} spacing={8}>
+                  {/* 颜色信息区域 - 只显示，不可点击 */}
+                  <HStack>
+                    <VStack spacing={4} alignment="leading">
+                      <Text font="body">颜色 {index + 1}</Text>
+                      <Text font="caption">{color}</Text>
+                    </VStack>
+                    <Spacer />
+                    {/* 删除按钮区域 - 独立点击区域 */}
+                    <Button title="删除" role="destructive" action={() => handleRemoveColor(index)} />
+                  </HStack>
+                </VStack>
+              ))
+            ) : (
+              <Text font="footnote" foregroundStyle="secondaryLabel">
+                暂无颜色，点击"添加颜色"开始设置
+              </Text>
+            )}
+          </Section>
+        ) : null}
 
         {/* 字体颜色设置 */}
         <Section

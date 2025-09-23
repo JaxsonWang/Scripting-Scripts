@@ -5,7 +5,7 @@
   "intentInputTypes": [],
   "name": "一言小组件",
   "description": "在桌面显示一言",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "changelog": [
     "添加对透明小组件支持"
   ],

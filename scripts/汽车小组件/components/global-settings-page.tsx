@@ -48,7 +48,7 @@ export const DEFAULT_SETTINGS = {
   carImageUrl: 'https://img.alicdn.com/imgextra/i4/2038135983/O1CN01zEbwxy1u4Gkjp7IW3_!!2038135983.png',
   carLogoUrl: 'https://img.alicdn.com/imgextra/i1/2038135983/O1CN01vwxt9y1u4Gkmj3KOx_!!2038135983.png',
   carLogoHeight: 15,
-  enableColorBackground: false,
+  enableColorBackground: true,
   backgroundColors: ['#999999', '#444444'], // 默认灰色渐变
   totalMileage: '0',
   enableDynamicMileage: false,

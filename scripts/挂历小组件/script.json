@@ -5,7 +5,7 @@
   "intentInputTypes": [],
   "name": "挂历小组件",
   "description": "在桌面显示日历和事件信息的挂历小组件",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "changelog": [
     "添加字典替换支持",
     "添加班/休标识支持（右上角小点）"

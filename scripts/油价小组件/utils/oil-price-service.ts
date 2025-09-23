@@ -92,7 +92,9 @@ const STORAGE_KEYS = {
 const DEFAULT_SETTINGS = {
   bgPath: '', // 透明背景图片路径
   lightModeColor: '#000000', // 浅色模式字体颜色
-  darkModeColor: '#FFFFFF' // 深色模式字体颜色
+  darkModeColor: '#FFFFFF', // 深色模式字体颜色
+  enableColorBackground: false, // 开启颜色背景
+  backgroundColors: [] // 背景颜色列表
 }
 
 // 创建存储管理器实例

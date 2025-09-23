@@ -5,7 +5,7 @@
   "intentInputTypes": [],
   "name": "油价小组件",
   "description": "在桌面随时了解油价信息",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "changelog": [
     "添加对透明小组件支持"
   ],

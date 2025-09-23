@@ -51,7 +51,9 @@ const DEFAULT_SETTINGS = {
   darkModeColor: '#FFFFFF', // 深色模式字体颜色
   workColor: '#999999', // 工作状态颜色
   haltColor: '#00CC00', // 休息状态颜色
-  fieldReplaceRules: [] as FieldReplaceRule[] // 字段替换规则
+  fieldReplaceRules: [] as FieldReplaceRule[], // 字段替换规则
+  enableColorBackground: false, // 开启颜色背景
+  backgroundColors: [] // 背景颜色列表
 }
 
 // 创建存储管理器实例

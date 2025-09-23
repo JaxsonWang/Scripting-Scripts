@@ -5,6 +5,40 @@ import { fetchHitokoto, getCurrentSettings, getDynamicTextColor } from './utils/
 // 无需全局缓存变量，每次都获取新数据
 
 /**
+ * 获取背景图片路径
+ */
+const getWidgetBackgroundImagePath = (settings: any) => {
+  return settings.bgPath && Widget.parameter ? Path.join(settings.bgPath, Widget.parameter) : undefined
+}
+
+/**
+ * 生成背景样式
+ */
+const generateWidgetBackground = (settings: any) => {
+  // 如果开启了颜色背景，优先使用颜色背景
+  if (settings.enableColorBackground && settings.backgroundColors && settings.backgroundColors.length > 0) {
+    const colors = settings.backgroundColors
+
+    if (colors.length === 1) {
+      // 单个颜色，使用纯色背景
+      return colors[0]
+    } else {
+      // 多个颜色，使用渐变背景
+      return {
+        gradient: colors.map((color: any, index: number) => ({
+          color: color,
+          location: index / (colors.length - 1)
+        })),
+        startPoint: { x: 0, y: 0 },
+        endPoint: { x: 1, y: 1 }
+      }
+    }
+  }
+
+  return undefined
+}
+
+/**
  * 加载数据的异步函数
  */
 const loadHitokotoData = async (): Promise<HitokotoData> => {
@@ -38,8 +72,9 @@ const loadHitokotoData = async (): Promise<HitokotoData> => {
 const WidgetView = ({ data }: { data: HitokotoData }) => {
   const settings = getCurrentSettings()
 
-  // 获取背景图片路径
-  const getWidgetBg = settings.bgPath && Widget.parameter ? Path.join(settings.bgPath, Widget.parameter) : undefined
+  // 获取背景图片路径和背景样式
+  const getWidgetBg = getWidgetBackgroundImagePath(settings)
+  const widgetBackground = generateWidgetBackground(settings)
 
   // 获取动态字体颜色（会自动适配系统的浅色/深色模式）
   const textColor = getDynamicTextColor()
@@ -52,7 +87,8 @@ const WidgetView = ({ data }: { data: HitokotoData }) => {
           spacing={6}
           padding={16}
           alignment="center"
-          background={getWidgetBg ? <Image filePath={getWidgetBg} resizable={true} scaleToFill={true} /> : undefined}
+          background={!settings.enableColorBackground && getWidgetBg ? <Image filePath={getWidgetBg} resizable={true} scaleToFill={true} /> : undefined}
+          widgetBackground={widgetBackground}
         >
           <Image systemName="quote.bubble.fill" font="title2" foregroundStyle="systemBlue" />
           <Text
@@ -93,7 +129,8 @@ const WidgetView = ({ data }: { data: HitokotoData }) => {
         <VStack
           spacing={10}
           padding={{ horizontal: 16, top: 16, bottom: 12 }}
-          background={getWidgetBg ? <Image filePath={getWidgetBg} resizable={true} scaleToFill={true} /> : undefined}
+          background={!settings.enableColorBackground && getWidgetBg ? <Image filePath={getWidgetBg} resizable={true} scaleToFill={true} /> : undefined}
+          widgetBackground={widgetBackground}
         >
           <HStack spacing={4} alignment="center">
             <Image systemName="quote.bubble.fill" font="body" foregroundStyle="systemBlue" />
@@ -147,7 +184,12 @@ const WidgetView = ({ data }: { data: HitokotoData }) => {
     case 'systemExtraLarge': {
       // 大尺寸小组件 - 显示最完整信息
       return (
-        <VStack spacing={16} padding={20} background={getWidgetBg ? <Image filePath={getWidgetBg} resizable={true} scaleToFill={true} /> : undefined}>
+        <VStack
+          spacing={16}
+          padding={20}
+          background={!settings.enableColorBackground && getWidgetBg ? <Image filePath={getWidgetBg} resizable={true} scaleToFill={true} /> : undefined}
+          widgetBackground={widgetBackground}
+        >
           <HStack spacing={4} alignment="center">
             <Image systemName="quote.bubble.fill" font="title2" foregroundStyle="systemBlue" />
             <Text font="title2" fontWeight="bold" foregroundStyle={textColor}>

@@ -54,7 +54,9 @@ const DEFAULT_SETTINGS = {
   autoRefresh: true, // 自动刷新开关
   refreshInterval: 30, // 刷新间隔（分钟）
   lightModeColor: '#000000', // 浅色模式字体颜色
-  darkModeColor: '#FFFFFF' // 深色模式字体颜色
+  darkModeColor: '#FFFFFF', // 深色模式字体颜色
+  enableColorBackground: false, // 开启颜色背景
+  backgroundColors: [] // 背景颜色列表
 }
 
 /**

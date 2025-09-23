@@ -10,6 +10,40 @@ import {
 } from './utils/calendar-service'
 import { getDaysLeftInYear, solarToLunar } from './utils/lunar-calendar'
 import { getActualColor, getCurrentSettings } from './components/settings-page'
+
+/**
+ * 获取背景图片路径
+ */
+const getWidgetBackgroundImagePath = (settings: any) => {
+  return settings.bgPath && Widget.parameter ? Path.join(settings.bgPath, Widget.parameter) : undefined
+}
+
+/**
+ * 生成背景样式
+ */
+const generateWidgetBackground = (settings: any) => {
+  // 如果开启了颜色背景，优先使用颜色背景
+  if (settings.enableColorBackground && settings.backgroundColors && settings.backgroundColors.length > 0) {
+    const colors = settings.backgroundColors
+
+    if (colors.length === 1) {
+      // 单个颜色，使用纯色背景
+      return colors[0]
+    } else {
+      // 多个颜色，使用渐变背景
+      return {
+        gradient: colors.map((color: any, index: number) => ({
+          color: color,
+          location: index / (colors.length - 1)
+        })),
+        startPoint: { x: 0, y: 0 },
+        endPoint: { x: 1, y: 1 }
+      }
+    }
+  }
+
+  return undefined
+}
 import {
   calculateWeeksToShow,
   formatDaysLeftText,
@@ -89,12 +123,16 @@ const SmallWidget = ({ data }: { data: WidgetData }) => {
   // 获取动态字体颜色和背景图片设置
   const textColor = getDynamicTextColor()
   const calendarSettings = getCalendarSettings()
-  const getWidgetBg = calendarSettings.bgPath && Widget.parameter ? Path.join(calendarSettings.bgPath, Widget.parameter) : undefined
+
+  // 获取背景图片路径和背景样式
+  const getWidgetBg = getWidgetBackgroundImagePath(calendarSettings)
+  const widgetBackground = generateWidgetBackground(calendarSettings)
 
   return (
     <VStack
       padding={{ horizontal: 10, vertical: 5 }}
-      background={getWidgetBg ? <Image filePath={getWidgetBg} resizable={true} scaleToFill={true} /> : undefined}
+      background={!calendarSettings.enableColorBackground && getWidgetBg ? <Image filePath={getWidgetBg} resizable={true} scaleToFill={true} /> : undefined}
+      widgetBackground={widgetBackground}
     >
       {/* 月份标题 - 包含农历信息 */}
       <VStack padding={{ bottom: 2 }}>
@@ -166,14 +204,18 @@ const MediumWidget = ({ data }: { data: WidgetData }) => {
   // 获取动态字体颜色和背景图片设置
   const textColor = getDynamicTextColor()
   const calendarSettings = getCalendarSettings()
-  const getWidgetBg = calendarSettings.bgPath && Widget.parameter ? Path.join(calendarSettings.bgPath, Widget.parameter) : undefined
+
+  // 获取背景图片路径和背景样式
+  const getWidgetBg = getWidgetBackgroundImagePath(calendarSettings)
+  const widgetBackground = generateWidgetBackground(calendarSettings)
   const lunarDisplay = formatLunarDisplay(lunar)
 
   return (
     <HStack
       spacing={0}
       padding={{ horizontal: 8, vertical: 10 }}
-      background={getWidgetBg ? <Image filePath={getWidgetBg} resizable={true} scaleToFill={true} /> : undefined}
+      background={!calendarSettings.enableColorBackground && getWidgetBg ? <Image filePath={getWidgetBg} resizable={true} scaleToFill={true} /> : undefined}
+      widgetBackground={widgetBackground}
     >
       {/* 左侧 - 日历网格 (4/6 宽度) */}
       <VStack spacing={0} frame={{ maxWidth: 'infinity', maxHeight: 'infinity', alignment: 'leading' }}>
@@ -304,10 +346,17 @@ const LargeWidget = ({ data }: { data: WidgetData }) => {
   // 获取动态字体颜色和背景图片设置
   const textColor = getDynamicTextColor()
   const calendarSettings = getCalendarSettings()
-  const getWidgetBg = calendarSettings.bgPath && Widget.parameter ? Path.join(calendarSettings.bgPath, Widget.parameter) : undefined
+
+  // 获取背景图片路径和背景样式
+  const getWidgetBg = getWidgetBackgroundImagePath(calendarSettings)
+  const widgetBackground = generateWidgetBackground(calendarSettings)
 
   return (
-    <VStack padding={16} background={getWidgetBg ? <Image filePath={getWidgetBg} resizable={true} scaleToFill={true} /> : undefined}>
+    <VStack
+      padding={16}
+      background={!calendarSettings.enableColorBackground && getWidgetBg ? <Image filePath={getWidgetBg} resizable={true} scaleToFill={true} /> : undefined}
+      widgetBackground={widgetBackground}
+    >
       {/* 标题栏 */}
       <HStack alignment="center">
         <VStack alignment="leading" spacing={2}>
