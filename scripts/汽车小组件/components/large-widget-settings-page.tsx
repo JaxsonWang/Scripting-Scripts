@@ -37,10 +37,27 @@ const DEFAULT_SETTINGS: SettingsData = {
  * 获取当前大号组件设置
  */
 export const getCurrentLargeWidgetSettings = () => {
-  const largeStatusText = storageManager.storage.get<string>(STORAGE_KEYS.LARGE_STATUS_TEXT) || DEFAULT_SETTINGS.largeStatusText
-  const largeStatusColor = storageManager.storage.get<string>(STORAGE_KEYS.LARGE_STATUS_COLOR) || DEFAULT_SETTINGS.largeStatusColor
-  const largeCarModel = storageManager.storage.get<string>(STORAGE_KEYS.LARGE_CAR_MODEL) || DEFAULT_SETTINGS.largeCarModel
-  const largeQuoteText = storageManager.storage.get<string>(STORAGE_KEYS.LARGE_QUOTE_TEXT) || DEFAULT_SETTINGS.largeQuoteText
+  const largeStatusText = storageManager.storage.get<string>(STORAGE_KEYS.LARGE_STATUS_TEXT) ?? DEFAULT_SETTINGS.largeStatusText
+  const largeStatusColor = storageManager.storage.get<string>(STORAGE_KEYS.LARGE_STATUS_COLOR) ?? DEFAULT_SETTINGS.largeStatusColor
+  const largeCarModel = storageManager.storage.get<string>(STORAGE_KEYS.LARGE_CAR_MODEL) ?? DEFAULT_SETTINGS.largeCarModel
+  const largeQuoteText = storageManager.storage.get<string>(STORAGE_KEYS.LARGE_QUOTE_TEXT) ?? DEFAULT_SETTINGS.largeQuoteText
+
+  return {
+    largeStatusText,
+    largeStatusColor,
+    largeCarModel,
+    largeQuoteText
+  } as SettingsData
+}
+
+/**
+ * 获取原始大号组件设置（支持空值）
+ */
+const getRawLargeWidgetSettings = () => {
+  const largeStatusText = storageManager.storage.get<string>(STORAGE_KEYS.LARGE_STATUS_TEXT) ?? ''
+  const largeStatusColor = storageManager.storage.get<string>(STORAGE_KEYS.LARGE_STATUS_COLOR) ?? DEFAULT_SETTINGS.largeStatusColor
+  const largeCarModel = storageManager.storage.get<string>(STORAGE_KEYS.LARGE_CAR_MODEL) ?? ''
+  const largeQuoteText = storageManager.storage.get<string>(STORAGE_KEYS.LARGE_QUOTE_TEXT) ?? ''
 
   return {
     largeStatusText,
@@ -55,12 +72,13 @@ export const getCurrentLargeWidgetSettings = () => {
  */
 export const LargeWidgetSettingsPage = () => {
   const dismiss = Navigation.useDismiss()
-  const [settings, setSettings] = useState(getCurrentLargeWidgetSettings())
+  const [settings, setSettings] = useState(getRawLargeWidgetSettings())
 
-  // 更新设置的通用函数
+  // 更新设置（优化 TextField 用户体验）
   const updateSetting = (key: string, value: any) => {
     storageManager.storage.set(key, value)
-    setSettings(getCurrentLargeWidgetSettings())
+    // 直接更新状态，不重新获取，避免空值被默认值覆盖
+    setSettings(prev => ({ ...prev, [key]: value }))
   }
 
   return (

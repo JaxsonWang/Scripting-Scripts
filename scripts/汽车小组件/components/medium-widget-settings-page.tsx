@@ -27,7 +27,18 @@ const DEFAULT_SETTINGS: SettingsData = {
  * 获取当前中号组件设置
  */
 export const getCurrentMediumWidgetSettings = () => {
-  const mediumCarModel = storageManager.storage.get<string>(STORAGE_KEYS.MEDIUM_CAR_MODEL) || DEFAULT_SETTINGS.mediumCarModel
+  const mediumCarModel = storageManager.storage.get<string>(STORAGE_KEYS.MEDIUM_CAR_MODEL) ?? DEFAULT_SETTINGS.mediumCarModel
+
+  return {
+    mediumCarModel
+  } as SettingsData
+}
+
+/**
+ * 获取原始中号组件设置（支持空值）
+ */
+const getRawMediumWidgetSettings = () => {
+  const mediumCarModel = storageManager.storage.get<string>(STORAGE_KEYS.MEDIUM_CAR_MODEL) ?? ''
 
   return {
     mediumCarModel
@@ -39,12 +50,13 @@ export const getCurrentMediumWidgetSettings = () => {
  */
 export const MediumWidgetSettingsPage = () => {
   const dismiss = Navigation.useDismiss()
-  const [settings, setSettings] = useState(getCurrentMediumWidgetSettings())
+  const [settings, setSettings] = useState(getRawMediumWidgetSettings())
 
-  // 更新设置的通用函数
+  // 更新设置（优化 TextField 用户体验）
   const updateSetting = (key: string, value: any) => {
     storageManager.storage.set(key, value)
-    setSettings(getCurrentMediumWidgetSettings())
+    // 直接更新状态，不重新获取，避免空值被默认值覆盖
+    setSettings(prev => ({ ...prev, [key]: value }))
   }
 
   return (

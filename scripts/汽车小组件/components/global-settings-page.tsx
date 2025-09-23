@@ -50,7 +50,7 @@ export const DEFAULT_SETTINGS = {
   carLogoHeight: 15,
   enableColorBackground: false,
   backgroundColors: ['#999999', '#444444'], // 默认灰色渐变
-  totalMileage: '59036',
+  totalMileage: '0',
   enableDynamicMileage: false,
   dailyMileageIncrement: '50',
   lastMileageUpdateDate: ''
@@ -65,18 +65,38 @@ export const carLogoName = `car_logo.png`
  */
 export const getCurrentGlobalSettings = () => {
   return {
-    transparentBg: storageManager.storage.get<string>(STORAGE_KEYS.TRANSPARENT_BG) || DEFAULT_SETTINGS.transparentBg,
-    lightFontColor: storageManager.storage.get<string>(STORAGE_KEYS.LIGHT_FONT_COLOR) || DEFAULT_SETTINGS.lightFontColor,
-    darkFontColor: storageManager.storage.get<string>(STORAGE_KEYS.DARK_FONT_COLOR) || DEFAULT_SETTINGS.darkFontColor,
-    carImageUrl: storageManager.storage.get<string>(STORAGE_KEYS.CAR_IMAGE_URL) || DEFAULT_SETTINGS.carImageUrl,
-    carLogoUrl: storageManager.storage.get<string>(STORAGE_KEYS.CAR_LOGO_URL) || DEFAULT_SETTINGS.carLogoUrl,
-    carLogoHeight: storageManager.storage.get<number>(STORAGE_KEYS.CAR_LOGO_HEIGHT) || DEFAULT_SETTINGS.carLogoHeight,
-    enableColorBackground: storageManager.storage.get<boolean>(STORAGE_KEYS.ENABLE_COLOR_BACKGROUND) || DEFAULT_SETTINGS.enableColorBackground,
-    backgroundColors: storageManager.storage.get<Color[]>(STORAGE_KEYS.BACKGROUND_COLORS) || DEFAULT_SETTINGS.backgroundColors,
-    totalMileage: storageManager.storage.get<string>(STORAGE_KEYS.TOTAL_MILEAGE) || DEFAULT_SETTINGS.totalMileage,
-    enableDynamicMileage: storageManager.storage.get<boolean>(STORAGE_KEYS.ENABLE_DYNAMIC_MILEAGE) || DEFAULT_SETTINGS.enableDynamicMileage,
-    dailyMileageIncrement: storageManager.storage.get<string>(STORAGE_KEYS.DAILY_MILEAGE_INCREMENT) || DEFAULT_SETTINGS.dailyMileageIncrement,
-    lastMileageUpdateDate: storageManager.storage.get<string>(STORAGE_KEYS.LAST_MILEAGE_UPDATE_DATE) || DEFAULT_SETTINGS.lastMileageUpdateDate
+    transparentBg: storageManager.storage.get<string>(STORAGE_KEYS.TRANSPARENT_BG) ?? DEFAULT_SETTINGS.transparentBg,
+    lightFontColor: storageManager.storage.get<string>(STORAGE_KEYS.LIGHT_FONT_COLOR) ?? DEFAULT_SETTINGS.lightFontColor,
+    darkFontColor: storageManager.storage.get<string>(STORAGE_KEYS.DARK_FONT_COLOR) ?? DEFAULT_SETTINGS.darkFontColor,
+    carImageUrl: storageManager.storage.get<string>(STORAGE_KEYS.CAR_IMAGE_URL) ?? DEFAULT_SETTINGS.carImageUrl,
+    carLogoUrl: storageManager.storage.get<string>(STORAGE_KEYS.CAR_LOGO_URL) ?? DEFAULT_SETTINGS.carLogoUrl,
+    carLogoHeight: storageManager.storage.get<number>(STORAGE_KEYS.CAR_LOGO_HEIGHT) ?? DEFAULT_SETTINGS.carLogoHeight,
+    enableColorBackground: storageManager.storage.get<boolean>(STORAGE_KEYS.ENABLE_COLOR_BACKGROUND) ?? DEFAULT_SETTINGS.enableColorBackground,
+    backgroundColors: storageManager.storage.get<Color[]>(STORAGE_KEYS.BACKGROUND_COLORS) ?? DEFAULT_SETTINGS.backgroundColors,
+    totalMileage: storageManager.storage.get<string>(STORAGE_KEYS.TOTAL_MILEAGE) ?? DEFAULT_SETTINGS.totalMileage,
+    enableDynamicMileage: storageManager.storage.get<boolean>(STORAGE_KEYS.ENABLE_DYNAMIC_MILEAGE) ?? DEFAULT_SETTINGS.enableDynamicMileage,
+    dailyMileageIncrement: storageManager.storage.get<string>(STORAGE_KEYS.DAILY_MILEAGE_INCREMENT) ?? DEFAULT_SETTINGS.dailyMileageIncrement,
+    lastMileageUpdateDate: storageManager.storage.get<string>(STORAGE_KEYS.LAST_MILEAGE_UPDATE_DATE) ?? DEFAULT_SETTINGS.lastMileageUpdateDate
+  } as SettingsData
+}
+
+/**
+ * 获取原始设置值
+ */
+const getRawGlobalSettings = () => {
+  return {
+    transparentBg: storageManager.storage.get<string>(STORAGE_KEYS.TRANSPARENT_BG) ?? '',
+    lightFontColor: storageManager.storage.get<string>(STORAGE_KEYS.LIGHT_FONT_COLOR) ?? DEFAULT_SETTINGS.lightFontColor,
+    darkFontColor: storageManager.storage.get<string>(STORAGE_KEYS.DARK_FONT_COLOR) ?? DEFAULT_SETTINGS.darkFontColor,
+    carImageUrl: storageManager.storage.get<string>(STORAGE_KEYS.CAR_IMAGE_URL) ?? DEFAULT_SETTINGS.carImageUrl,
+    carLogoUrl: storageManager.storage.get<string>(STORAGE_KEYS.CAR_LOGO_URL) ?? DEFAULT_SETTINGS.carLogoUrl,
+    carLogoHeight: storageManager.storage.get<number>(STORAGE_KEYS.CAR_LOGO_HEIGHT) ?? DEFAULT_SETTINGS.carLogoHeight,
+    enableColorBackground: storageManager.storage.get<boolean>(STORAGE_KEYS.ENABLE_COLOR_BACKGROUND) ?? DEFAULT_SETTINGS.enableColorBackground,
+    backgroundColors: storageManager.storage.get<Color[]>(STORAGE_KEYS.BACKGROUND_COLORS) ?? DEFAULT_SETTINGS.backgroundColors,
+    totalMileage: storageManager.storage.get<string>(STORAGE_KEYS.TOTAL_MILEAGE) ?? '',
+    enableDynamicMileage: storageManager.storage.get<boolean>(STORAGE_KEYS.ENABLE_DYNAMIC_MILEAGE) ?? DEFAULT_SETTINGS.enableDynamicMileage,
+    dailyMileageIncrement: storageManager.storage.get<string>(STORAGE_KEYS.DAILY_MILEAGE_INCREMENT) ?? '',
+    lastMileageUpdateDate: storageManager.storage.get<string>(STORAGE_KEYS.LAST_MILEAGE_UPDATE_DATE) ?? DEFAULT_SETTINGS.lastMileageUpdateDate
   } as SettingsData
 }
 
@@ -85,7 +105,7 @@ export const getCurrentGlobalSettings = () => {
  */
 export const GlobalSettingsPage = () => {
   const dismiss = Navigation.useDismiss()
-  const [settings, setSettings] = useState(getCurrentGlobalSettings())
+  const [settings, setSettings] = useState(getRawGlobalSettings())
 
   // 颜色背景相关状态
   const [showAddColorModal, setShowAddColorModal] = useState(false)
@@ -94,7 +114,8 @@ export const GlobalSettingsPage = () => {
   // 更新设置
   const updateSetting = (key: string, value: any) => {
     storageManager.storage.set(key, value)
-    setSettings(getCurrentGlobalSettings())
+    // 直接更新状态，不重新获取，避免空值被默认值覆盖
+    setSettings(prev => ({ ...prev, [key]: value }))
   }
 
   // 清除位置缓存（使用封装的持久化库）

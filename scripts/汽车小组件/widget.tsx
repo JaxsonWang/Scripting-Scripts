@@ -1,6 +1,6 @@
 import { HStack, Image, Path, Script, Spacer, Text, VStack, Widget } from 'scripting'
 import { DEFAULT_SETTINGS as DEFAULT_GLOBAL_SETTINGS, carFileName, carLogoName, getCurrentGlobalSettings } from './components/global-settings-page'
-import { DEFAULT_SETTINGS as DEFAULT_SMALL_WIDGET_SETTINGS, getCurrentSmallWidgetSettings } from './components/small-widget-settings-page'
+import { getCurrentSmallWidgetSettings } from './components/small-widget-settings-page'
 import { getCurrentMediumWidgetSettings } from './components/medium-widget-settings-page'
 import { getCurrentLargeWidgetSettings } from './components/large-widget-settings-page'
 import { ImageCacheManager } from './utils/image-cache'

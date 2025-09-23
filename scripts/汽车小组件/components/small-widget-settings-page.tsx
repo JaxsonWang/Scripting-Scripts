@@ -32,8 +32,18 @@ export const DEFAULT_SETTINGS: SettingsData = {
  */
 export const getCurrentSmallWidgetSettings = () => {
   return {
-    smallStatusText: storageManager.storage.get<string>(STORAGE_KEYS.SMALL_STATUS_TEXT) || DEFAULT_SETTINGS.smallStatusText,
-    smallStatusColor: storageManager.storage.get<string>(STORAGE_KEYS.SMALL_STATUS_COLOR) || DEFAULT_SETTINGS.smallStatusColor
+    smallStatusText: storageManager.storage.get<string>(STORAGE_KEYS.SMALL_STATUS_TEXT) ?? DEFAULT_SETTINGS.smallStatusText,
+    smallStatusColor: storageManager.storage.get<string>(STORAGE_KEYS.SMALL_STATUS_COLOR) ?? DEFAULT_SETTINGS.smallStatusColor
+  } as SettingsData
+}
+
+/**
+ * 获取原始小号组件设置（支持空值）
+ */
+const getRawSmallWidgetSettings = () => {
+  return {
+    smallStatusText: storageManager.storage.get<string>(STORAGE_KEYS.SMALL_STATUS_TEXT) ?? '',
+    smallStatusColor: storageManager.storage.get<string>(STORAGE_KEYS.SMALL_STATUS_COLOR) ?? DEFAULT_SETTINGS.smallStatusColor
   } as SettingsData
 }
 
@@ -42,12 +52,13 @@ export const getCurrentSmallWidgetSettings = () => {
  */
 export const SmallWidgetSettingsPage = () => {
   const dismiss = Navigation.useDismiss()
-  const [settings, setSettings] = useState(getCurrentSmallWidgetSettings())
+  const [settings, setSettings] = useState(getRawSmallWidgetSettings())
 
-  // 更新设置
+  // 更新设置（优化 TextField 用户体验）
   const updateSetting = (key: string, value: any) => {
     storageManager.storage.set(key, value)
-    setSettings(getCurrentSmallWidgetSettings())
+    // 直接更新状态，不重新获取，避免空值被默认值覆盖
+    setSettings(prev => ({ ...prev, [key]: value }))
   }
 
   return (
@@ -73,7 +84,7 @@ export const SmallWidgetSettingsPage = () => {
             title="状态文本"
             value={settings.smallStatusText}
             onChanged={text => updateSetting(STORAGE_KEYS.SMALL_STATUS_TEXT, text)}
-            prompt="输入状态文本，如：ALL GOOD"
+            prompt="输入状态文本，如：ALL|GOOD"
           />
         </Section>
 
