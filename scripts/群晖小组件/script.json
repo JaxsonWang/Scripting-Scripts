@@ -1,0 +1,16 @@
+{
+  "name": "群晖小组件",
+  "description": "显示 Synology NAS 硬件信息状态，支持实时监控 CPU、内存和存储使用情况",
+  "version": "1.0.0",
+  "icon": "externaldrive.connected.to.line.below",
+  "color": "#FF6B35",
+  "runInApp": false,
+  "intentInputTypes": [],
+  "changelog": ["初始版本发布", "支持群晖 NAS 状态监控", "支持 CPU、内存、存储信息显示"],
+  "author": "淮城一只猫",
+  "remoteResource": {
+    "autoUpdateInterval": 86400,
+    "url": "https://joiner.i95.me/scripting/群晖小组件.scripting",
+    "hash": "00783b94652970dc0250169d974fa77b"
+  }
+}

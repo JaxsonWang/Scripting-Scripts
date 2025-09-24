@@ -6396,6 +6396,7 @@ type RequestInit = {
      * Debug label will display in log panel.
      */
     debugLabel?: string;
+  allowInsecureRequest?: boolean;
 };
 /**
  * The Request interface of the Fetch API represents a resource request.
