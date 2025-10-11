@@ -136,6 +136,27 @@ declare global {
      */
     readonly size: number
     /**
+     * Sets a region of the data buffer to 0.
+     * @param startIndex The start index of the region to reset.
+     * @param endIndex The end index of the region to reset.
+     * @throws an error if the startIndex or endIndex is out of bounds.
+     */
+    resetBytes(startIndex: number, endIndex: number): void
+    /**
+     * Creates a new data buffer by removing the specified number of bytes from the beginning of the original buffer.
+     * @param amount The number of bytes to strip from the input data buffer. The value must be less than the original data buffer's length.
+     * @returns Returns a new data buffer created by removing the given number of bytes from the front of the original buffer.
+     */
+    advanced(amount: number): Data
+    /**
+     * Replace a range of bytes in the data with the bytes from another data object.
+     * @param startIndex The start index of the range to replace.
+     * @param endIndex The end index of the range to replace.
+     * @param data The data to replace the range with.
+     * @throws an error if the startIndex or endIndex is out of bounds.
+     */
+    replaceSubrange(startIndex: number, endIndex: number, data: Data): void
+    /**
      * Use this method to compress in-memory data when you want to reduce memory usage and can afford the time to compress and decompress it. If your data object is already in a compressed format, such as media formats like JPEG images or AAC audio, additional compression may provide minimal or no reduction in memory usage.
      * @param algorithm An algorithm used to compress the data.
      * @returns Returns a new data object by compressing the data object’s bytes. 
@@ -160,12 +181,19 @@ declare global {
      * Append another Data instance to this data.
      * @param other The Data instance to append.
      */
-    append(other: Data): Data
+    append(other: Data)
+    /**
+     * Get a byte array of the data.
+     * @returns Returns a `Uint8Array` containing the bytes of the data, or `null` if the data is empty or cannot be converted to bytes.
+     * @deprecated Use `toUint8Array()` instead.
+     */
+    getBytes(): Uint8Array | null
+
     /**
      * Get a byte array of the data.
      * @returns Returns a `Uint8Array` containing the bytes of the data, or `null` if the data is empty or cannot be converted to bytes.
      */
-    getBytes(): Uint8Array | null
+    toUint8Array(): Uint8Array | null
     /**
      * Get an ArrayBuffer of the data.
      * @returns Returns an `ArrayBuffer` containing the bytes of the data, or `null` if the data is empty or cannot be converted to bytes.
@@ -186,12 +214,31 @@ declare global {
      */
     toRawString(encoding?: string): string | null
     /**
-     * Create a new Data instance from a string, file path, ArrayBuffer, base64 encoded string, or hex encoded string.
+     * Get an array of integers representing the bytes of the data.
+     * @returns Returns an array of integers representing the bytes of the data.
+     */
+    toIntArray(): number[]
+    /**
+     * Create a new Data instance from an array of integers.
+     * @param array The array of integers to convert to data.
+     * @returns Returns a new Data instance containing the bytes of the integer array.
+     */
+    static fromIntArray(array: number[]): Data
+    /**
+     * Create a new Data instance from a string.
+     * @param string The string to convert to data.
+     * @param encoding The encoding of the string, defaults to `utf-8`.
+     * @returns Returns a new Data instance containing the bytes of the string, or `null` if the string is empty or cannot be converted to bytes.
+     * @deprecated Use `Data.fromRawString` instead.
+     */
+    static fromString(string: string, encoding?: string): Data | null
+    /**
+     * Create a new Data instance from a raw string.
      * @param string The string to convert to data.
      * @param encoding The encoding of the string, defaults to `utf-8`.
      * @returns Returns a new Data instance containing the bytes of the string, or `null` if the string is empty or cannot be converted to bytes.
      */
-    static fromString(string: string, encoding?: string): Data | null
+    static fromRawString(string: string, encoding?: string): Data | null
     /**
      * Create a new Data instance from a file path.
      * @param filePath The path to the file to read.
@@ -204,6 +251,12 @@ declare global {
      * @returns Returns a new Data instance containing the bytes of the ArrayBuffer, or `null` if the ArrayBuffer is empty or cannot be converted to bytes.
      */
     static fromArrayBuffer(arrayBuffer: ArrayBuffer): Data | null
+    /**
+     * Create a new Data instance from a Uint8Array.
+     * @param byteArray The Uint8Array to convert to Data.
+     * @returns Returns a new Data instance containing the bytes of the Uint8Array, or `null` if the Uint8Array is empty or cannot be converted to bytes.
+     */
+    static fromUint8Array(byteArray: Uint8Array): Data | null
     /**
      * Create a new Data instance from a base64 encoded string.
      * @param base64Encoded The base64 encoded string to convert to Data.
@@ -704,6 +757,10 @@ declare global {
      * The longitude in degrees.
      */
     longitude: number
+    /**
+     * Timestamp in milliseconds
+     */
+    timestamp: number
   }
   /**
    * A user-friendly description of a geographic coordinate, often containing the name of the place, its address, and other relevant information.
@@ -778,9 +835,16 @@ declare global {
      */
     function setAccuracy(accuracy: LocationAccuracy): Promise<void>
     /**
-     * Requests the one-time delivery of the user’s current location.
+     * Requests the current location.
+     * 
+     * By default, if a cached location is available, it will be returned immediately.
+     * If no cached location exists, a new location request will be made.
+     * 
+     * @param options.forceRequest If `true`, ignores any cached location and always requests a new location before returning. Default is `false`.
+     * 
+     * @returns A promise that resolves to the current location object.
      */
-    function requestCurrent(): Promise<LocationInfo | null>
+    function requestCurrent(options?: { forceRequest?: boolean }): Promise<LocationInfo | null>
     /**
      * Pick a location from the iOS built-in map.
      */
@@ -1407,7 +1471,7 @@ declare global {
   }
 
   /**
-   * Providing a persistent store for simple data. All data is stored in current script's private domain.
+   * Providing a persistent store for simple data. All data is deafult stored in current script's private domain, and you can set `shared` option to true to store data in shared domain, so the other scripts can access it.
    *
    * Data is persisted to disk asynchronously.
    *
@@ -1421,29 +1485,46 @@ declare global {
   declare namespace Storage {
     /**
      * Saves a `value` to persistent storage in the background.
+     * @param key The key for the value to be stored.
+     * @param value The value to store, it can be `string`, `number`, `boolean` or `JSON`.
+     * @param options The options for the storage, if `shared` is true, the data will be stored in shared domain.
      * @returns A boolean indicates whether the operation was successful.
      */
-    function set<T>(key: string, value: T): boolean
+    function set<T>(key: string, value: T, options?: { shared: boolean }): boolean
     /**
      * Reads a value from persistent storage, if the value of the key is not exists, returns `null`.
+     * @param key The key for the value to be retrieved.
+     * @param options The options for the storage, if `shared` is true, the data will be retrieved from shared domain.
+     * @returns The value associated with the key, or `null` if the key does not exist.
      */
-    function get<T>(key: string): T | null
+    function get<T>(key: string, options?: { shared: boolean }): T | null
     /**
      * Saves a `Data` to persistent storage in the background.
+     * @param key The key for the value to be stored.
+     * @param data The `Data` to store.
+     * @param options The options for the storage, if `shared` is true, the data will be stored in shared domain.
      */
-    function setData(key: string, data: Data): void
+    function setData(key: string, data: Data, options?: { shared: boolean }): void
     /**
      * Reads a `Data` from persistent storage, if the value of the key is not exists, returns `null`.
+     * @param key The key for the value to be retrieved.
+     * @param options The options for the storage, if `shared` is true, the data will be retrieved from shared domain.
+     * @returns The `Data` associated with the key, or `null` if the key does not exist.
      */
-    function getData(key: string): Data | null
+    function getData(key: string, options?: { shared: boolean }): Data | null
     /**
      * Removes an entry from persistent storage.
+     * @param key The key for the value to be removed.
+     * @param options The options for the storage, if `shared` is true, the data will be removed from shared domain.
      */
-    function remove(key: string): void
+    function remove(key: string, options?: { shared: boolean }): void
     /**
      * Returns true if the persistent storage contains the given `key`.
+     * @param key The key to check for existence.
+     * @param options The options for the storage, if `shared` is true, the data will be checked from shared domain.
+     * @returns A boolean value indicating whether the persistent storage contains the given key.
      */
-    function contains(key: string): boolean
+    function contains(key: string, options?: { shared: boolean }): boolean
     /**
      * Removes all entries from the persistent storage.
      */
@@ -4516,7 +4597,7 @@ declare global {
       prompt: string,
       schema: JSONSchemaArray | JSONSchemaObject,
       options?: {
-        provider: "openai" | "gemini" | "anthropic" | "deepseek" | "pollinations" | {
+        provider: "openai" | "gemini" | "anthropic" | "deepseek" | "openrouter" | {
           custom: string
         }
         modelId?: string
@@ -7323,7 +7404,7 @@ declare global {
      * ```
      */
     static const shared: Translation
-    
+
     /**
      * Translates a single text from the source language to the target language.
      * @param options An object containing the text to be translated, the target language, and optionally the source language.
@@ -7353,6 +7434,861 @@ declare global {
       source?: string
       target?: string
     }): Promise<string[]>
+  }
+
+  /**
+   * This interface allows you to custom your own keyboard extension.
+   */
+  declare namespace CustomKeyboard {
+
+    /**
+     * Text input traits. You should use `useTraits()` to get the current traits instead of importing this type directly, the value will be updated when `textDidChange` or `selectionDidChange` event is emitted.
+     * 
+     *  - `autocapitalizationType`: The autocapitalization style for the text object.
+     *  - `autocorrectionType`: The autocorrection style for the text object.
+     *  - `inlinePredictionType`: The inline prediction style for the text object.
+     *  - `spellCheckingType`: The spell-checking style for the text object.
+     *  - `smartQuotesType`: The smart quotes style for the text object.
+     *  - `smartDashesType`: The smart dashes style for the text object.
+     *  - `smartInsertDeleteType`: The smart insert/delete style for the text object.
+     *  - `keyboardType`: The keyboard type to be displayed for the text object.
+     *  - `keyboardAppearance`: The appearance style of the keyboard for the text object.
+     *  - `returnKeyType`: The return key type for the keyboard.
+     *  - `enablesReturnKeyAutomatically`: A Boolean value that indicates whether the return key is automatically enabled when the user enters text.
+     *  - `textContentType`: A string that describes the semantic meaning expected of the content in a text input area.
+     */
+    type TextInputTraits = {
+      autocapitalizationType: 'default' | 'none' | 'words' | 'sentences' | 'allCharacters'
+      autocorrectionType: 'default' | 'no' | 'yes'
+      inlinePredictionType: 'default' | 'no' | 'yes'
+      spellCheckingType: 'default' | 'no' | 'yes'
+      smartQuotesType: 'default' | 'no' | 'yes'
+      smartDashesType: 'default' | 'no' | 'yes'
+      smartInsertDeleteType: 'default' | 'no' | 'yes'
+      keyboardType: 'default' | 'asciiCapable' | 'numbersAndPunctuation' | 'url' | 'numberPad' | 'phonePad' | 'namePhonePad' | 'emailAddress' | 'decimalPad' | 'twitter' | 'webSearch' | 'asciiCapableNumberPad'
+      keyboardAppearance: 'default' | 'dark' | 'light'
+      returnKeyType: 'default' | 'go' | 'google' | 'join' | 'next' | 'route' | 'search' | 'send' | 'yahoo' | 'done' | 'emergencyCall' | 'continue'
+      enablesReturnKeyAutomatically: boolean
+      textContentType: "URL" |
+      "namePrefix" |
+      "name" |
+      "nameSuffix" |
+      "givenName" |
+      "middleName" |
+      "familyName" |
+      "nickname" |
+      "organizationName" |
+      "jobTitle" |
+      "location" |
+      "fullStreetAddress" |
+      "streetAddressLine1" |
+      "streetAddressLine2" |
+      "addressCity" |
+      "addressCityAndState" |
+      "addressState" |
+      "postalCode" |
+      "sublocality" |
+      "countryName" |
+      "username" |
+      "password" |
+      "newPassword" |
+      "oneTimeCode" |
+      "emailAddress" |
+      "telephoneNumber" |
+      "cellularEID" |
+      "cellularIMEI" |
+      "creditCardNumber" |
+      "creditCardExpiration" |
+      "creditCardExpirationMonth" |
+      "creditCardExpirationYear" |
+      "creditCardSecurityCode" |
+      "creditCardType" |
+      "creditCardName" |
+      "creditCardGivenName" |
+      "creditCardMiddleName" |
+      "creditCardFamilyName" |
+      "birthdate" |
+      "birthdateDay" |
+      "birthdateMonth" |
+      "birthdateYear" |
+      "dateTime" |
+      "flightNumber" |
+      "shipmentTrackingNumber"
+    }
+
+    const traits: TextInputTraits
+
+    /**
+     * The text before the cursor, or null if there is no text before the cursor.
+     */
+    const textBeforeCursor: Promise<string | null>
+    /**
+     * The text after the cursor, or null if there is no text after the cursor.
+     */
+    const textAfterCursor: Promise<string | null>
+    /**
+     * The currently selected text, or null if there is no selected text.
+     */
+    const selectedText: Promise<string | null>
+    /**
+     * A Boolean value that indicates whether the text input object has any text.
+     */
+    const hasText: Promise<boolean>
+
+    /**
+     * Sets the visibility of the dictation key of the system.
+     * @param value A boolean value indicating whether the dictation key should be shown (true) or hidden (false).
+     * @returns A promise that resolves when the dictation key visibility is successfully set.
+     */
+    function setHasDictationKey(value: boolean): Promise<void>
+
+    /**
+     * Dismisses the custom keyboard.
+     */
+    function dismiss(): Promise<void>
+    /**
+     * Switches to the next keyboard in the list of enabled keyboards.
+     */
+    function nextKeyboard(): Promise<void>
+    /**
+     * Moves the cursor by the specified offset.
+     * @param offset The number of characters to move the cursor. A positive value moves the cursor to the right, while a negative value moves it to the left.
+     */
+    function moveCursor(offset: number): Promise<void>
+    /**
+     * Inserts the specified text at the current cursor position.
+     * @param text The text to insert.
+     */
+    function insertText(text: string): Promise<void>
+    /**
+     * Deletes a character before the current cursor position.
+     */
+    function deleteBackward(): Promise<void>
+    /**
+     * Inserts the provided text and marks it to indicate that it’s part of an active input session.
+     * @param text The text to be marked.
+     * @param location The starting position of the marked text.
+     * @param length The length of the marked text.
+     */
+    function setMarkedText(text: string, location: number, length: number): Promise<void>
+    /**
+     * Unmarks the currently marked text.
+     */
+    function unmarkText(): Promise<void>
+
+    /**
+     * Requests the system to adjust the height of the custom keyboard.
+     * @param height The desired height in points.
+     * Note: The system may ignore this request if the height is too small or too large.
+     */
+    function requestHeight(height: number): Promise<void>
+
+    /**
+     * Sets the visibility of the custom keyboard's toolbar. The toolbar defaults to visible, and it is useful for debugging.
+     * @param visible A boolean value indicating whether the toolbar should be visible (true) or hidden (false).
+     */
+    function setToolbarVisible(visible: boolean): Promise<void>
+
+    /**
+     *  Play keyboard clicks sound.
+     */
+    function playInputClick(): void
+
+    /**
+     * Dismisses the currently presented custom keyboard script view
+     * and returns to the Scripting keyboard home screen (script list).
+     *
+     * Use this method when you want to exit the active keyboard script
+     * and allow the user to choose another script from the home screen.
+     *
+     * Example:
+     * ```ts
+     * await CustomKeyboard.dismissToHome()
+     * ```
+     */
+    function dismissToHome(): Promise<void>
+
+    /**
+     * Adds an event listener for the specified event.
+     * @param event Event name
+     * @param listener Event listener
+     */
+    function addListener(event: 'textWillChange' | 'selectionWillChange', listener: () => void): void
+    function addListener(event: 'textDidChange' | 'selectionDidChange', listener: (traits: TextInputTraits) => void): void
+
+    /**
+     * Removes an event listener for the specified event.
+     * @param event Event name
+     * @param listener Event listener
+     */
+    function removeListener(event: 'textWillChange' | 'selectionWillChange', listener: () => void): void
+    function removeListener(event: 'textDidChange' | 'selectionDidChange', listener: (traits: TextInputTraits) => void): void
+
+    /**
+     * Removes all event listeners for the specified event.
+     * @param event Event name
+     */
+    function removeAllListeners(event: 'textWillChange' | 'selectionWillChange' | 'textDidChange' | 'selectionDidChange'): void
+
+    /**
+     * A hook to get the current text input traits. The returned value will be updated when `textDidChange` or `selectionDidChange` event is emitted.
+     * @returns The current text input traits.
+     */
+    function useTraits(): TextInputTraits
+
+    /**
+     * Presents a custom keyboard interface using the provided virtual node.
+     * This method can only be called once during the keyboard's lifecycle.
+     * @param node The root virtual node representing the custom keyboard UI.
+     */
+    function present(node: VirtualNode): void
+
+  }
+
+  type BluetoothCharacteristicProperty =
+    "broadcast" |
+    "read" |
+    "writeWithoutResponse" |
+    "write" |
+    "notify" |
+    "indicate" |
+    "authenticatedSignedWrites" |
+    "extendedProperties" |
+    "notifyEncryptionRequired" |
+    "indicateEncryptionRequired"
+
+  type BluetoothAttributePermissions =
+    "readable" |
+    "writeable" |
+    "readEncryptionRequired" |
+    "writeEncryptionRequired"
+
+  /**
+   * This class represents a Bluetooth characteristic, which is a basic data element used in Bluetooth communication.
+   * It contains properties that describe the characteristic's UUID, service UUID, properties, notification status, and value.
+   */
+  class BluetoothCharacteristic {
+    /**
+     * The UUID of the characteristic.
+     */
+    readonly uuid: string
+    /**
+     * The UUID of the service that contains this characteristic, or null if the service is not known.
+     */
+    readonly serviceUUID: string | null
+    /**
+     * The properties of the characteristic, which indicate the operations that can be performed on it.
+     */
+    readonly properties: BluetoothCharacteristicProperty[]
+    /**
+     * A boolean value that indicates whether notifications are enabled for the characteristic.
+     * If true, the peripheral will send updates to the central when the characteristic's value changes.
+     * If false, notifications are disabled.
+     */
+    readonly isNotifying: boolean
+    /**
+     * The current value of the characteristic, or null if the value is not known.
+     */
+    readonly value: Data | null
+  }
+
+  /**
+   * This class represents a Bluetooth service, which is a collection of characteristics and relationships to other services.
+   * It contains properties that describe the service's UUID, peripheral ID, primary status, included services, and characteristics.
+   */
+  class BluetoothService {
+    /**
+     * The UUID of the service.
+     */
+    readonly uuid: string
+    /**
+     * The identifier of the peripheral that contains this service, or null if the peripheral is not known.
+     */
+    readonly peripheralId: string | null
+    /**
+     * A boolean value that indicates whether the service is a primary service.
+     * A primary service is one that is essential to the functionality of the peripheral.
+     * A secondary service is one that is not essential, but may provide additional features or information.
+     */
+    readonly isPrimary: boolean
+    /**
+     * An array of included services, or null if the included services are not known.
+     * Included services are services that are referenced by this service.
+     * They may be primary or secondary services.
+     * If the included services have not been discovered, this property will be null.
+     * You can discover included services by calling the `discoverIncludedServices` method on the peripheral.
+     */
+    readonly includedServices: BluetoothService[] | null
+    /**
+     * An array of characteristics, or null if the characteristics are not known.
+     * Characteristics are data elements that are used to exchange information between the central and peripheral.
+     * If the characteristics have not been discovered, this property will be null.
+     * You can discover characteristics by calling the `discoverCharacteristics` method on the peripheral.
+     */
+    readonly characteristics: BluetoothCharacteristic[] | null
+  }
+
+  /**
+   * This class represents a Bluetooth peripheral, which is a device that offers services and characteristics to a central device.
+   * It contains properties that describe the peripheral's name, ID, services, and capabilities, as well as methods for interacting with the peripheral.
+   */
+  class BluetoothPeripheral {
+    /**
+     * The name of the peripheral, or null if the name is not known.
+     */
+    readonly name: string | null
+    /**
+     * The identifier of the peripheral. This value is unique to the device and remains constant across app launches.
+     * It can be used to identify and connect to the peripheral.
+     */
+    readonly id: string
+    /**
+     * An array of services offered by the peripheral, or null if the services are not known.
+     * Services are collections of characteristics and relationships to other services.
+     * If the services have not been discovered, this property will be null.
+     * You can discover services by calling the `discoverServices` method on the peripheral.
+     */
+    readonly services: BluetoothService[] | null
+    /**
+     * A boolean value that indicates whether the peripheral is connected to the central device.
+     * If true, the peripheral is connected and can be used for communication.
+     * If false, the peripheral is not connected.
+     */
+    readonly isConnected: boolean
+    /**
+     * A boolean value that indicates whether the peripheral can send write requests without a response.
+     * If true, the peripheral can send write requests without waiting for a response from the central device.
+     * If false, the peripheral must wait for a response before sending another write request.
+     * The `onReadyToSendWriteWithoutResponse` event will be emitted when the peripheral is ready to send more write requests without a response.
+     */
+    readonly canSendWriteWithoutResponse: boolean
+    /**
+     * A boolean value that indicates whether the peripheral is authorized to use the Apple Notification Center Service (ANCS).
+     * If true, the peripheral is authorized to use ANCS and can receive notifications from the central device.
+     * If false, the peripheral is not authorized to use ANCS.
+     * This property is only relevant for peripherals that support ANCS.
+     */
+    readonly ancsAuthorized: boolean
+
+    /**
+     * Event handler that is called when the peripheral is connected.
+     */
+    onConnected: (() => void) | null
+
+    /**
+     * Event handler that is called when the peripheral is disconnected.
+     * @param error An Error object if there was an error during disconnection, or null if the disconnection was intentional.
+     * @param isReconnecting A boolean value that indicates whether the peripheral is attempting to reconnect.
+     * If true, the peripheral is trying to reconnect after an unexpected disconnection.
+     * If false, the disconnection was intentional and no reconnection will be attempted.
+     */
+    onDisconnected: ((error: Error | null, isReconnecting: boolean) => void) | null
+
+    /**
+     * Event handler that is called when the peripheral fails to connect.
+     */
+    onConnectFailed: ((error: Error) => void) | null
+
+    /**
+     * Event handler that is called when the peripheral's name changes.
+     */
+    onNameChanged: ((name: string | null) => void) | null
+
+    /**
+     * Event handler that is called when the peripheral's services are updated.
+     * This event is triggered after calling `discoverServices()`.
+     */
+    onDiscoverServices: ((error: Error | null, services: BluetoothService[] | null) => void) | null
+
+    /**
+     * Event handler that is called when the peripheral's characteristics are updated.
+     * This event is triggered after calling `discoverCharacteristics()`.
+     */
+    onDiscoverCharacteristics: ((error: Error | null, characteristics: BluetoothCharacteristic[] | null) => void) | null
+
+    /**
+     * Event handler that is called when the peripheral's included services are updated.
+     * This event is triggered after calling `discoverIncludedServices()`.
+     */
+    onDiscoverIncludedServices: ((error: Error | null, services: BluetoothService[] | null) => void) | null
+
+    /**
+     * Event handler that is called when the peripheral is ready to send write requests without a response.
+     * This event is triggered when the `canSendWriteWithoutResponse` property changes from false to true.
+     * You can use this event to send more write requests without a response.
+     */
+    onReadyToSendWriteWithoutResponse: (() => void) | null
+
+    /**
+     * Reads the value of the specified characteristic from the peripheral.
+     * @param characteristic The characteristic to read the value from.
+     * @returns A promise that resolves to the value of the characteristic as a Data object.
+     * If the read operation fails, the promise will be rejected with an error.
+     */
+    readValue(characteristic: BluetoothCharacteristic): Promise<Data>
+
+    /**
+     * Gets the maximum length of data that can be written to the specified characteristic using the specified write type.
+     * @param writeType The type of write operation to perform. It can be either "withResponse" or "withoutResponse".
+     * - "withResponse": The write operation will wait for a response from the peripheral to confirm that the write was successful.
+     * - "withoutResponse": The write operation will not wait for a response from the peripheral. This is faster but less reliable.
+     * @returns The maximum length of data that can be written to the characteristic using the specified write type.
+     * This value is determined by the peripheral's capabilities and may vary between different devices and characteristics.
+     */
+    maxWriteValueLength(writeType: "withResponse" | "withoutResponse"): number
+
+    /**
+     * Writes the specified value to the specified characteristic on the peripheral.
+     * @param characteristic The characteristic to write the value to.
+     * @param value The value to write to the characteristic, represented as a Data object.
+     * @param writeType The type of write operation to perform. It can be either "withResponse" or "withoutResponse".
+     * - "withResponse": The write operation will wait for a response from the peripheral to confirm that the write was successful.
+     * - "withoutResponse": The write operation will not wait for a response from the peripheral. This is faster but less reliable.
+     * @returns A promise that resolves when the write operation is complete.
+     * If the write operation fails, the promise will be rejected with an error.
+     */
+    writeValue(characteristic: BluetoothCharacteristic, value: Data, writeType: "withResponse" | "withoutResponse"): Promise<void>
+
+    /**
+     * Sets a notification handler for the specified characteristic on the peripheral.
+     * When the characteristic's value changes, the handler function will be called with the new value.
+     * This method should only be called if the characteristic has the "notify" or "indicate" property, and should only be called once per characteristic.
+     * @param characteristic The characteristic to set the notification handler for.
+     * @param handler The handler function that will be called when the characteristic's value changes.
+     * The handler function takes two arguments:
+     * - error: An Error object if there was an error, or null if the operation was successful.
+     * - value: The new value of the characteristic as a Data object, or null if there was an error.
+     * @returns A promise that resolves when the notification handler is successfully set.
+     * If the operation fails, the promise will be rejected with an error.
+     * 
+     * Note: You must call `removeNotifyHandler()` to remove the notification handler when you no longer need it.
+     */
+    subscribe(characteristic: BluetoothCharacteristic, handler: (error: Error | null, value: Data | null) => void): Promise<void>
+
+    /**
+     * Removes the notification handler for the specified characteristic on the peripheral.
+     * @param characteristic The characteristic to remove the notification handler from.
+     * This method should be called when you no longer need to receive notifications for the characteristic.
+     * @returns A promise that resolves when the notification handler is successfully removed.
+     * If the operation fails, the promise will be rejected with an error.
+     */
+    unsubscribe(characteristic: BluetoothCharacteristic): Promise<void>
+
+    /**
+     * Discovers the services of the peripheral.
+     * @param serviceUUIDs An optional array of UUID strings to filter the services to discover.
+     * If this parameter is not provided, all services will be discovered.
+     * @returns A promise that resolves when the services have been discovered.
+     * If the discovery operation fails, the promise will be rejected with an error.
+     * 
+     * Note: You must call this method after connecting to the peripheral.
+     */
+    discoverServices(serviceUUIDs?: string[]): Promise<void>
+
+    /**
+     * Discovers the included services of the specified service on the peripheral.
+     * @param service The service to discover included services for.
+     * @param includedServiceUUIDs An optional array of UUID strings to filter the included services to discover.
+     * If this parameter is not provided, all included services will be discovered.
+     * @returns A promise that resolves when the included services have been discovered.
+     * If the discovery operation fails, the promise will be rejected with an error.
+     * 
+     * Note: You must call this method after discovering the service using `discoverServices()`.
+     */
+    discoverIncludedServices(service: BluetoothService, includedServiceUUIDs?: string[]): Promise<void>
+
+    /**
+     * Discovers the characteristics of the specified service on the peripheral.
+     * @param service The service to discover characteristics for.
+     * @param characteristicUUIDs An optional array of UUID strings to filter the characteristics to discover.
+     * If this parameter is not provided, all characteristics will be discovered.
+     * @returns A promise that resolves when the characteristics have been discovered.
+     * If the discovery operation fails, the promise will be rejected with an error.
+     * 
+     * Note: You must call this method after discovering the service using `discoverServices()`.
+     */
+    discoverCharacteristics(service: BluetoothService, characteristicUUIDs?: string[]): Promise<void>
+
+    /**
+     * Reads the Received Signal Strength Indicator (RSSI) value for the peripheral.
+     * The RSSI value indicates the signal strength of the peripheral, measured in decibels (dBm).
+     * A higher RSSI value indicates a stronger signal, while a lower value indicates a weaker signal.
+     * @returns A promise that resolves to the RSSI value as a number.
+     * If the read operation fails, the promise will be rejected with an error.
+     * 
+     * Note: You must call this method after connecting to the peripheral.
+     */
+    readRSSI(): Promise<number>
+  }
+
+  /**
+   * This type represents the advertisement data received from a Bluetooth peripheral during scanning.
+   *  - `localName`: The local name of the peripheral, if available.
+   *  - `txPowerLevel`: The transmit power level of the peripheral, if available.
+   *  - `manufacturerData`: The manufacturer-specific data of the peripheral, if available.
+   *  - `serviceData`: A record of service UUIDs and their associated data, if available.
+   *  - `serviceUUIDs`: An array of service UUIDs advertised by the peripheral, if available.
+   *  - `overflowServiceUUIDs`: An array of overflow service UUIDs advertised by the peripheral, if available.
+   *  - `isConnectable`: A boolean value indicating whether the peripheral is connectable, if available.
+   *  - `solicitedServiceUUIDs`: An array of solicited service UUIDs advertised by the peripheral, if available.
+   */
+  type BluetoothAdvertisementData = {
+    localName?: string
+    txPowerLevel?: number
+    manufacturerData?: Data
+    serviceData?: Record<string, Data>
+    serviceUUIDs?: string[]
+    overflowServiceUUIDs?: string[]
+    isConnectable?: boolean
+    solicitedServiceUUIDs?: string[]
+  }
+
+  /**
+   * This namespace provides functions for managing Bluetooth central operations, including scanning for peripherals, connecting to peripherals, and retrieving known or connected peripherals.
+   */
+  declare namespace BluetoothCentralManager {
+
+    /**
+     * A promise that resolves to a boolean indicating whether the BluetoothCentralManager is scanning for peripherals.
+     */
+    const isScanning: Promise<boolean>
+
+    /**
+     * Starts scanning for Bluetooth peripherals that are advertising the specified services.
+     * This method will continuously scan for peripherals until `stopScan()` is called.
+     * @param onDiscoverPeripheral A callback function that is called when a peripheral is discovered during scanning.
+     * The function receives three arguments:
+     * - `peripheral`: The discovered BluetoothPeripheral object.
+     * - `advertisementData`: The advertisement data received from the peripheral, represented as a BluetoothAdvertisementData object.
+     * - `rssi`: The Received Signal Strength Indicator (RSSI) value of the peripheral, indicating its signal strength.
+     * @param options Optional parameters for scanning, including:
+     * - services: An array of UUID strings representing the services to filter peripherals by.
+     * If this parameter is not provided, all advertising peripherals will be discovered.
+     * - allowDuplicates: A boolean value that specifies whether the scan should run without duplicate filtering. If true, the central disables filtering and generates a discovery event each time it receives an advertising packet from the peripheral. If false (the default), the central coalesces multiple discoveries of the same peripheral into a single discovery event.
+     * - solicitedServiceUUIDs: An array of UUID strings representing the services that are solicited by the central. Specifying this scan option causes the central manager to also scan for peripherals soliciting any of the services contained in the array.
+     * @returns A promise that resolves when scanning has started.
+     * If the scanning operation fails, the promise will be rejected with an error.
+     * 
+     * Note: You must call `stopScan()` to stop scanning when you no longer need to discover peripherals.
+     */
+    function startScan(
+      onDiscoverPeripheral: (
+        peripheral: BluetoothPeripheral,
+        advertisementData: BluetoothAdvertisementData,
+        rssi: number
+      ) => void,
+      options?: {
+        services?: string[]
+        allowDuplicates?: boolean
+        solicitedServiceUUIDs?: string[]
+      }
+    ): Promise<void>
+
+    /**
+     * Stops scanning for Bluetooth peripherals.
+     * @returns A promise that resolves when scanning has stopped.
+     */
+    function stopScan(): Promise<void>
+
+    /**
+     * Retrieves a list of known Bluetooth peripherals by their identifiers.
+     * These peripherals may or may not be currently connected.
+     * @param ids An array of peripheral identifiers (UUID strings) to retrieve.
+     * @returns A promise that resolves to an array of BluetoothPeripheral objects representing the retrieved peripherals.
+     * If a peripheral with a specified identifier is not found, it will not be included in the returned array.
+     */
+    function retrievePeripherals(ids: string[]): Promise<BluetoothPeripheral[]>
+
+    /**
+     * Retrieves a list of currently connected Bluetooth peripherals that offer the specified services.
+     * The list of connected peripherals can include those that other apps have connected. You need to connect these peripherals locally using the `connect` method before using them.
+     * @param serviceUUIDs An array of service UUID strings to filter the connected peripherals by.
+     * Only peripherals that are currently connected and offer at least one of the specified services will be returned.
+     * @returns A promise that resolves to an array of BluetoothPeripheral objects representing the connected peripherals that match the specified service UUIDs.
+     * If no connected peripherals match the specified service UUIDs, the returned array will be empty.
+     */
+    function retrieveConnectedPeripherals(serviceUUIDs: string[]): Promise<BluetoothPeripheral[]>
+
+    /**
+     * Connects to the specified Bluetooth peripheral.
+     * @param peripheral The BluetoothPeripheral object representing the peripheral to connect to.
+     * @param options Optional parameters for the connection, including:
+     * - startDelay: The delay in seconds before attempting to connect to the peripheral. Default is 0.
+     * - enableTransportBridging: A boolean value that specifies whether to enable transport bridging for the connection. Default is false.
+     * - requiresANCS: A boolean value that specifies whether the peripheral requires the Apple Notification Center Service (ANCS) for the connection. Default is false.
+     * - enableAutoReconnect: A boolean value that specifies whether to enable automatic reconnection to the peripheral if the connection is lost. Default is false.
+     * - notifyOnConnection: A boolean value that specifies whether to notify the app when the connection is established. Default is false.
+     * - notifyOnNotification: A boolean value that specifies whether to notify the app when a notification is received from the peripheral. Default is false.
+     * - notifyOnDisconnection: A boolean value that specifies whether to notify the app when the connection is lost. Default is false.
+     * @returns A promise that resolves when the connection is successfully established.
+     * If the connection operation fails, the promise will be rejected with an error.
+     */
+    function connect(peripheral: BluetoothPeripheral, options?: {
+      startDelay?: number
+      enableTransportBridging?: boolean
+      requiresANCS?: boolean
+      enableAutoReconnect?: boolean
+      notifyOnConnection?: boolean
+      notifyOnNotification?: boolean
+      notifyOnDisconnection?: boolean
+    }): Promise<void>
+
+    /**
+     * Disconnects from the specified Bluetooth peripheral.
+     * This method is nonblocking, and any BluetoothPeripheral class commands that are still pending to peripheral may not complete. Because other apps may still have a connection to the peripheral, canceling a local connection doesn’t guarantee that the underlying physical link is immediately disconnected. From the app’s perspective, however, the peripheral is effectively disconnected, and the `onDisconnect` callback of the peripheral will be called, if it is set.
+     * @param peripheral The BluetoothPeripheral object representing the peripheral to disconnect from.
+     */
+    function disconnect(peripheral: BluetoothPeripheral): Promise<void>
+  }
+
+  /**
+   * This enum represents the possible response codes for Bluetooth Attribute Protocol (ATT) operations.
+   * Each code indicates the result of an ATT operation, such as reading or writing a characteristic.
+   */
+  enum BluetoothATTResponseCode {
+    success = 0,
+    invalidHandle = 1,
+    readNotPermitted = 2,
+    writeNotPermitted = 3,
+    invalidPdu = 4,
+    insufficientAuthentication = 5,
+    requestNotSupported = 6,
+    invalidOffset = 7,
+    insufficientAuthorization = 8,
+    prepareQueueFull = 9,
+    attributeNotFound = 10,
+    attributeNotLong = 11,
+    insufficientEncryptionKeySize = 12,
+    invalidAttributeValueLength = 13,
+    unlikelyError = 14,
+    insufficientEncryption = 15,
+    unsupportedGroupType = 16,
+    insufficientResources = 17,
+  }
+
+  type BluetoothServiceInfo = {
+    uuid: string
+    isPrimary: boolean
+    characteristics?: BluetoothCharacteristicInfo[]
+    peripheralId?: string | null
+    includedServices?: BluetoothServiceInfo[] | null
+  }
+
+  type BluetoothCharacteristicInfo = {
+    uuid: string
+    properties: BluetoothCharacteristicProperty[]
+    permissions: BluetoothAttributePermissions[]
+    value?: Data | null
+    serviceUUID?: string | null
+    isNotifying: boolean
+  }
+
+  declare namespace BluetoothPeripheralManager {
+
+    /**
+     * For apps that opt-in to state preservation and restoration, this is the first method invoked when Scripting app is relaunched into the background to complete some Bluetooth-related task. Use this method to synchronize your script's state with the state of the Bluetooth system.
+     */
+    var onRestoreState: ((state: {
+      services: BluetoothServiceInfo[]
+      advertisementData: BluetoothAdvertisementData
+    }) => void) | null
+
+    /**
+     * When a call to the `updateValue` method fails because the underlying queue used to transmit the updated characteristic value is full, Bluetooth System calls this callback when more space in the transmit queue becomes available. You can then implement this callback to resend the value.
+     */
+    var onReadyToUpdateSubscribers: (() => void) | null
+
+    /**
+     * When a remote central wants to read the value of a characteristic, Bluetooth System calls this callback. Implement this callback to provide the requested value. If you do not implement this callback, the read request fails and the central receives a response with the `readNotPermitted` error code.
+     * @param characteristicId The UUID string of the characteristic whose value is being read.
+     * @param offset The offset within the characteristic value where the read is to begin.
+     * @param central An object representing the central that is requesting the read operation. It contains the following properties:
+     * - `id`: The identifier of the central.
+     * - `maximumUpdateValueLength`: The maximum length of data that the central can receive in a single update.
+     * @returns A promise that resolves to an object containing the result of the read operation and the value of the characteristic, if applicable.
+     * The object has the following properties:
+     * - `result`: A BluetoothATTResponseCode indicating the result of the read operation.
+     * - `value`: A Data object containing the value of the characteristic, or null if the read operation failed.
+     */
+    var onReadCharacteristicValue: (
+      characteristicId: string,
+      offset: number,
+      central: {
+        id: string
+        maximumUpdateValueLength: number
+      }
+    ) => Promise<{
+      result: BluetoothATTResponseCode
+      value?: Data | null
+    }> | null
+
+    /**
+     * When a remote central wants to write a value to a characteristic, Bluetooth System calls this callback. Implement this callback to process the write request. If you do not implement this callback, the write request fails and the central receives a response with the `writeNotPermitted` error code.
+     * @param characteristicId The UUID string of the characteristic whose value is being written.
+     * @param offset The offset within the characteristic value where the write is to begin.
+     * @param value A Data object containing the value to be written to the characteristic.
+     * @param central An object representing the central that is requesting the write operation. It contains the following properties:
+     * - `id`: The identifier of the central.
+     * - `maximumUpdateValueLength`: The maximum length of data that the central can receive in a single update.
+     * @returns A promise that resolves to a BluetoothATTResponseCode indicating the result of the write operation.
+     */
+    var onWriteCharacteristicValue: ((
+      characteristicId: string,
+      offset: number,
+      value: Data, central: {
+        id: string
+        maximumUpdateValueLength: number
+      }
+    ) => Promise<BluetoothATTResponseCode>) | null
+
+    /**
+     * When a remote central subscribes to a characteristic, Bluetooth System calls this callback. Implement this callback to start sending updates to the central when the characteristic value changes. If you do not implement this callback, the subscribe request fails and the central does not receive notifications or indications for the characteristic.
+     * @param characteristicId The UUID string of the characteristic that the central is subscribing to.
+     * @param central An object representing the central that is requesting the subscription. It contains the following properties:
+     * - `id`: The identifier of the central.
+     * - `maximumUpdateValueLength`: The maximum length of data that the central can receive in a single update.
+     */
+    var onSubscribe: ((
+      characteristicId: string,
+      central: {
+        id: string
+        maximumUpdateValueLength: number
+      }
+    ) => void) | null
+
+    /**
+     * When a remote central unsubscribes from a characteristic, Bluetooth System calls this callback. Implement this callback to stop sending updates to the central for the characteristic. If you do not implement this callback, the unsubscribe request fails and the central continues to receive notifications or indications for the characteristic.
+     * @param characteristicId The UUID string of the characteristic that the central is unsubscribing from.
+     * @param central An object representing the central that is requesting the unsubscription. It contains the following properties:
+     * - `id`: The identifier of the central.
+     * - `maximumUpdateValueLength`: The maximum length of data that the central can receive in a single update.
+     */
+    var onUnsubscribe: ((
+      characteristicId: string,
+      central: {
+        id: string
+        maximumUpdateValueLength: number
+      }
+    ) => void) | null
+
+    /**
+     * A promise that resolves to a boolean indicating whether the BluetoothPeripheralManager is currently advertising.
+     */
+    const isAdvertising: Promise<boolean>
+
+    /**
+     * Add a service to the peripheral manager.
+     * @param service A service object that defines the service to be added to the peripheral manager. The service object should include the following properties:
+     * - `uuid`: A string representing the UUID of the service.
+     * - `characteristics`: An array of characteristic objects that define the characteristics of the service. Each characteristic object should include the following properties:
+     *   - `uuid`: A string representing the UUID of the characteristic.
+     *   - `properties`: An array of BluetoothCharacteristicProperty values that define the properties of the characteristic.
+     *   - `permissions`: An array of BluetoothAttributePermissions values that define the permissions of the characteristic.
+     *   - `value` (optional): A Data object representing the initial value of the characteristic, or null if the characteristic has no initial value.
+     * - `includedServices` (optional): An array of service objects that define the included services of the service. Each included service object should have the same structure as the main service object.
+     * @returns A promise that resolves when the service has been successfully added to the peripheral manager.
+     * @throws An error if the service could not be added, for example, if a service with the same UUID already exists.
+     */
+    function addService(service: {
+      uuid: string
+      characteristics: {
+        uuid: string
+        properties: BluetoothCharacteristicProperty[]
+        permissions: BluetoothAttributePermissions[]
+        value?: Data | null
+      }[]
+      includedServices?: {
+        uuid: string
+        characteristics: {
+          uuid: string
+          properties: BluetoothCharacteristicProperty[]
+          permissions: BluetoothAttributePermissions[]
+          value?: Data | null
+        }[]
+      }[]
+    }): Promise<void>
+
+    /**
+     * Remove the specified service from the peripheral manager.
+     * Because apps on the local peripheral device share the GATT database, more than one instance of a service may exist in the database. As a result, this method removes only the instance of the service that Scripting app added to the database (using the `addService` method). If any other services contains this service, you must first remove them.
+     * @param serviceUUID The UUID string of the service to be removed from the peripheral manager.
+     * @returns A promise that resolves when this method call is complete. If the service with the specified UUID is not found, the promise will still resolve successfully.
+     */
+    function removeService(serviceUUID: string): Promise<void>
+
+    /**
+     * Removes all services from the peripheral manager.
+     * Because apps on the local peripheral device share the GATT database, more than one instance of a service may exist in the database. As a result, this method removes only the instances of services that Scripting app added to the database (using the `addService` method). If any other services exist, you must first remove them.
+     * @returns A promise that resolves when this method call is complete. If no services were found, the promise will still resolve successfully.
+     */
+    function removeAllServices(): Promise<void>
+
+    /**
+     * Starts advertising the specified advertisement data.
+     * After calling this method, the peripheral manager begins broadcasting the advertisement data to nearby central devices. The advertisement continues until you call the `stopAdvertising` method or the peripheral manager is stopped.
+     * @param advertisementData An object containing the advertisement data to be broadcast by the peripheral manager. The object can include the following optional properties:
+     * - `localName`: A string representing the local name of the peripheral. This name will be advertised to nearby central devices.
+     * - `serviceUUIDs`: An array of UUID strings representing the services that the peripheral offers. These UUIDs will be advertised to nearby central devices.
+     * @returns A promise that resolves when advertising has started successfully. If advertising could not be started, the promise will be rejected with an error.
+     */
+    function startAdvertising(advertisementData: {
+      localName?: string
+      serviceUUIDs?: string[]
+    }): Promise<void>
+
+    /**
+     * Stops advertising the peripheral manager.
+     * After calling this method, the peripheral manager stops broadcasting its advertisement data to nearby central devices.
+     * @returns A promise that resolves when advertising has stopped successfully.
+     */
+    function stopAdvertising(): Promise<void>
+
+    /**
+     * Get a list of centrals that are currently subscribed to the specified characteristic.
+     * When a central subscribes to a characteristic, it indicates that it wants to receive notifications or indications whenever the value of that characteristic changes. You can use this method to retrieve a list of such centrals.
+     * @param characteristicId The UUID string of the characteristic for which to retrieve the list of subscribed centrals.
+     * @returns A promise that resolves to an array of objects, each representing a central that is subscribed to the specified characteristic. Each object contains the following properties:
+     * - `id`: A string representing the identifier of the subscribed central.
+     * - `maximumUpdateValueLength`: A number representing the maximum length of data that the central can receive in a single update.
+     * If no centrals are subscribed to the specified characteristic, the returned array will be empty.
+     */
+    function getSubscribers(characteristicId: string): Promise<{
+      id: string
+      maximumUpdateValueLength: number
+    }[]>
+
+    /**
+     * Updates the value of the specified characteristic and notifies subscribed centrals of the change.
+     * You use this method to send updates of a characteristic’s value—through a notification or indication—to selected centrals that have subscribed to that characteristic’s value. If the method returns false because the underlying transmit queue is full, the peripheral manager calls the `onReadyToUpdateSubscribers` method when more space in the transmit queue becomes available. After you receive this callback, you may resend the update.
+If the length of the value parameter exceeds the length of the `maximumUpdateValueLength` property of a subscribed central, the value parameter truncates accordingly.
+     * @param characteristicId The UUID string of the characteristic to be updated.
+     * @param value A Data object representing the new value to be set for the characteristic.
+     * @param options Optional parameters for the update, including:
+     * - `centrals`: An array of central identifiers (UUID strings) to which the update should be sent. If this parameter is not provided, the update will be sent to all subscribed centrals.
+     * @returns A promise that resolves to a boolean value, this value is true if the update is successfully sent to the subscribed central or centrals. false if the update isn’t successfully sent because the underlying transmit queue is full. If the update could not be initiated (for example, if the characteristic is not found), the promise will be rejected with an error.
+     */
+    function updateValue(
+      characteristicId: string,
+      value: Data,
+      options?: {
+        centrals?: string[]
+      }
+    ): Promise<boolean>
+
+    /**
+     * Sets the desired connection latency for a connected central.
+     * The latency of a peripheral-central connection controls how frequently the peripheral and the peripheral’s connected central can exchange messages. By setting a desired connection latency, you manage the relationship between the frequency of the data exchange and the resulting battery performance of the peripheral device. When you call this method to set the connection latency, note that connection latency changes aren’t guaranteed. As a result, the latency may vary. If you don’t explicitly set a latency, the central device uses the connection latency it chose when establishing the connection. Typically, you don’t need to change the connection latency.
+     * @param centralId The identifier of the connected central for which to set the desired connection latency.
+     * @param latency The desired connection latency. It can be one of the following values:
+     * - "low": Requests a low connection latency, which results in more frequent data exchanges.
+     * - "medium": Requests a medium connection latency, which balances responsiveness and power consumption.
+     * - "high": Requests a high connection latency, which reduces the frequency of data exchanges.
+     * @returns A promise that resolves when the desired connection latency has been set successfully. If the operation fails (for example, if the central is not found), the promise will be rejected with an error.
+     */
+    function setDesiredConnectionLatency(
+      centralId: string,
+      latency: "low" | "medium" | "high"
+    ): Promise<void>
   }
 }
 
