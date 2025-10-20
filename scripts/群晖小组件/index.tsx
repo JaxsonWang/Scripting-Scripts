@@ -17,7 +17,6 @@ import {
   loginToSynology,
   logoutFromSynology
 } from './utils/synology-service'
-import { ImageCacheManager } from './utils/image-cache'
 import pkg from './script.json'
 
 function SynologyMain() {
@@ -27,7 +26,7 @@ function SynologyMain() {
   const [storageData, setStorageData] = useState<StorageInfo | null>(null)
   const [systemLog, setSystemLog] = useState<SystemLog | null>(null)
   const [isLoading, setIsLoading] = useState<boolean>(false)
-  const [bannerImagePath, setBannerImagePath] = useState<string | null>(null)
+  const [bannerImageUrl, setBannerImageUrl] = useState<string>('')
   const [refreshTimer, setRefreshTimer] = useState<number | null>(null)
   const [isAutoRefreshActive, setIsAutoRefreshActive] = useState<boolean>(false)
   const isAutoRefreshActiveRef = useRef<boolean>(false)
@@ -64,8 +63,8 @@ function SynologyMain() {
       const bannerUrl = data.bannerImage
 
       if (bannerUrl) {
-        const imagePath = await ImageCacheManager.getCachedImagePath(bannerUrl)
-        setBannerImagePath(imagePath)
+        setBannerImageUrl(bannerUrl)
+        console.log('获取到的横幅图片:', bannerUrl)
       }
     } catch (error) {
       console.error('加载横幅图片失败:', error)
@@ -172,16 +171,6 @@ function SynologyMain() {
       })
     } catch (error) {
       console.error('预览小组件失败:', error)
-    }
-  }
-
-  // 清理缓存
-  const clearCache = async () => {
-    try {
-      await ImageCacheManager.clearAllCache()
-      console.log('✅ 缓存清理完成')
-    } catch (error) {
-      console.error('❌ 清理缓存失败:', error)
     }
   }
 
@@ -485,7 +474,7 @@ function SynologyMain() {
           header={<Text font="headline">操作</Text>}
           footer={
             <VStack spacing={10} alignment="leading">
-              {bannerImagePath ? <Image filePath={bannerImagePath} resizable scaleToFit /> : null}
+              {bannerImageUrl ? <Image filePath={bannerImageUrl} resizable scaleToFit /> : null}
               <Text font="footnote" foregroundStyle="secondaryLabel">
                 群晖小组件 v{pkg.version}
                 {'\n'}
@@ -547,21 +536,6 @@ function SynologyMain() {
               </VStack>
               <Spacer />
               <Image systemName="eye" foregroundStyle="systemBlue" frame={{ width: 16, height: 16 }} />
-            </HStack>
-          </Button>
-
-          <Button action={clearCache}>
-            <HStack alignment="center">
-              <VStack alignment="leading" spacing={2}>
-                <Text font="body" foregroundStyle="label">
-                  清理缓存
-                </Text>
-                <Text font="caption" foregroundStyle="secondaryLabel">
-                  清除图片和数据缓存
-                </Text>
-              </VStack>
-              <Spacer />
-              <Image systemName="trash" foregroundStyle="systemRed" frame={{ width: 16, height: 16 }} />
             </HStack>
           </Button>
         </Section>

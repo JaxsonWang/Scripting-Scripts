@@ -15,7 +15,6 @@ import { getDaysLeftInYear, solarToLunar } from './utils/lunar-calendar'
 import { SettingsPage, getCurrentSettings } from './components/settings-page'
 import { getActualColor } from './components/settings-page'
 import type { CalendarData } from './utils/calendar-service'
-import { ImageCacheManager } from './utils/image-cache'
 import type { LunarData } from './utils/lunar-calendar'
 import type { SettingsData } from './components/settings-page'
 
@@ -37,7 +36,6 @@ const CalendarDetail = () => {
   const [changelogContent, setChangelogContent] = useState<string>('')
   const [updateTitle, setUpdateTitle] = useState<string>('')
   const [bannerImageUrl, setBannerImageUrl] = useState<string>('')
-  const [cachedBannerImagePath, setCachedBannerImagePath] = useState<string>('')
 
   // 加载数据
   const loadData = async () => {
@@ -83,17 +81,6 @@ const CalendarDetail = () => {
       if (bannerUrl) {
         setBannerImageUrl(bannerUrl)
         console.log('获取到的横幅图片:', bannerUrl)
-
-        // 缓存横幅图片
-        try {
-          const cachedPath = await ImageCacheManager.getCachedImagePath(bannerUrl)
-          if (cachedPath) {
-            setCachedBannerImagePath(cachedPath)
-            console.log('横幅图片缓存路径:', cachedPath)
-          }
-        } catch (error) {
-          console.error('缓存横幅图片失败:', error)
-        }
       }
     } catch (error) {
       console.error('加载横幅图片失败:', error)
@@ -284,11 +271,7 @@ const CalendarDetail = () => {
         <Section
           footer={
             <VStack spacing={10} alignment="leading">
-              {cachedBannerImagePath ? (
-                <Image filePath={cachedBannerImagePath} resizable scaleToFit frame={{ maxWidth: 'infinity' }} />
-              ) : bannerImageUrl ? (
-                <Image imageUrl={bannerImageUrl} resizable scaleToFit />
-              ) : null}
+              {bannerImageUrl ? <Image imageUrl={bannerImageUrl} resizable scaleToFit /> : null}
               <Text font="footnote" foregroundStyle="secondaryLabel">
                 挂历小组件 v{getCurrentVersion()}
                 {'\n'}

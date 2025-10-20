@@ -11,7 +11,6 @@ import {
   shouldShowUpdateLog
 } from './utils/news-service'
 import { SettingsPage } from './components/settings-page'
-import { ImageCacheManager } from './utils/image-cache'
 
 /**
  * 央广头条详情页面
@@ -26,7 +25,6 @@ const CNRNewsDetail = () => {
   const [changelogContent, setChangelogContent] = useState<string>('')
   const [updateTitle, setUpdateTitle] = useState<string>('')
   const [bannerImageUrl, setBannerImageUrl] = useState<string>('')
-  const [cachedBannerImagePath, setCachedBannerImagePath] = useState<string>('')
 
   // 加载数据
   const loadData = async () => {
@@ -65,17 +63,6 @@ const CNRNewsDetail = () => {
       if (bannerUrl) {
         setBannerImageUrl(bannerUrl)
         // console.log('获取到的横幅图片:', bannerUrl)
-
-        // 缓存横幅图片
-        try {
-          const cachedPath = await ImageCacheManager.getCachedImagePath(bannerUrl)
-          if (cachedPath) {
-            setCachedBannerImagePath(cachedPath)
-            console.log('横幅图片缓存路径:', cachedPath)
-          }
-        } catch (error) {
-          console.error('缓存横幅图片失败:', error)
-        }
       }
     } catch (error) {
       console.error('加载横幅图片失败:', error)
@@ -253,9 +240,7 @@ const CNRNewsDetail = () => {
         <Section
           footer={
             <VStack spacing={10} alignment="leading">
-              {cachedBannerImagePath ? (
-                <Image filePath={cachedBannerImagePath} resizable scaleToFit />
-              ) : bannerImageUrl ? (
+              {bannerImageUrl ? (
                 <Image imageUrl={bannerImageUrl} resizable scaleToFit />
               ) : null}
               <Text font="footnote" foregroundStyle="secondaryLabel">

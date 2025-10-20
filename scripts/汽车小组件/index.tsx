@@ -5,8 +5,6 @@ import { GlobalSettingsPage, getCurrentGlobalSettings } from './components/globa
 import { SmallWidgetSettingsPage, getCurrentSmallWidgetSettings } from './components/small-widget-settings-page'
 import { MediumWidgetSettingsPage, getCurrentMediumWidgetSettings } from './components/medium-widget-settings-page'
 import { LargeWidgetSettingsPage, getCurrentLargeWidgetSettings } from './components/large-widget-settings-page'
-import { ImageCacheManager } from './utils/image-cache'
-import { createStorageManager } from './utils/storage'
 import pkg from './script.json'
 import { getChangelog, getCurrentVersion, getLocalVersionInfo, markUpdateLogDismissed, shouldShowUpdateLog } from './utils/car-service'
 
@@ -37,30 +35,20 @@ const MainPage = () => {
   const [smallSettings, setSmallSettings] = useState(getCurrentSmallWidgetSettings())
   const [mediumSettings, setMediumSettings] = useState(getCurrentMediumWidgetSettings())
   const [largeSettings, setLargeSettings] = useState(getCurrentLargeWidgetSettings())
-  const [bannerImagePath, setBannerImagePath] = useState<string>('')
   const [versionInfo, setVersionInfo] = useState<any>(null)
   const [hasCheckedUpdate, setHasCheckedUpdate] = useState(false)
   const [showChangelogSheet, setShowChangelogSheet] = useState(false)
   const [changelogContent, setChangelogContent] = useState<string>('')
   const [updateTitle, setUpdateTitle] = useState<string>('')
+  const [bannerImageUrl, setBannerImageUrl] = useState<string>('')
 
   // 加载 Banner 图片
   const loadBannerImage = async () => {
     try {
       const bannerUrl = await fetchBannerImage()
       if (bannerUrl) {
+        setBannerImageUrl(bannerUrl)
         // console.log('获取到的横幅图片:', bannerUrl)
-
-        // 缓存横幅图片
-        try {
-          const cachedPath = await ImageCacheManager.getCachedImagePath(bannerUrl)
-          if (cachedPath) {
-            setBannerImagePath(cachedPath)
-            // console.log('横幅图片缓存路径:', cachedPath)
-          }
-        } catch (error) {
-          console.error('缓存横幅图片失败:', error)
-        }
       }
     } catch (error) {
       console.error('加载横幅图片失败:', error)
@@ -156,16 +144,6 @@ const MainPage = () => {
       })
     } catch (error) {
       console.error('预览小组件失败:', error)
-    }
-  }
-
-  // 清理缓存
-  const clearCache = async () => {
-    try {
-      await ImageCacheManager.clearAllCache()
-      console.log('缓存清理完成')
-    } catch (error) {
-      console.error('清理缓存失败:', error)
     }
   }
 
@@ -291,7 +269,7 @@ const MainPage = () => {
           header={<Text font="headline">操作</Text>}
           footer={
             <VStack spacing={10} alignment="leading">
-              {bannerImagePath ? <Image filePath={bannerImagePath} resizable scaleToFit /> : null}
+              {bannerImageUrl ? <Image imageUrl={bannerImageUrl} resizable scaleToFit /> : null}
               <Text font="footnote" foregroundStyle="secondaryLabel">
                 汽车小组件 v{pkg.version}
                 {'\n'}
@@ -322,18 +300,6 @@ const MainPage = () => {
               <VStack alignment="leading" spacing={2}>
                 <Text font="body" foregroundStyle="label">
                   刷新数据
-                </Text>
-              </VStack>
-              <Spacer />
-              <Image systemName="chevron.right" foregroundStyle="systemBlue" frame={{ width: 16, height: 16 }} />
-            </HStack>
-          </Button>
-
-          <Button action={clearCache}>
-            <HStack alignment="center">
-              <VStack alignment="leading" spacing={2}>
-                <Text font="body" foregroundStyle="label">
-                  清理缓存
                 </Text>
               </VStack>
               <Spacer />
