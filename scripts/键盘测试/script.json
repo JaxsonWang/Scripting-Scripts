@@ -1,0 +1,22 @@
+{
+  "intentInputTypes" : [
+
+  ],
+  "contributors" : [
+
+  ],
+  "icon" : "square.2.layers.3d.fill",
+  "author" : {
+    "homepage" : "https:\/\/iiong.com",
+    "name" : "淮城一只猫",
+    "email" : "i@iiong.com"
+  },
+  "description" : null,
+  "remoteResource" : null,
+  "name" : "键盘测试",
+  "version" : "1.0.0",
+  "localizedNames" : null,
+  "runInApp" : false,
+  "localizedDescriptions" : null,
+  "color" : "rgba(238, 92, 98,1)"
+}
