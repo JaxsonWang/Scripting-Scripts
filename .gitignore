@@ -21,4 +21,5 @@ stats.html
 *.njsproj
 *.sln
 *.sw?
-/AGENTS.md
+AGENTS.md
+GEMINI.md
