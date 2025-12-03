@@ -1,4 +1,4 @@
-import { HStack, Image, Path, Script, Spacer, Text, VStack, Widget } from 'scripting'
+import { HStack, Image, Path, Spacer, Text, VStack, Widget } from 'scripting'
 import { DEFAULT_SETTINGS as DEFAULT_GLOBAL_SETTINGS, carFileName, carLogoName, getCurrentGlobalSettings } from './components/global-settings-page'
 import { getCurrentSmallWidgetSettings } from './components/small-widget-settings-page'
 import { getCurrentMediumWidgetSettings } from './components/medium-widget-settings-page'
@@ -10,6 +10,24 @@ let carImagePath = ''
 let carLogoPath = ''
 let fullLocationAddress = '暂无位置信息' // 完整地址（大号组件用）
 let shortLocationAddress = '暂无位置信息' // 精简地址（中号组件用）
+
+// 兼容网络 / 本地 / 对象格式的图片值
+const normalizeImageValue = (value: any, fallback: string) => {
+  if (!value) return fallback
+  if (typeof value === 'string') return value
+  if (typeof value === 'object') {
+    const candidate = value.fileURL ?? value.filePath ?? value.path ?? value.url
+    if (typeof candidate === 'string') return candidate
+  }
+  return fallback
+}
+
+type ImageSourceProps = { filePath: string } | { imageUrl: string }
+
+// 根据路径返回 Image 组件需要的 props（网络图用 imageUrl，本地图用 filePath）
+const buildImageProps = (path: string): ImageSourceProps => {
+  return /^https?:\/\//.test(path) ? { imageUrl: path } : { filePath: path }
+}
 
 /**
  * 获取所有设置
@@ -303,35 +321,18 @@ const getImagePath = async (type: 'car' | 'logo') => {
   }
 
   const config = imageConfig[type]
-  const { url: currentImageUrl, fileName, defaultUrl: defaultImageUrl, setPath } = config
+  const { url: currentImageUrl, defaultUrl: defaultImageUrl, setPath } = config
+  const normalizedPath = normalizeImageValue(currentImageUrl, defaultImageUrl)
 
-  // 如果没有设置图片URL，使用默认图片
-  if (!currentImageUrl) {
+  // 如果没有配置，直接使用默认图片
+  if (!normalizedPath) {
     setPath(defaultImageUrl)
     return defaultImageUrl
   }
 
-  // 如果是本地路径（用户选择的图片），直接返回
-  if (currentImageUrl.startsWith('/') || currentImageUrl.includes(fileName)) {
-    console.log('使用本地图片路径:', currentImageUrl)
-    setPath(currentImageUrl)
-    return currentImageUrl
-  }
-
-  // 如果是网络URL，使用缓存管理器获取缓存路径
-  try {
-    const finalPath = currentImageUrl || defaultImageUrl
-
-    setPath(finalPath)
-    console.log('使用缓存图片路径:', finalPath)
-    return finalPath
-  } catch (error) {
-    console.error('获取车辆图片失败:', error)
-    const finalPath = currentImageUrl || defaultImageUrl
-
-    setPath(finalPath)
-    return finalPath
-  }
+  // 本地路径直接返回，网络路径留给 Image 组件处理
+  setPath(normalizedPath)
+  return normalizedPath
 }
 
 /**
@@ -343,13 +344,14 @@ const SmallWidgetView = () => {
 
   // 获取背景图片路径和背景样式
   const getWidgetBg = getWidgetBackgroundImagePath(settings)
+  const widgetBgSource = getWidgetBg ? buildImageProps(getWidgetBg) : undefined
   const widgetBackground = generateWidgetBackground(settings)
 
   return (
     <VStack
       spacing={4}
       padding={16}
-      background={!settings.enableColorBackground && getWidgetBg ? <Image filePath={getWidgetBg} resizable scaleToFit /> : undefined}
+      background={!settings.enableColorBackground && widgetBgSource ? <Image {...widgetBgSource} resizable scaleToFit /> : undefined}
       widgetBackground={widgetBackground}
     >
       <VStack
@@ -377,7 +379,7 @@ const SmallWidgetView = () => {
         }}
         overlay={{
           alignment: 'topTrailing',
-          content: <Image filePath={carLogoPath} resizable scaleToFit frame={{ height: settings.carLogoHeight }} />
+          content: <Image {...buildImageProps(carLogoPath)} resizable scaleToFit frame={{ height: settings.carLogoHeight }} />
         }}
       />
       <Spacer />
@@ -389,7 +391,7 @@ const SmallWidgetView = () => {
         }}
       >
         <Image
-          filePath={carImagePath}
+          {...buildImageProps(carImagePath)}
           resizable
           scaleToFit
           frame={{
@@ -423,13 +425,14 @@ const MediumWidgetView = () => {
 
   // 获取背景图片路径和背景样式
   const getWidgetBg = getWidgetBackgroundImagePath(settings)
+  const widgetBgSource = getWidgetBg ? buildImageProps(getWidgetBg) : undefined
   const widgetBackground = generateWidgetBackground(settings)
 
   return (
     <HStack
       spacing={20}
       padding={16}
-      background={!settings.enableColorBackground && getWidgetBg ? <Image filePath={getWidgetBg} resizable scaleToFit /> : undefined}
+      background={!settings.enableColorBackground && widgetBgSource ? <Image {...widgetBgSource} resizable scaleToFit /> : undefined}
       widgetBackground={widgetBackground}
       overlay={{
         alignment: 'topLeading',
@@ -455,12 +458,12 @@ const MediumWidgetView = () => {
         spacing={0}
         overlay={{
           alignment: 'topTrailing',
-          content: <Image filePath={carLogoPath} resizable scaleToFit frame={{ height: settings.carLogoHeight + 5 }} />
+          content: <Image {...buildImageProps(carLogoPath)} resizable scaleToFit frame={{ height: settings.carLogoHeight + 5 }} />
         }}
         alignment="center"
       >
         <Image
-          filePath={carImagePath}
+          {...buildImageProps(carImagePath)}
           resizable
           scaleToFit
           frame={{
@@ -499,6 +502,7 @@ const LargeWidgetView = () => {
 
   // 获取背景图片路径和背景样式
   const getWidgetBg = getWidgetBackgroundImagePath(settings)
+  const widgetBgSource = getWidgetBg ? buildImageProps(getWidgetBg) : undefined
   const widgetBackground = generateWidgetBackground(settings)
 
   return (
@@ -506,7 +510,7 @@ const LargeWidgetView = () => {
       alignment="leading"
       spacing={10}
       padding={16}
-      background={!settings.enableColorBackground && getWidgetBg ? <Image filePath={getWidgetBg} resizable scaleToFit /> : undefined}
+      background={!settings.enableColorBackground && widgetBgSource ? <Image {...widgetBgSource} resizable scaleToFit /> : undefined}
       widgetBackground={widgetBackground}
     >
       <HStack spacing={0} frame={{ maxWidth: 'infinity', maxHeight: 0 }}>
@@ -529,7 +533,7 @@ const LargeWidgetView = () => {
           overlay={{
             alignment: 'topTrailing',
             // 顶部状态文本
-            content: <Image filePath={carLogoPath} resizable scaleToFit frame={{ height: settings.carLogoHeight + 10 }} />
+            content: <Image {...buildImageProps(carLogoPath)} resizable scaleToFit frame={{ height: settings.carLogoHeight + 10 }} />
           }}
         />
       </HStack>
@@ -553,7 +557,7 @@ const LargeWidgetView = () => {
         }}
       >
         <Image
-          filePath={carImagePath}
+          {...buildImageProps(carImagePath)}
           resizable
           scaleToFit
           frame={{

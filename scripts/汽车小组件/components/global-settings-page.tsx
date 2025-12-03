@@ -1,4 +1,4 @@
-import { Button, ColorPicker, HStack, Image, List, Navigation, NavigationStack, Section, Spacer, Text, TextField, Toggle, VStack } from 'scripting'
+import { Button, ColorPicker, HStack, List, Navigation, NavigationStack, Path, Section, Spacer, Text, TextField, Toggle, VStack } from 'scripting'
 import { useState } from 'scripting'
 import type { Color } from 'scripting'
 import { createStorageManager } from '../utils/storage'
@@ -62,12 +62,19 @@ export const carLogoName = `car_logo.png`
  * 获取当前全局设置
  */
 export const getCurrentGlobalSettings = () => {
+  const normalizeStoredPath = (value: any, defaultValue: string) => {
+    if (!value) return defaultValue
+    if (typeof value === 'string') return value
+    const candidate = value.filePath ?? value.fileURL ?? value.path ?? value.url
+    return typeof candidate === 'string' ? candidate : defaultValue
+  }
+
   return {
     transparentBg: storageManager.storage.get<string>(STORAGE_KEYS.TRANSPARENT_BG) ?? DEFAULT_SETTINGS.transparentBg,
     lightFontColor: storageManager.storage.get<string>(STORAGE_KEYS.LIGHT_FONT_COLOR) ?? DEFAULT_SETTINGS.lightFontColor,
     darkFontColor: storageManager.storage.get<string>(STORAGE_KEYS.DARK_FONT_COLOR) ?? DEFAULT_SETTINGS.darkFontColor,
-    carImageUrl: storageManager.storage.get<string>(STORAGE_KEYS.CAR_IMAGE_URL) ?? DEFAULT_SETTINGS.carImageUrl,
-    carLogoUrl: storageManager.storage.get<string>(STORAGE_KEYS.CAR_LOGO_URL) ?? DEFAULT_SETTINGS.carLogoUrl,
+    carImageUrl: normalizeStoredPath(storageManager.storage.get(STORAGE_KEYS.CAR_IMAGE_URL), DEFAULT_SETTINGS.carImageUrl),
+    carLogoUrl: normalizeStoredPath(storageManager.storage.get(STORAGE_KEYS.CAR_LOGO_URL), DEFAULT_SETTINGS.carLogoUrl),
     carLogoHeight: storageManager.storage.get<number>(STORAGE_KEYS.CAR_LOGO_HEIGHT) ?? DEFAULT_SETTINGS.carLogoHeight,
     enableColorBackground: storageManager.storage.get<boolean>(STORAGE_KEYS.ENABLE_COLOR_BACKGROUND) ?? DEFAULT_SETTINGS.enableColorBackground,
     backgroundColors: storageManager.storage.get<Color[]>(STORAGE_KEYS.BACKGROUND_COLORS) ?? DEFAULT_SETTINGS.backgroundColors,
@@ -82,12 +89,19 @@ export const getCurrentGlobalSettings = () => {
  * 获取原始设置值
  */
 const getRawGlobalSettings = () => {
+  const normalizeStoredPath = (value: any, defaultValue: string) => {
+    if (!value) return defaultValue
+    if (typeof value === 'string') return value
+    const candidate = value.filePath ?? value.fileURL ?? value.path ?? value.url
+    return typeof candidate === 'string' ? candidate : defaultValue
+  }
+
   return {
     transparentBg: storageManager.storage.get<string>(STORAGE_KEYS.TRANSPARENT_BG) ?? '',
     lightFontColor: storageManager.storage.get<string>(STORAGE_KEYS.LIGHT_FONT_COLOR) ?? DEFAULT_SETTINGS.lightFontColor,
     darkFontColor: storageManager.storage.get<string>(STORAGE_KEYS.DARK_FONT_COLOR) ?? DEFAULT_SETTINGS.darkFontColor,
-    carImageUrl: storageManager.storage.get<string>(STORAGE_KEYS.CAR_IMAGE_URL) ?? DEFAULT_SETTINGS.carImageUrl,
-    carLogoUrl: storageManager.storage.get<string>(STORAGE_KEYS.CAR_LOGO_URL) ?? DEFAULT_SETTINGS.carLogoUrl,
+    carImageUrl: normalizeStoredPath(storageManager.storage.get(STORAGE_KEYS.CAR_IMAGE_URL), DEFAULT_SETTINGS.carImageUrl),
+    carLogoUrl: normalizeStoredPath(storageManager.storage.get(STORAGE_KEYS.CAR_LOGO_URL), DEFAULT_SETTINGS.carLogoUrl),
     carLogoHeight: storageManager.storage.get<number>(STORAGE_KEYS.CAR_LOGO_HEIGHT) ?? DEFAULT_SETTINGS.carLogoHeight,
     enableColorBackground: storageManager.storage.get<boolean>(STORAGE_KEYS.ENABLE_COLOR_BACKGROUND) ?? DEFAULT_SETTINGS.enableColorBackground,
     backgroundColors: storageManager.storage.get<Color[]>(STORAGE_KEYS.BACKGROUND_COLORS) ?? DEFAULT_SETTINGS.backgroundColors,
@@ -96,6 +110,12 @@ const getRawGlobalSettings = () => {
     dailyMileageIncrement: storageManager.storage.get<string>(STORAGE_KEYS.DAILY_MILEAGE_INCREMENT) ?? '',
     lastMileageUpdateDate: storageManager.storage.get<string>(STORAGE_KEYS.LAST_MILEAGE_UPDATE_DATE) ?? DEFAULT_SETTINGS.lastMileageUpdateDate
   } as SettingsData
+}
+
+// 判断当前配置是否指向本地文件（用于展示文案）
+const isLocalImage = (value: any, fileName: string) => {
+  const path = typeof value === 'string' ? value : (value?.filePath ?? value?.fileURL ?? value?.path ?? value?.url)
+  return typeof path === 'string' && path.includes(fileName)
 }
 
 /**
@@ -156,8 +176,16 @@ export const GlobalSettingsPage = () => {
           logo: STORAGE_KEYS.CAR_LOGO_URL
         }
 
-        updateSetting(key[type], photo)
-        console.log('车辆图片已保存:', photo)
+        const imageData = Data.fromJPEG(photo, 1)
+        if (!imageData) throw new Error('无法读取所选图片数据')
+
+        const baseDir = FileManager.appGroupDocumentsDirectory
+        const filePath = Path.join(baseDir, typeList[type])
+        await FileManager.createDirectory(baseDir, true)
+        await FileManager.writeAsData(filePath, imageData)
+
+        updateSetting(key[type], filePath)
+        console.log('车辆图片已保存到本地路径:', filePath)
       }
     } catch (error) {
       console.error('选择图片失败:', error)
@@ -360,7 +388,7 @@ export const GlobalSettingsPage = () => {
           <Button title="选择车辆图片" action={() => selectImage('car')} />
           <Button title="重置为默认图片" action={() => resetToDefaultImage('car')} />
           <Text font="caption2" foregroundStyle="tertiaryLabel">
-            当前图片: {settings.carImageUrl.includes(carFileName) ? '本地自定义图片' : '默认网络图片'}
+            当前图片: {isLocalImage(settings.carImageUrl, carFileName) ? '本地自定义图片' : '默认网络图片'}
           </Text>
         </Section>
 
@@ -376,7 +404,7 @@ export const GlobalSettingsPage = () => {
           <Button title="选择车辆 Logo" action={() => selectImage('logo')} />
           <Button title="重置为默认 Logo" action={() => resetToDefaultImage('logo')} />
           <Text font="caption2" foregroundStyle="tertiaryLabel">
-            当前图片: {settings.carLogoUrl.includes(carLogoName) ? '本地自定义 Logo' : '默认网络 Logo'}
+            当前图片: {isLocalImage(settings.carLogoUrl, carLogoName) ? '本地自定义 Logo' : '默认网络 Logo'}
           </Text>
           <Button
             action={async () => {
