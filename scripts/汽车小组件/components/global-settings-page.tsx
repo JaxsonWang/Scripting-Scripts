@@ -2,8 +2,6 @@ import { Button, ColorPicker, HStack, Image, List, Navigation, NavigationStack, 
 import { useState } from 'scripting'
 import type { Color } from 'scripting'
 import { createStorageManager } from '../utils/storage'
-import { ImageCacheManager } from '../utils/image-cache'
-import { SmallWidgetSettingsPage } from './small-widget-settings-page'
 
 // 存储管理
 const STORAGE_NAME = 'ScriptPie.CarWidgetSettings'
@@ -148,27 +146,18 @@ export const GlobalSettingsPage = () => {
         const photo = selectedPhotos[0]
         console.log('选中的图片:', photo)
 
-        try {
-          const typeList = {
-            car: carFileName,
-            logo: carLogoName
-          }
-          // 使用 ImageCacheManager 缓存图片
-          const savedPath = await ImageCacheManager.saveUIImageToCache(photo, typeList[type])
-          if (savedPath) {
-            const key = {
-              car: STORAGE_KEYS.CAR_IMAGE_URL,
-              logo: STORAGE_KEYS.CAR_LOGO_URL
-            }
-            // 直接使用保存的路径
-            updateSetting(key[type], savedPath)
-            console.log('车辆图片已缓存:', savedPath)
-          } else {
-            console.error('保存图片失败: 无法获取保存路径')
-          }
-        } catch (saveError) {
-          console.error('缓存图片失败:', saveError)
+        const typeList = {
+          car: carFileName,
+          logo: carLogoName
         }
+
+        const key = {
+          car: STORAGE_KEYS.CAR_IMAGE_URL,
+          logo: STORAGE_KEYS.CAR_LOGO_URL
+        }
+
+        updateSetting(key[type], photo)
+        console.log('车辆图片已保存:', photo)
       }
     } catch (error) {
       console.error('选择图片失败:', error)

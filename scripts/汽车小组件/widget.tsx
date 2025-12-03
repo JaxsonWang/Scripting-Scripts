@@ -3,7 +3,6 @@ import { DEFAULT_SETTINGS as DEFAULT_GLOBAL_SETTINGS, carFileName, carLogoName, 
 import { getCurrentSmallWidgetSettings } from './components/small-widget-settings-page'
 import { getCurrentMediumWidgetSettings } from './components/medium-widget-settings-page'
 import { getCurrentLargeWidgetSettings } from './components/large-widget-settings-page'
-import { ImageCacheManager } from './utils/image-cache'
 import { createStorageManager } from './utils/storage'
 import type { Color } from 'scripting'
 
@@ -321,8 +320,7 @@ const getImagePath = async (type: 'car' | 'logo') => {
 
   // 如果是网络URL，使用缓存管理器获取缓存路径
   try {
-    const cachedPath = await ImageCacheManager.getCachedImagePath(currentImageUrl)
-    const finalPath = cachedPath || currentImageUrl || defaultImageUrl
+    const finalPath = currentImageUrl || defaultImageUrl
 
     setPath(finalPath)
     console.log('使用缓存图片路径:', finalPath)
