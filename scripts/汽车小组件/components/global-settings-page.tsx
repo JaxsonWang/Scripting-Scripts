@@ -176,7 +176,8 @@ export const GlobalSettingsPage = () => {
           logo: STORAGE_KEYS.CAR_LOGO_URL
         }
 
-        const imageData = Data.fromJPEG(photo, 1)
+        // 优先保留 PNG 透明通道，若失败再降级为 JPEG
+        const imageData = Data.fromPNG(photo) ?? Data.fromJPEG(photo, 1)
         if (!imageData) throw new Error('无法读取所选图片数据')
 
         const baseDir = FileManager.appGroupDocumentsDirectory
