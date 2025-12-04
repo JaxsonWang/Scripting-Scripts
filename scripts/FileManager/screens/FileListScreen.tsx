@@ -1,4 +1,4 @@
-import { Button, HStack, Image, ScrollView, Spacer, Text, VStack, useCallback, useColorScheme, useEffect, useState } from 'scripting'
+import { Button, HStack, Image, List, Spacer, Text, VStack, useCallback, useColorScheme, useEffect, useState } from 'scripting'
 import { FileRow } from '../components/FileRow'
 
 export function FileListScreen() {
@@ -53,56 +53,56 @@ export function FileListScreen() {
 
   const isRoot = currentPath === root
 
-  const handleMore = async (name: string) => {
+  const handleInfo = async (name: string) => {
     const filePath = currentPath + '/' + name
-    const index = await Dialog.actionSheet({
-      title: name,
-      actions: [{ label: 'Info' }, { label: 'Rename' }, { label: 'Duplicate' }, { label: 'Delete', destructive: true }],
-      cancelButton: true
-    })
-
-    if (index === 0) {
-      const stat = await FileManager.stat(filePath)
-      const info = `
+    const stat = await FileManager.stat(filePath)
+    const info = `
 Path: ${filePath}
 Size: ${stat.size} bytes
 Created: ${new Date(stat.creationDate).toLocaleString()}
 Modified: ${new Date(stat.modificationDate).toLocaleString()}
 Type: ${stat.type}
-       `
-      await Dialog.alert({ title: 'File Info', message: info })
-    } else if (index === 1) {
-      const newName = await Dialog.prompt({
-        title: 'Rename',
-        defaultValue: name,
-        confirmLabel: 'Rename'
-      })
-      if (newName && newName !== name) {
-        await FileManager.rename(filePath, currentPath + '/' + newName)
-        setRefreshKey(k => k + 1)
-      }
-    } else if (index === 2) {
-      // Duplicate
-      let newName = name
-      if (name.includes('.')) {
-        const parts = name.split('.')
-        const ext = parts.pop()
-        newName = parts.join('.') + ' copy.' + ext
-      } else {
-        newName = name + ' copy'
-      }
-      await FileManager.copyFile(filePath, currentPath + '/' + newName)
+    `
+    await Dialog.alert({ title: 'File Info', message: info })
+  }
+
+  const handleRename = async (name: string) => {
+    const filePath = currentPath + '/' + name
+    const newName = await Dialog.prompt({
+      title: 'Rename',
+      defaultValue: name,
+      confirmLabel: 'Rename'
+    })
+    if (newName && newName !== name) {
+      await FileManager.rename(filePath, currentPath + '/' + newName)
       setRefreshKey(k => k + 1)
-    } else if (index === 3) {
-      const confirm = await Dialog.confirm({
-        title: 'Delete',
-        message: `Are you sure you want to delete "${name}"?`,
-        confirmLabel: 'Delete'
-      })
-      if (confirm) {
-        await FileManager.remove(filePath)
-        setRefreshKey(k => k + 1)
-      }
+    }
+  }
+
+  const handleDuplicate = async (name: string) => {
+    const filePath = currentPath + '/' + name
+    let newName = name
+    if (name.includes('.')) {
+      const parts = name.split('.')
+      const ext = parts.pop()
+      newName = parts.join('.') + ' copy.' + ext
+    } else {
+      newName = name + ' copy'
+    }
+    await FileManager.copyFile(filePath, currentPath + '/' + newName)
+    setRefreshKey(k => k + 1)
+  }
+
+  const handleDelete = async (name: string) => {
+    const filePath = currentPath + '/' + name
+    const confirm = await Dialog.confirm({
+      title: 'Delete',
+      message: `Are you sure you want to delete "${name}"?`,
+      confirmLabel: 'Delete'
+    })
+    if (confirm) {
+      await FileManager.remove(filePath)
+      setRefreshKey(k => k + 1)
     }
   }
 
@@ -137,9 +137,9 @@ Type: ${stat.type}
   const relativePath = currentPath.replace(root, '') || '/'
 
   return (
-    <VStack frame={{ maxWidth: 'infinity', maxHeight: 'infinity' }} background={isDark ? '#000000' : '#f2f2f7'}>
+    <VStack frame={{ maxWidth: 'infinity', maxHeight: 'infinity' }} background="#ffffff">
       {/* Header */}
-      <VStack padding={16} background={isDark ? '#1c1c1e' : '#ffffff'}>
+      <VStack padding={16} background="#ffffff">
         <HStack alignment="center">
           {!isRoot && (
             <Button action={handleBack}>
@@ -185,38 +185,39 @@ Type: ${stat.type}
       </VStack>
 
       {/* File List */}
-      <ScrollView>
-        <VStack padding={16} spacing={8}>
-          {files.map(name => {
-            const path = currentPath + '/' + name
-            let isDir = false
-            let stat = undefined
-            try {
-              isDir = FileManager.isDirectorySync(path)
-              stat = FileManager.statSync(path)
-            } catch (e) {
-              console.error(e)
-            }
+      <List listStyle="inset">
+        {files.map(name => {
+          const path = currentPath + '/' + name
+          let isDir = false
+          let stat = undefined
+          try {
+            isDir = FileManager.isDirectorySync(path)
+            stat = FileManager.statSync(path)
+          } catch (e) {
+            console.error(e)
+          }
 
-            return (
-              <FileRow
-                key={name}
-                name={name}
-                path={path}
-                isDirectory={isDir}
-                stat={stat}
-                onPress={() => handleNavigate(name)}
-                onMore={() => handleMore(name)}
-              />
-            )
-          })}
-          {files.length === 0 && (
-            <VStack alignment="center" padding={{ top: 50 }}>
-              <Text styledText={{ content: 'Empty Folder', font: 14, foregroundColor: '#8e8e93' }} />
-            </VStack>
-          )}
-        </VStack>
-      </ScrollView>
+          return (
+            <FileRow
+              key={name}
+              name={name}
+              path={path}
+              isDirectory={isDir}
+              stat={stat}
+              onPress={() => handleNavigate(name)}
+              onInfo={() => handleInfo(name)}
+              onRename={() => handleRename(name)}
+              onDuplicate={() => handleDuplicate(name)}
+              onDelete={() => handleDelete(name)}
+            />
+          )
+        })}
+        {files.length === 0 && (
+          <VStack alignment="center" padding={{ top: 50 }}>
+            <Text styledText={{ content: 'Empty Folder', font: 14, foregroundColor: '#8e8e93' }} />
+          </VStack>
+        )}
+      </List>
     </VStack>
   )
 }
