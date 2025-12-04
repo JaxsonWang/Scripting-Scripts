@@ -1,6 +1,6 @@
 import { fetch } from 'scripting'
 
-const DEFAULT_UA = 'netdisk;7.2.1;PC;PC-Windows;10.0.19043;WindowsBaiduYunGuanJia'
+const DEFAULT_UA = 'netdisk'
 const DEFAULT_PDF_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
 
 export interface BaiduFile {
@@ -27,7 +27,7 @@ export class BaiduDiskClient {
   bdstoken: string
   commonHeaders: Record<string, string>
 
-  constructor(cookie: string, clientIP: string = '127.0.0.1') {
+  constructor(cookie: string, clientIP: string = '::1') {
     this.cookie = cookie || ''
     this.clientIP = clientIP
     this.bdstoken = ''
@@ -95,17 +95,20 @@ export class BaiduDiskClient {
 
   async fetchJson(url: string, options: any = {}, shouldUpdateCookies = false) {
     const headers = { ...this.commonHeaders, ...options.headers }
+    console.log('[fetchJson] headers', headers)
     try {
-      const resp = await fetch(url, { ...options, headers })
+      const response = await fetch(url, { ...options, headers })
+      console.log('[fetchJson] response', response)
       if (shouldUpdateCookies) {
         // Scripting's fetch response might differ slightly, let's check headers
         // Usually headers.get('set-cookie') returns a string
         // If strictly Headers object:
-        const setCookie = resp.headers.get('set-cookie')
+        const setCookie = response.headers.get('set-cookie')
         this.updateCookies(setCookie)
       }
-      const data = await resp.json()
-      return data
+      const result = await response.json()
+      console.log('[fetchJson] result', result)
+      return result
     } catch (e) {
       console.error(`Fetch error: ${url}`, e)
       throw e
@@ -113,13 +116,21 @@ export class BaiduDiskClient {
   }
 
   async init() {
-    const api =
-      'https://pan.baidu.com/api/gettemplatevariable?clienttype=12&app_id=web=1&fields=[%22bdstoken%22,%22token%22,%22uk%22,%22isdocuser%22,%22servertime%22]'
+    const fields = ['bdstoken', 'token', 'uk', 'isdocuser', 'servertime']
+    const api = `https://pan.baidu.com/api/gettemplatevariable?clienttype=12&app_id=web=1&fields=${encodeURIComponent(JSON.stringify(fields))}`
+
     try {
-      const data = await this.fetchJson(api, undefined, true)
+      const data = await this.fetchJson(api, { method: 'GET' }, true)
+      const debugInfo: { api: string; errno?: number; hasResult: boolean; resultKeys?: string[] } = {
+        api: api,
+        errno: typeof data?.errno === 'number' ? data.errno : undefined,
+        hasResult: !!data?.result,
+        resultKeys: data?.result ? Object.keys(data.result) : undefined
+      }
+      console.log('[BaiduDiskClient.init] response', debugInfo)
+
       if (data.errno === 0 && data.result) {
         this.bdstoken = data.result.bdstoken
-        // Update STOKEN
         const pcsUrls = [
           'https://pcs.baidu.com/rest/2.0/pcs/file?method=plantcookie&type=ett',
           'https://pcs.baidu.com/rest/2.0/pcs/file?method=plantcookie&type=stoken&source=pcs'
@@ -127,20 +138,31 @@ export class BaiduDiskClient {
         for (const api of pcsUrls) {
           const resp = await fetch(api, { headers: this.commonHeaders })
           const setCookie = resp.headers.get('set-cookie')
+          console.log('[init] setCookie', setCookie)
           this.updateCookies(setCookie)
-          // await resp.body.cancel(); // Not needed/supported in all fetch implementations
         }
 
         return true
       }
+
+      // 当 errno === 2（参数/登录状态异常）时，继续尝试后续 API，让后续接口返回更具体的错误信息。
+      if (data.errno === 2) {
+        console.warn('[BaiduDiskClient.init] errno=2, continue without bdstoken')
+        return true
+      }
+
+      console.warn('[BaiduDiskClient.init] failed with errno or missing result', {
+        errno: data?.errno
+      })
       return false
     } catch (e) {
-      console.error('Init failed', e)
+      console.error('[BaiduDiskClient.init] error', e)
       return false
     }
   }
 
   static async getSharedList(surl: string, pwd: string, dir: string | null = null) {
+    console.log('[BaiduDiskClient.getSharedList] request', { surl, hasPwd: !!pwd, dir })
     const api = 'https://pan.baidu.com/share/wxlist?channel=weixin&version=2.2.3&clienttype=25&web=1&qq-pf-to=pcqq.c2c'
 
     const params: string[] = [`shorturl=${encodeURIComponent(surl)}`, `pwd=${encodeURIComponent(pwd)}`, 'page=1', 'number=1000', 'order=time']
@@ -159,10 +181,19 @@ export class BaiduDiskClient {
       'Content-Type': 'application/x-www-form-urlencoded'
     }
 
-    const resp = await fetch(api, { method: 'POST', body, headers })
-    const data = await resp.json()
-    if (data.errno !== 0) throw new Error(`List error: ${data.errno}`)
-    return data
+    try {
+      const resp = await fetch(api, { method: 'POST', body, headers })
+      const data = await resp.json()
+      console.log('[BaiduDiskClient.getSharedList] response', {
+        errno: data.errno,
+        listLength: Array.isArray(data.list) ? data.list.length : 0
+      })
+      if (data.errno !== 0) throw new Error(`List error: ${data.errno}`)
+      return data
+    } catch (e) {
+      console.error('[BaiduDiskClient.getSharedList] error', e)
+      throw e
+    }
   }
 
   async createDir(path: string) {
@@ -215,6 +246,9 @@ export class BaiduDiskClient {
     const headers = { ...this.commonHeaders, 'User-Agent': customUA }
     const resp = await fetch(api, { headers })
     const data = await resp.json()
+    console.log('[getSmallFileLink] api', api)
+    console.log('[getSmallFileLink] headers', headers)
+    console.log('[getSmallFileLink] data', data)
     if (data.errno === 0) return data.dlink
     throw new Error(`Errno ${data.errno}`)
   }

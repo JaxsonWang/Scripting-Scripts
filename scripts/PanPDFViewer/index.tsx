@@ -7,8 +7,18 @@ import { FileRow } from './components/FileRow'
 import { SettingsScreen } from './screens/SettingsScreen'
 import { ResultScreen } from './screens/ResultScreen'
 
+const normalizeBdussCookie = (raw: string | null | undefined): string => {
+  if (!raw) return ''
+  const trimmed = raw.trim()
+  if (!trimmed) return ''
+
+  if (trimmed.includes('BDUSS=')) return trimmed
+  if (trimmed.includes('=') && !/^[A-Za-z0-9+/=]+$/.test(trimmed)) return trimmed
+  return `BDUSS=${trimmed}`
+}
+
 export const PanPDFViewer = () => {
-  const [link, setLink] = useState('https://pan.baidu.com/s/1xoVIZzOSjWX0WaEOkFQTbg?pwd=bgbh')
+  const [link, setLink] = useState('https://pan.baidu.com/s/1XRgunqdA1CA04_beluqH2Q?pwd=7897')
   const [loading, setLoading] = useState(false)
   const [loadingText, setLoadingText] = useState('')
   const [errorMsg, setErrorMsg] = useState('')
@@ -22,10 +32,14 @@ export const PanPDFViewer = () => {
   // Settings Modal
   const [showSettings, setShowSettings] = useState(false)
 
-  const client = new BaiduDiskClient(storage.get('bduss') as string)
-
   const handleAnalyze = async () => {
-    if (!link) return
+    console.log('[PanPDFViewer] handleAnalyze start', { link })
+    if (!link) {
+      console.warn('[PanPDFViewer] handleAnalyze: link is empty')
+      await Dialog.alert({ title: '提示', message: '请先输入分享链接' })
+      return
+    }
+
     setLoading(true)
     setLoadingText('解析链接中...')
     setErrorMsg('')
@@ -35,49 +49,72 @@ export const PanPDFViewer = () => {
 
     try {
       const { surl, pwd } = getShareInfo(link)
+      console.log('[PanPDFViewer] getShareInfo result', { surl, hasPwd: !!pwd })
       const res = await BaiduDiskClient.getSharedList(surl, pwd)
+      const innerList = Array.isArray(res.data?.list) ? res.data.list : []
+      console.log('[PanPDFViewer] getSharedList response', {
+        errno: res.errno,
+        hasData: !!res.data,
+        listLength: innerList.length
+      })
 
       if (res.errno !== 0) throw new Error(`Error ${res.errno}`)
 
-      setShareData({ shareid: res.shareid, uk: res.uk, sekey: res.seckey })
+      // Baidu 返回的数据实际在 res.data 里，结构与原 Cloudflare 版一致
+      const payload = res.data as { list?: BaiduFile[]; shareid: number; uk: number; seckey?: string }
+      const list = (payload?.list || []) as BaiduFile[]
 
-      // Initialize List
-      const list = (res.list || []) as BaiduFile[]
+      if (!Array.isArray(payload?.list) || list.length === 0) {
+        console.warn('[PanPDFViewer] handleAnalyze: empty list returned from Baidu API (res.data.list)')
+        const msg = '分享链接解析成功，但接口返回的文件列表为空，可能是分享内容为空，或接口返回结构发生了变化。'
+        setErrorMsg(msg)
+        await Dialog.alert({ title: '未找到文件', message: msg })
+        return
+      }
+
+      setShareData({ shareid: payload.shareid, uk: payload.uk, sekey: payload.seckey || '' })
       setCurrentList(list)
       setDirCache({ root: list })
     } catch (e: any) {
-      setErrorMsg(e.message)
-      await Dialog.alert({ title: '解析失败', message: e.message })
+      console.error('[PanPDFViewer] handleAnalyze error', e)
+      const message = e?.message ?? String(e)
+      setErrorMsg(message)
+      await Dialog.alert({ title: '解析失败', message })
     } finally {
       setLoading(false)
+      console.log('[PanPDFViewer] handleAnalyze finished')
     }
   }
 
   const enterFolder = async (folder: BaiduFile) => {
+    console.log('[PanPDFViewer] enterFolder', { path: folder.path, name: folder.server_filename })
     setLoading(true)
     setLoadingText(`加载 ${folder.server_filename}...`)
 
     try {
-      // Check cache
       if (dirCache[folder.path]) {
+        console.log('[PanPDFViewer] enterFolder: use cache')
         setCurrentList(dirCache[folder.path])
         setPathStack([...pathStack, folder])
         setLoading(false)
         return
       }
 
-      // Fetch
       const { surl, pwd } = getShareInfo(link)
+      console.log('[PanPDFViewer] enterFolder: fetch dir', { surl, hasPwd: !!pwd, dir: folder.path })
       const res = await BaiduDiskClient.getSharedList(surl, pwd, folder.path)
-      const list = (res.list || []) as BaiduFile[]
+      const payload = res.data as { list?: BaiduFile[] }
+      const list = (payload?.list || []) as BaiduFile[]
 
       setDirCache(prev => ({ ...prev, [folder.path]: list }))
       setCurrentList(list)
       setPathStack([...pathStack, folder])
     } catch (e: any) {
+      console.error('[PanPDFViewer] enterFolder error', e)
       await Dialog.alert({ title: '加载文件夹失败', message: e.message })
     } finally {
       setLoading(false)
+      console.log('[PanPDFViewer] enterFolder finished')
     }
   }
 
@@ -117,12 +154,28 @@ export const PanPDFViewer = () => {
   }
 
   const handleProcess = async () => {
-    if (selectedFiles.size === 0) return
+    console.log('[PanPDFViewer] handleProcess start', { selectedCount: selectedFiles.size })
+    if (selectedFiles.size === 0) {
+      console.warn('[PanPDFViewer] handleProcess: no selected files')
+      return
+    }
 
-    // Check Cookie
-    const bduss = storage.get('bduss')
-    if (!bduss) {
-      Dialog.alert({ title: '未配置 Cookie', message: '请先点击右上角设置图标配置百度网盘 BDUSS' })
+    const bdussRaw = storage.get('bduss')
+    if (!bdussRaw) {
+      console.warn('[PanPDFViewer] handleProcess: missing BDUSS')
+      await Dialog.alert({ title: '未配置 Cookie', message: '请先点击右上角设置图标配置百度网盘 BDUSS' })
+      return
+    }
+
+    const cookie = normalizeBdussCookie(bdussRaw)
+    console.log('[PanPDFViewer] handleProcess cookie info', {
+      length: cookie.length,
+      hasBDUSS: cookie.includes('BDUSS=')
+    })
+
+    if (!shareData) {
+      console.warn('[PanPDFViewer] handleProcess: missing shareData')
+      await Dialog.alert({ title: '缺少分享信息', message: '请先解析分享链接，再执行批量加速。' })
       return
     }
 
@@ -130,15 +183,20 @@ export const PanPDFViewer = () => {
     setLoadingText('加速处理中 (这可能需要几十秒)...')
 
     try {
-      // Re-init client with latest cookie
-      const processingClient = new BaiduDiskClient(bduss)
+      const filesToDownload = currentList.filter(f => selectedFiles.has(f.fs_id))
+      console.log('[PanPDFViewer] handleProcess: filesToDownload', { count: filesToDownload.length })
+
+      // 没有配置 SESSION_AUTH 时，回退到本地直连百度逻辑
+      const processingClient = new BaiduDiskClient(cookie)
       if (!(await processingClient.init())) {
         throw new Error('Cookie 无效或已过期，请重新获取 BDUSS')
       }
-
-      const filesToDownload = currentList.filter(f => selectedFiles.has(f.fs_id))
-
       const result = await processDownload(processingClient, filesToDownload, shareData)
+
+      console.log('[PanPDFViewer] handleProcess: processDownload result', {
+        fileCount: result.files.length,
+        errorCount: result.errors.length
+      })
 
       Navigation.present(
         <NavigationStack>
@@ -146,11 +204,14 @@ export const PanPDFViewer = () => {
         </NavigationStack>
       )
 
-      setSelectedFiles(new Set()) // Clear selection
+      setSelectedFiles(new Set())
     } catch (e: any) {
-      Dialog.alert({ title: '处理失败', message: e.message })
+      console.error('[PanPDFViewer] handleProcess error', e)
+      const message = e?.message ?? String(e)
+      await Dialog.alert({ title: '处理失败', message })
     } finally {
       setLoading(false)
+      console.log('[PanPDFViewer] handleProcess finished')
     }
   }
 
@@ -224,4 +285,5 @@ export const PanPDFViewer = () => {
 }
 
 // Present the main component
+console.log('[PanPDFViewer] script loaded, presenting UI')
 Navigation.present(<PanPDFViewer />)

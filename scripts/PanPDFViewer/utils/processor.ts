@@ -8,14 +8,14 @@ interface ShareData {
 }
 
 export const processDownload = async (client: BaiduDiskClient, files: BaiduFile[], shareData: ShareData, userAgent?: string) => {
+  console.log('[processDownload] start', { fileCount: files.length })
   const fs_ids = files.map(f => f.fs_id)
-  // Use a unique temp directory
   const transferDir = `/netdisk/${UUID.string()}`
   const errors: string[] = []
   const validFiles: any[] = []
 
   try {
-    // 1. Create Dir
+    console.log('[processDownload] createDir', { transferDir })
     await client.createDir(transferDir)
 
     // 2. Transfer
@@ -32,9 +32,9 @@ export const processDownload = async (client: BaiduDiskClient, files: BaiduFile[
       }
     }
 
-    // 3. Recursive List
     const localFiles: any[] = []
     await recursiveListFiles(client, transferDir, localFiles)
+    console.log('[processDownload] recursiveListFiles done', { count: localFiles.length })
     if (localFiles.length === 0) throw new Error('No files found after transfer')
 
     const filesToProcess = localFiles.map(f => f.path)
@@ -70,15 +70,14 @@ export const processDownload = async (client: BaiduDiskClient, files: BaiduFile[
       }
     }
 
+    console.log(new Date())
     // 5. Wait for sync (simulated delay)
-    await new Promise<void>(resolve => {
-      setTimeout(() => {
-        resolve()
-      }, 3000)
-    })
+    await new Promise<void>(resolve => setTimeout(() => resolve(), 3000))
+    console.log(new Date())
 
-    // 6. Get Links
-    const targetUA = userAgent || 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+    const targetUA = userAgent || 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36'
+    console.log('[processDownload] targetUA', targetUA)
+    console.log('[processDownload] will get links', { pathCount: newPaths.length })
 
     for (const path of newPaths) {
       const info = pathInfoMap[path]
@@ -96,25 +95,17 @@ export const processDownload = async (client: BaiduDiskClient, files: BaiduFile[
       }
     }
 
-    // Cleanup in background (fire and forget style, but in Scripting we might want to await it or let it run)
-    // In Scripting, if script exits, async tasks might be killed.
-    // We should probably wait a bit or tell user cleanup is happening.
-    // For now, we return, but we can schedule a cleanup.
-    // Since we can't really keep script running in background indefinitely easily without keeping UI open.
-    // We will delete immediately after getting links? No, links might expire if file deleted?
-    // Baidu dlinks usually time bound. If we delete file, dlink MIGHT become invalid?
-    // The original code waits 30s then deletes.
-
-    // We'll perform cleanup asynchronously.
     setTimeout(() => {
-      client.deleteFiles([transferDir]).catch(console.error)
+      console.log('[processDownload] start cleanup', { transferDir })
+      client.deleteFiles([transferDir]).catch(err => console.error('[processDownload] cleanup error', err))
     }, 30000)
   } catch (e) {
-    // Cleanup on error
+    console.error('[processDownload] error', e)
     client.deleteFiles([transferDir]).catch(() => {})
     throw e
   }
 
+  console.log('[processDownload] finished', { validCount: validFiles.length, errorCount: errors.length })
   return { files: validFiles, errors }
 }
 
