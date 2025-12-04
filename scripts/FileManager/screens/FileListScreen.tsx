@@ -1,5 +1,4 @@
 import { Button, HStack, Image, ScrollView, Spacer, Text, VStack, useCallback, useColorScheme, useEffect, useState } from 'scripting'
-
 import { FileRow } from '../components/FileRow'
 
 export function FileListScreen() {
@@ -195,7 +194,9 @@ Type: ${stat.type}
             try {
               isDir = FileManager.isDirectorySync(path)
               stat = FileManager.statSync(path)
-            } catch (e) {}
+            } catch (e) {
+              console.error(e)
+            }
 
             return (
               <FileRow
