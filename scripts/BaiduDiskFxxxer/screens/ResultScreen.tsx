@@ -1,4 +1,4 @@
-import { Button, HStack, List, Navigation, Section, Spacer, Text, VStack } from 'scripting'
+import { Button, Form, HStack, List, Navigation, NavigationStack, Section, Spacer, Text, VStack } from 'scripting'
 import { sendToAria2 } from '../utils/aria2-service'
 
 interface ResultItem {
@@ -51,32 +51,33 @@ export const ResultScreen = ({ results, errors }: ResultScreenProps) => {
         console.error(e)
       }
     }
-    Dialog.alert({ title: '批量推送完成', message: `成功发送 ${successCount} / ${results.length} 个任务` })
+    await Dialog.alert({ title: '批量推送完成', message: `成功发送 ${successCount} / ${results.length} 个任务` })
   }
 
   return (
-    <List
-      navigationTitle="解析结果"
-      navigationBarTitleDisplayMode="inline"
-      toolbar={{
-        topBarLeading: <Button title="关闭" action={dismiss} />,
-        topBarTrailing: results.length > 0 ? <Button title="全部推送到 Aria2" action={handleBatchAria2} /> : undefined
-      }}
-    >
-      {errors.length > 0 && (
-        <Section header={<Text font="headline">错误信息</Text>}>
-          {errors.map((err, idx) => (
-            <Text key={idx} foregroundStyle="systemRed" font="caption">
-              {err}
-            </Text>
-          ))}
-        </Section>
-      )}
+    <NavigationStack>
+      <VStack
+        navigationTitle="解析结果"
+        navigationBarTitleDisplayMode="inline"
+        alignment="leading"
+        toolbar={{
+          topBarLeading: <Button title="关闭" action={dismiss} />,
+          topBarTrailing: results.length > 0 ? <Button title="全部推送到 Aria2" action={handleBatchAria2} /> : undefined
+        }}
+      >
+        {errors.length > 0 && (
+          <Section header={<Text font="headline">错误信息</Text>}>
+            {errors.map((err, idx) => (
+              <Text key={idx} foregroundStyle="systemRed" font="caption">
+                {err}
+              </Text>
+            ))}
+          </Section>
+        )}
 
-      {results.length > 0 ? (
-        results.map((item, idx) => (
-          <Section key={idx}>
-            <VStack spacing={8}>
+        {results.length > 0 ? (
+          results.map((item, idx) => (
+            <VStack spacing={8} key={idx}>
               <HStack>
                 <Text font="headline" lineLimit={1}>
                   {item.filename}
@@ -89,21 +90,24 @@ export const ResultScreen = ({ results, errors }: ResultScreenProps) => {
               <Text font="caption" foregroundStyle="secondaryLabel" lineLimit={1}>
                 {item.relativePath}
               </Text>
-
-              <HStack spacing={10}>
+              <Section>
                 <Button title="复制链接" action={() => handleCopy(item.dlink)} />
+              </Section>
+              <Section>
                 <Button title="直接下载" action={() => handleDownload(item.dlink)} />
+              </Section>
+              <Section>
                 <Button title="Aria2" action={() => handleAria2(item)} />
-              </HStack>
+              </Section>
             </VStack>
+          ))
+        ) : (
+          <Section>
+            <Text foregroundStyle="secondaryLabel">无成功解析的文件</Text>
           </Section>
-        ))
-      ) : (
-        <Section>
-          <Text foregroundStyle="secondaryLabel">无成功解析的文件</Text>
-        </Section>
-      )}
-    </List>
+        )}
+      </VStack>
+    </NavigationStack>
   )
 }
 

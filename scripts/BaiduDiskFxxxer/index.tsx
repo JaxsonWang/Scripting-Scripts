@@ -1,4 +1,4 @@
-import { Button, HStack, Image, List, Navigation, NavigationStack, Section, Spacer, Text, TextField, VStack, useState } from 'scripting'
+import { Button, HStack, Image, List, Navigation, NavigationStack, Section, Spacer, Text, TextField, VStack, useState, Form } from 'scripting'
 import type { BaiduFile } from './utils/baidu-client'
 import { BaiduDiskClient, getShareInfo } from './utils/baidu-client'
 import { processDownload } from './utils/processor'
@@ -18,7 +18,7 @@ const normalizeBdussCookie = (raw: string | null | undefined): string => {
 }
 
 export const PanPDFViewer = () => {
-  const [link, setLink] = useState('https://pan.baidu.com/s/1XRgunqdA1CA04_beluqH2Q?pwd=7897')
+  const [link, setLink] = useState('')
   const [loading, setLoading] = useState(false)
   const [loadingText, setLoadingText] = useState('')
   const [errorMsg, setErrorMsg] = useState('')
@@ -220,9 +220,10 @@ export const PanPDFViewer = () => {
 
   return (
     <NavigationStack>
-      <List
+      <VStack
         navigationTitle="百度网盘PDF加速"
         navigationBarTitleDisplayMode="inline"
+        alignment="leading"
         toolbar={{
           topBarLeading: pathStack.length > 0 ? <Button title="返回" action={goBack} /> : undefined,
           topBarTrailing: (
@@ -239,47 +240,55 @@ export const PanPDFViewer = () => {
           content: <SettingsScreen />
         }}
       >
-        <Section>
-          <VStack spacing={10}>
+        <Form>
+          <Section>
             <TextField title="链接" value={link} prompt="输入分享链接 (含提取码)" onChanged={setLink} keyboardType="URL" />
+          </Section>
+          <Section>
             <Button title={loading ? loadingText || '处理中...' : '解析链接'} action={handleAnalyze} disabled={loading} />
-          </VStack>
+          </Section>
           {errorMsg ? (
             <Text foregroundStyle="systemRed" font="caption">
               {errorMsg}
             </Text>
           ) : null}
-        </Section>
 
-        {currentList.length > 0 && (
-          <Section
-            header={
-              <HStack>
-                <Text>文件列表</Text>
-                <Spacer />
-                <Button title={isAllSelected ? '取消全选' : '全选'} action={toggleAll} font="caption" />
-              </HStack>
-            }
-          >
-            {currentList.map(file => (
-              <FileRow
-                key={file.fs_id}
-                file={file}
-                isSupported={file.size <= 150 * 1024 * 1024}
-                isSelected={selectedFiles.has(file.fs_id)}
-                onToggle={toggleFile}
-                onEnterFolder={enterFolder}
-              />
-            ))}
-          </Section>
-        )}
+          {currentList.length > 0 && (
+            <Section
+              header={
+                <HStack>
+                  <Text>文件列表</Text>
+                  <Spacer />
+                  <Button title={isAllSelected ? '取消全选' : '全选'} action={toggleAll} font="caption" />
+                </HStack>
+              }
+            >
+              {currentList.map(file => (
+                <FileRow
+                  key={file.fs_id}
+                  file={file}
+                  isSupported={file.size <= 150 * 1024 * 1024}
+                  isSelected={selectedFiles.has(file.fs_id)}
+                  onToggle={toggleFile}
+                  onEnterFolder={enterFolder}
+                />
+              ))}
+            </Section>
+          )}
 
-        {selectedFiles.size > 0 && (
-          <Section>
-            <Button title={`批量加速 (${selectedFiles.size})`} action={handleProcess} background="systemGreen" foregroundStyle="white" />
-          </Section>
-        )}
-      </List>
+          {selectedFiles.size > 0 && (
+            <Section>
+              <Button title={`加速下载 (${selectedFiles.size})`} action={handleProcess} foregroundStyle="green" />
+            </Section>
+          )}
+          <VStack alignment="leading">
+            <Text font="footnote" foregroundStyle="secondaryLabel">
+              BaiduDisk Fxxxer {'\n'}
+              实现对 150MB 以下文件的免客户端高速预览。
+            </Text>
+          </VStack>
+        </Form>
+      </VStack>
     </NavigationStack>
   )
 }
