@@ -1,0 +1,9 @@
+{
+  "name": "PanPDFViewer",
+  "version": "1.0.0",
+  "description": "百度网盘 PDF 高速预览 (Scripting 版)",
+  "icon": "doc.text.fill",
+  "color": "systemBlue",
+  "author": "Gemini",
+  "min_app_version": "1.0.0"
+}
