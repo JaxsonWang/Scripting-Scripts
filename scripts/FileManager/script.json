@@ -1,0 +1,38 @@
+{
+  "localizedDescriptions": {
+    "en": "",
+    "fr": "",
+    "pt": "",
+    "de": "",
+    "ru": "",
+    "it": "",
+    "es": "",
+    "ja": "",
+    "zh": ""
+  },
+  "runInApp": false,
+  "name": "FileManager",
+  "color": "rgba(190, 0, 159, 1.00)",
+  "intentInputTypes": [],
+  "author": {
+    "homepage": "https:\/\/iiong.com",
+    "email": "i@iiong.com",
+    "name": "淮城一只猫"
+  },
+  "description": "Manage files in Documents and AppGroup directories.",
+  "version": "1.0.0",
+  "remoteResource": null,
+  "localizedNames": {
+    "ru": "",
+    "de": "",
+    "en": "",
+    "ja": "",
+    "pt": "",
+    "zh": "",
+    "it": "",
+    "fr": "",
+    "es": ""
+  },
+  "contributors": [],
+  "icon": "folder.fill"
+}
