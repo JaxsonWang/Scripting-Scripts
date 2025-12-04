@@ -198,11 +198,7 @@ export const PanPDFViewer = () => {
         errorCount: result.errors.length
       })
 
-      Navigation.present(
-        <NavigationStack>
-          <ResultScreen results={result.files} errors={result.errors} />
-        </NavigationStack>
-      )
+      await Navigation.present(<ResultScreen results={result.files} errors={result.errors} />)
 
       setSelectedFiles(new Set())
     } catch (e: any) {

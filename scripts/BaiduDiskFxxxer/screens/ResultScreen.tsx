@@ -1,4 +1,4 @@
-import { Button, Form, HStack, List, Navigation, NavigationStack, Section, Spacer, Text, VStack } from 'scripting'
+import { Button, DisclosureGroup, Form, Group, HStack, List, Navigation, NavigationStack, Section, Spacer, Text, VStack } from 'scripting'
 import { sendToAria2 } from '../utils/aria2-service'
 
 interface ResultItem {
@@ -32,9 +32,9 @@ export const ResultScreen = ({ results, errors }: ResultScreenProps) => {
         url: item.dlink,
         outPath: item.relativePath || item.filename
       })
-      Dialog.alert({ title: '成功', message: `已推送到 Aria2: ${item.filename}` })
+      await Dialog.alert({ title: '成功', message: `已推送到 Aria2: ${item.filename}` })
     } catch (e: any) {
-      Dialog.alert({ title: '推送失败', message: e.message })
+      await Dialog.alert({ title: '推送失败', message: e.message })
     }
   }
 
@@ -56,10 +56,9 @@ export const ResultScreen = ({ results, errors }: ResultScreenProps) => {
 
   return (
     <NavigationStack>
-      <VStack
+      <List
         navigationTitle="解析结果"
         navigationBarTitleDisplayMode="inline"
-        alignment="leading"
         toolbar={{
           topBarLeading: <Button title="关闭" action={dismiss} />,
           topBarTrailing: results.length > 0 ? <Button title="全部推送到 Aria2" action={handleBatchAria2} /> : undefined
@@ -77,36 +76,18 @@ export const ResultScreen = ({ results, errors }: ResultScreenProps) => {
 
         {results.length > 0 ? (
           results.map((item, idx) => (
-            <VStack spacing={8} key={idx}>
-              <HStack>
-                <Text font="headline" lineLimit={1}>
-                  {item.filename}
-                </Text>
-                <Spacer />
-                <Text font="caption" foregroundStyle="secondaryLabel">
-                  {formatSize(item.size)}
-                </Text>
-              </HStack>
-              <Text font="caption" foregroundStyle="secondaryLabel" lineLimit={1}>
-                {item.relativePath}
-              </Text>
-              <Section>
-                <Button title="复制链接" action={() => handleCopy(item.dlink)} />
-              </Section>
-              <Section>
-                <Button title="直接下载" action={() => handleDownload(item.dlink)} />
-              </Section>
-              <Section>
-                <Button title="Aria2" action={() => handleAria2(item)} />
-              </Section>
-            </VStack>
+            <DisclosureGroup key={idx} title={`${item.filename}(${formatSize(item.size)})`}>
+              <Button title="复制链接" action={() => handleCopy(item.dlink)} />
+              <Button title="直接下载" action={() => handleDownload(item.dlink)} />
+              <Button title="Aria2" action={() => handleAria2(item)} />
+            </DisclosureGroup>
           ))
         ) : (
           <Section>
             <Text foregroundStyle="secondaryLabel">无成功解析的文件</Text>
           </Section>
         )}
-      </VStack>
+      </List>
     </NavigationStack>
   )
 }
