@@ -246,27 +246,39 @@ function DirectoryView({ rootPath, path, rootDisplayName, tag, tabItem }: Direct
   const currentDirName = isRoot ? rootDisplayName : currentPath.split('/').pop() || rootDisplayName
   const relativePath = currentPath === rootPath ? '/' : currentPath.replace(rootPath, '')
 
-  return (
-    <VStack tag={tag} tabItem={tabItem} frame={{ maxWidth: 'infinity', maxHeight: 'infinity' }}>
-      <VStack padding={16}>
-        <HStack alignment="center">
-          <VStack layoutPriority={1} alignment="leading">
-            <Text styledText={{ content: currentDirName, font: 20, fontWeight: 'bold' }} />
-            <Text styledText={{ content: relativePath, font: 12, foregroundColor: '#8e8e93' }} />
-          </VStack>
-          <Spacer />
-          <Button action={handleCreate}>
-            <Image image={UIImage.fromSFSymbol('plus')!} frame={{ width: 24, height: 24 }} />
-          </Button>
-          <Button action={handlePreferences}>
-            <Image image={UIImage.fromSFSymbol('gear')!} frame={{ width: 24, height: 24 }} />
-          </Button>
-          <Button action={dismiss}>
-            <Image image={UIImage.fromSFSymbol('xmark.circle')!} frame={{ width: 24, height: 24 }} />
-          </Button>
-        </HStack>
-      </VStack>
+  const toolbarLeading = (
+    <VStack alignment="leading">
+      <Text styledText={{ content: currentDirName, font: 16, fontWeight: 'bold' }} />
+      <Text styledText={{ content: relativePath, font: 11, foregroundColor: '#8e8e93' }} />
+    </VStack>
+  )
 
+  const toolbarTrailing = (
+    <HStack spacing={8}>
+      <Button action={handleCreate}>
+        <Image image={UIImage.fromSFSymbol('plus')!} frame={{ width: 20, height: 20 }} />
+      </Button>
+      <Button action={handlePreferences}>
+        <Image image={UIImage.fromSFSymbol('gearshape')!} frame={{ width: 20, height: 20 }} />
+      </Button>
+      <Button
+        action={() => {
+          dismiss()
+          Script.exit()
+        }}
+      >
+        <Image image={UIImage.fromSFSymbol('xmark.circle')!} frame={{ width: 20, height: 20 }} />
+      </Button>
+    </HStack>
+  )
+
+  return (
+    <VStack
+      tag={tag}
+      tabItem={tabItem}
+      frame={{ maxWidth: 'infinity', maxHeight: 'infinity' }}
+      toolbar={{ topBarLeading: toolbarLeading, topBarTrailing: toolbarTrailing }}
+    >
       {files.length === 0 ? (
         <VStack frame={{ maxWidth: 'infinity', maxHeight: 'infinity' }} alignment="center">
           <Spacer />
