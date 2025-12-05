@@ -92,10 +92,20 @@ export function FileRow({ name, path, isDirectory, stat, onPress, onCopy, onMove
         menuItems: (
           <Group>
             <VStack spacing={8}>
-              <HStack spacing={8}>
-                <Button title="拷贝" action={onCopy} />
-                <Button title="移动" action={onMove} />
-              </HStack>
+              <Button action={onCopy}>
+                <HStack alignment="center" frame={{ maxWidth: 'infinity' }}>
+                  <Text>拷贝</Text>
+                  <Spacer />
+                  <Image image={UIImage.fromSFSymbol('doc.on.doc')!} frame={{ width: 16, height: 16 }} />
+                </HStack>
+              </Button>
+              <Button action={onMove}>
+                <HStack alignment="center" frame={{ maxWidth: 'infinity' }}>
+                  <Text>移动</Text>
+                  <Spacer />
+                  <Image image={UIImage.fromSFSymbol('folder')!} frame={{ width: 16, height: 16 }} />
+                </HStack>
+              </Button>
               <Button action={onInfo}>
                 <HStack alignment="center" frame={{ maxWidth: 'infinity' }}>
                   <Text>显示简介</Text>

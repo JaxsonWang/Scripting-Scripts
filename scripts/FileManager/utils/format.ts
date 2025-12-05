@@ -1,3 +1,7 @@
+/**
+ * 格式化文件大小
+ * @param size
+ */
 export function formatSize(size: number): string {
   if (size < 1024) {
     return size + ' B'
