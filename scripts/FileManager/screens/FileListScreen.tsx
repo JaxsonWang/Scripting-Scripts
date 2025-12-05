@@ -1,6 +1,5 @@
 import {
   Button,
-  Form,
   HStack,
   Image,
   Label,
@@ -8,19 +7,18 @@ import {
   Navigation,
   NavigationLink,
   NavigationStack,
-  Section,
   SVG,
   Script,
   Spacer,
   TabView,
   Text,
-  Toggle,
   VStack,
   useCallback,
   useEffect,
   useState
 } from 'scripting'
 import { FileRow } from '../components/FileRow'
+import { PreferencesScreen } from './PreferencesScreen'
 
 const ROOT_TABS = [
   { title: 'Documents', icon: 'folder.fill', path: FileManager.documentsDirectory },
@@ -223,7 +221,7 @@ function DirectoryView({ rootPath, path, rootDisplayName, tag, tabItem }: Direct
    */
   const handlePreferences = useCallback(() => {
     Navigation.present({
-      element: <PreferencesView showHidden={showHidden} onToggleHidden={setShowHidden} />
+      element: <PreferencesScreen showHidden={showHidden} onToggleHidden={setShowHidden} />
     })
   }, [showHidden])
 
@@ -246,7 +244,12 @@ function DirectoryView({ rootPath, path, rootDisplayName, tag, tabItem }: Direct
           <Button action={handlePreferences}>
             <Image image={UIImage.fromSFSymbol('gear')!} frame={{ width: 24, height: 24 }} />
           </Button>
-          <Button action={dismiss}>
+          <Button
+            action={() => {
+              dismiss()
+              Script.exit()
+            }}
+          >
             <Image image={UIImage.fromSFSymbol('xmark.circle')!} frame={{ width: 24, height: 24 }} />
           </Button>
         </HStack>
@@ -262,21 +265,21 @@ function DirectoryView({ rootPath, path, rootDisplayName, tag, tabItem }: Direct
       ) : (
         <List listStyle="inset">
           {files.map(name => {
-            const path = currentPath + '/' + name
+            const childPath = currentPath + '/' + name
             let isDir = false
             let stat = undefined
             try {
-              isDir = FileManager.isDirectorySync(path)
-              stat = FileManager.statSync(path)
+              isDir = FileManager.isDirectorySync(childPath)
+              stat = FileManager.statSync(childPath)
             } catch (e) {
               console.error(e)
             }
             if (isDir) {
               return (
-                <NavigationLink key={name} destination={<DirectoryView rootPath={rootPath} path={path} rootDisplayName={rootDisplayName} />}>
+                <NavigationLink key={name} destination={<DirectoryView rootPath={rootPath} path={childPath} rootDisplayName={rootDisplayName} />}>
                   <FileRow
                     name={name}
-                    path={path}
+                    path={childPath}
                     isDirectory
                     stat={stat}
                     onCopy={() => handleCopy(name)}
@@ -294,7 +297,7 @@ function DirectoryView({ rootPath, path, rootDisplayName, tag, tabItem }: Direct
               <FileRow
                 key={name}
                 name={name}
-                path={path}
+                path={childPath}
                 isDirectory={false}
                 stat={stat}
                 onPress={() => handleOpenFile(name)}
@@ -310,42 +313,5 @@ function DirectoryView({ rootPath, path, rootDisplayName, tag, tabItem }: Direct
         </List>
       )}
     </VStack>
-  )
-}
-
-type PreferencesViewProps = {
-  showHidden: boolean
-  onToggleHidden: (value: boolean) => void
-}
-
-function PreferencesView({ showHidden, onToggleHidden }: PreferencesViewProps) {
-  const dismiss = Navigation.useDismiss()
-
-  return (
-    <NavigationStack>
-      <Form
-        navigationTitle="偏好设置"
-        toolbar={{
-          cancellationAction: (
-            <Button
-              title="完成"
-              action={() => {
-                dismiss()
-              }}
-            />
-          )
-        }}
-      >
-        <Section header={<Text>列表显示</Text>}>
-          <Toggle
-            title="显示隐藏文件"
-            value={showHidden}
-            onChanged={value => {
-              onToggleHidden(value)
-            }}
-          />
-        </Section>
-      </Form>
-    </NavigationStack>
   )
 }
