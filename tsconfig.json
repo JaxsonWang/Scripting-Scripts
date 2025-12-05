@@ -26,5 +26,8 @@
   "include": [
     "./dts/global.d.ts",
     "scripts"
+  ],
+  "exclude": [
+    "scripts/挂历小组件/utils/lunar.js"
   ]
 }

@@ -56,7 +56,8 @@ export default [
       '*.njsproj',
       '*.sln',
       '*.sw?',
-      'watch.ts'
+      'watch.ts',
+      'scripts/挂历小组件/utils/lunar.js'
     ]
   },
 
