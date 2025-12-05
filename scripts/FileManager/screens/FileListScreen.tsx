@@ -225,6 +225,23 @@ function DirectoryView({ rootPath, path, rootDisplayName, tag, tabItem }: Direct
     })
   }, [showHidden])
 
+  const renderRow = (name: string, path: string, isDirectoryEntry: boolean, stat?: FileStat) => (
+    <FileRow
+      key={name}
+      name={name}
+      path={path}
+      isDirectory={isDirectoryEntry}
+      stat={stat}
+      onPress={!isDirectoryEntry ? () => handleOpenFile(name) : undefined}
+      onCopy={() => handleCopy(name)}
+      onMove={() => handleMove(name)}
+      onInfo={() => handleInfo(name)}
+      onRename={() => handleRename(name)}
+      onDuplicate={() => handleDuplicate(name)}
+      onDelete={() => handleDelete(name)}
+    />
+  )
+
   const isRoot = currentPath === rootPath
   const currentDirName = isRoot ? rootDisplayName : currentPath.split('/').pop() || rootDisplayName
   const relativePath = currentPath === rootPath ? '/' : currentPath.replace(rootPath, '')
@@ -277,38 +294,12 @@ function DirectoryView({ rootPath, path, rootDisplayName, tag, tabItem }: Direct
             if (isDir) {
               return (
                 <NavigationLink key={name} destination={<DirectoryView rootPath={rootPath} path={childPath} rootDisplayName={rootDisplayName} />}>
-                  <FileRow
-                    name={name}
-                    path={childPath}
-                    isDirectory
-                    stat={stat}
-                    onCopy={() => handleCopy(name)}
-                    onMove={() => handleMove(name)}
-                    onInfo={() => handleInfo(name)}
-                    onRename={() => handleRename(name)}
-                    onDuplicate={() => handleDuplicate(name)}
-                    onDelete={() => handleDelete(name)}
-                  />
+                  {renderRow(name, childPath, true, stat)}
                 </NavigationLink>
               )
             }
 
-            return (
-              <FileRow
-                key={name}
-                name={name}
-                path={childPath}
-                isDirectory={false}
-                stat={stat}
-                onPress={() => handleOpenFile(name)}
-                onCopy={() => handleCopy(name)}
-                onMove={() => handleMove(name)}
-                onInfo={() => handleInfo(name)}
-                onRename={() => handleRename(name)}
-                onDuplicate={() => handleDuplicate(name)}
-                onDelete={() => handleDelete(name)}
-              />
-            )
+            return renderRow(name, childPath, false, stat)
           })}
         </List>
       )}
