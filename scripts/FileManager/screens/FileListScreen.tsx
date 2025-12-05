@@ -1,10 +1,12 @@
 import {
   Button,
-  DragGesture,
   HStack,
   Image,
   Label,
   List,
+  Navigation,
+  NavigationLink,
+  NavigationStack,
   SVG,
   Script,
   Spacer,
@@ -12,9 +14,7 @@ import {
   Text,
   VStack,
   useCallback,
-  useColorScheme,
   useEffect,
-  useMemo,
   useState
 } from 'scripting'
 import { FileRow } from '../components/FileRow'
@@ -28,33 +28,38 @@ export function FileListScreen() {
   const [tabIndex, setTabIndex] = useState(0)
 
   return (
-    <TabView tabIndex={tabIndex} onTabIndexChanged={setTabIndex}>
-      {ROOT_TABS.map((tab, index) => (
-        <FileListView key={tab.path} initialRoot={tab.path} tag={index} tabItem={<Label title={tab.title} systemImage={tab.icon} />} />
-      ))}
-    </TabView>
+    <NavigationStack>
+      <TabView tabIndex={tabIndex} onTabIndexChanged={setTabIndex}>
+        {ROOT_TABS.map((tab, index) => (
+          <DirectoryView
+            key={tab.path}
+            rootPath={tab.path}
+            path={tab.path}
+            rootDisplayName={tab.title}
+            tag={index}
+            tabItem={<Label title={tab.title} systemImage={tab.icon} />}
+          />
+        ))}
+      </TabView>
+    </NavigationStack>
   )
 }
 
-type FileListViewProps = {
-  initialRoot: string
-  tag: number
-  tabItem: JSX.Element
+type DirectoryViewProps = {
+  rootPath: string
+  path: string
+  rootDisplayName: string
+  tag?: number
+  tabItem?: JSX.Element
 }
 
-function FileListView({ initialRoot, tag, tabItem }: FileListViewProps) {
-  const [currentPath, setCurrentPath] = useState(initialRoot)
+function DirectoryView({ rootPath, path, rootDisplayName, tag, tabItem }: DirectoryViewProps) {
+  const currentPath = path
   const [files, setFiles] = useState<string[]>([])
   const [showHidden, setShowHidden] = useState(true)
   const [refreshKey, setRefreshKey] = useState(0)
 
-  const colorScheme = useColorScheme()
-  const isDark = colorScheme === 'dark'
-
-  useEffect(() => {
-    setCurrentPath(initialRoot)
-    setRefreshKey(k => k + 1)
-  }, [initialRoot])
+  const dismiss = Navigation.useDismiss()
 
   /**
    * 根据当前路径加载文件列表，统一处理隐藏项过滤与排序。
@@ -84,16 +89,15 @@ function FileListView({ initialRoot, tag, tabItem }: FileListViewProps) {
   }, [loadFiles])
 
   /**
-   * 点击条目时决定是进入子目录还是直接预览文件。
+   * 预览文件内容，目录由 NavigationLink 处理。
    */
-  const handleNavigate = (name: string) => {
-    const newPath = currentPath + '/' + name
-    if (FileManager.isDirectorySync(newPath)) {
-      setCurrentPath(newPath)
-    } else {
+  const handleOpenFile = useCallback(
+    (name: string) => {
+      const newPath = currentPath + '/' + name
       QuickLook.previewURLs([`file://${newPath}`])
-    }
-  }
+    },
+    [currentPath]
+  )
 
   /**
    * 将选中文件的完整路径写入剪贴板，方便外部粘贴。
@@ -102,22 +106,6 @@ function FileListView({ initialRoot, tag, tabItem }: FileListViewProps) {
     const filePath = currentPath + '/' + name
     await Pasteboard.setString(filePath)
     await Dialog.alert({ title: '已拷贝路径', message: filePath })
-  }
-
-  /**
-   * 返回上一层目录，根目录时保持不动。
-   */
-  const handleBack = useCallback(() => {
-    if (currentPath === initialRoot) return
-    const parent = currentPath.substring(0, currentPath.lastIndexOf('/'))
-    setCurrentPath(parent)
-  }, [currentPath, initialRoot])
-
-  /**
-   * 快速退出脚本，供右上角按钮调用。
-   */
-  const handleExit = async () => {
-    Script.exit()
   }
 
   /**
@@ -227,46 +215,31 @@ function FileListView({ initialRoot, tag, tabItem }: FileListViewProps) {
     }
   }
 
-  const isRoot = currentPath === initialRoot
-  const rootDisplayName = initialRoot === FileManager.appGroupDocumentsDirectory ? 'AppGroup' : 'Documents'
-  const currentDirName = isRoot ? rootDisplayName : currentPath.split('/').pop() || rootDisplayName
-  const relativePath = currentPath.replace(initialRoot, '') || '/'
+  /**
+   * 偏好设置
+   */
+  const handlePreferences = async () => {}
 
-  const backSwipeGesture = useMemo(() => {
-    if (isRoot) return undefined
-    return DragGesture({ minDistance: 25, coordinateSpace: 'local' }).onEnded(details => {
-      if (details.startLocation.x > 80) return
-      if (details.translation.width > 60 && Math.abs(details.translation.height) < 40) {
-        handleBack()
-      }
-    })
-  }, [handleBack, isRoot])
+  const isRoot = currentPath === rootPath
+  const currentDirName = isRoot ? rootDisplayName : currentPath.split('/').pop() || rootDisplayName
+  const relativePath = currentPath === rootPath ? '/' : currentPath.replace(rootPath, '')
 
   return (
-    <VStack
-      tag={tag}
-      tabItem={tabItem}
-      frame={{ maxWidth: 'infinity', maxHeight: 'infinity' }}
-      background="#ffffff"
-      gesture={backSwipeGesture}
-      defersSystemGestures="leading"
-    >
-      <VStack padding={16} background="#ffffff">
+    <VStack tag={tag} tabItem={tabItem} frame={{ maxWidth: 'infinity', maxHeight: 'infinity' }}>
+      <VStack padding={16}>
         <HStack alignment="center">
-          {!isRoot && (
-            <Button action={handleBack}>
-              <Image image={UIImage.fromSFSymbol('chevron.left')!} frame={{ width: 24, height: 24 }} />
-            </Button>
-          )}
           <VStack layoutPriority={1} alignment="leading">
-            <Text styledText={{ content: currentDirName, font: 20, fontWeight: 'bold', foregroundColor: isDark ? '#ffffff' : '#000000' }} />
+            <Text styledText={{ content: currentDirName, font: 20, fontWeight: 'bold' }} />
             <Text styledText={{ content: relativePath, font: 12, foregroundColor: '#8e8e93' }} />
           </VStack>
           <Spacer />
           <Button action={handleCreate}>
             <Image image={UIImage.fromSFSymbol('plus')!} frame={{ width: 24, height: 24 }} />
           </Button>
-          <Button action={handleExit}>
+          <Button action={handlePreferences}>
+            <Image image={UIImage.fromSFSymbol('gear')!} frame={{ width: 24, height: 24 }} />
+          </Button>
+          <Button action={dismiss}>
             <Image image={UIImage.fromSFSymbol('xmark.circle')!} frame={{ width: 24, height: 24 }} />
           </Button>
         </HStack>
@@ -298,15 +271,33 @@ function FileListView({ initialRoot, tag, tabItem }: FileListViewProps) {
             } catch (e) {
               console.error(e)
             }
+            if (isDir) {
+              return (
+                <NavigationLink key={name} destination={<DirectoryView rootPath={rootPath} path={path} rootDisplayName={rootDisplayName} />}>
+                  <FileRow
+                    name={name}
+                    path={path}
+                    isDirectory
+                    stat={stat}
+                    onCopy={() => handleCopy(name)}
+                    onMove={() => handleMove(name)}
+                    onInfo={() => handleInfo(name)}
+                    onRename={() => handleRename(name)}
+                    onDuplicate={() => handleDuplicate(name)}
+                    onDelete={() => handleDelete(name)}
+                  />
+                </NavigationLink>
+              )
+            }
 
             return (
               <FileRow
                 key={name}
                 name={name}
                 path={path}
-                isDirectory={isDir}
+                isDirectory={false}
                 stat={stat}
-                onPress={() => handleNavigate(name)}
+                onPress={() => handleOpenFile(name)}
                 onCopy={() => handleCopy(name)}
                 onMove={() => handleMove(name)}
                 onInfo={() => handleInfo(name)}

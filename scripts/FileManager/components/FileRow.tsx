@@ -1,4 +1,4 @@
-import { Button, Group, HStack, Image, Label, SVG, Script, Spacer, Text, VStack, useColorScheme, useMemo } from 'scripting'
+import { Button, Group, HStack, Image, Label, SVG, Script, Spacer, Text, VStack, useMemo } from 'scripting'
 
 import { formatDate, formatSize } from '../utils/format'
 
@@ -59,7 +59,7 @@ interface FileRowProps {
   path: string
   isDirectory: boolean
   stat?: FileStat
-  onPress: () => void
+  onPress?: () => void
   onCopy: () => void
   onMove: () => void
   onInfo: () => void
@@ -69,9 +69,6 @@ interface FileRowProps {
 }
 
 export function FileRow({ name, path, isDirectory, stat, onPress, onCopy, onMove, onInfo, onRename, onDuplicate, onDelete }: FileRowProps) {
-  const colorScheme = useColorScheme()
-  const isDark = colorScheme === 'dark'
-
   const iconPath = useMemo(() => `${Script.directory}/assets/icon/${resolveIconName(name, isDirectory)}.svg`, [isDirectory, name])
   /**
    * 统计目录内的条目数量
@@ -88,7 +85,6 @@ export function FileRow({ name, path, isDirectory, stat, onPress, onCopy, onMove
   const detailText = stat && `${formatDate(stat.modificationDate)} - ${isDirectory ? `${directoryItemCount ?? 0} 项` : formatSize(stat.size)}`
   return (
     <HStack
-      background={isDark ? '#1c1c1e' : '#ffffff'}
       frame={{ height: 60 }}
       alignment="center"
       onTapGesture={onPress}
@@ -142,7 +138,7 @@ export function FileRow({ name, path, isDirectory, stat, onPress, onCopy, onMove
     >
       <SVG filePath={iconPath} resizable frame={{ width: 64, height: 64 }} />
       <VStack layoutPriority={1} alignment="leading">
-        <Text styledText={{ content: name, font: 16, foregroundColor: isDark ? '#ffffff' : '#000000' }} />
+        <Text styledText={{ content: name, font: 16 }} />
         {detailText ? (
           <Text
             styledText={{
