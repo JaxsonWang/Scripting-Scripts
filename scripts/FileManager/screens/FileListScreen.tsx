@@ -39,6 +39,9 @@ function FileListView({ initialRoot, tag, tabItem }: FileListViewProps) {
     setRefreshKey(k => k + 1)
   }, [initialRoot])
 
+  /**
+   * 根据当前路径加载文件列表，统一处理隐藏项过滤与排序。
+   */
   const loadFiles = useCallback(async () => {
     try {
       const names = await FileManager.readDirectory(currentPath)
@@ -63,6 +66,9 @@ function FileListView({ initialRoot, tag, tabItem }: FileListViewProps) {
     loadFiles()
   }, [loadFiles])
 
+  /**
+   * 点击条目时决定是进入子目录还是直接预览文件。
+   */
   const handleNavigate = (name: string) => {
     const newPath = currentPath + '/' + name
     if (FileManager.isDirectorySync(newPath)) {
@@ -72,22 +78,34 @@ function FileListView({ initialRoot, tag, tabItem }: FileListViewProps) {
     }
   }
 
+  /**
+   * 将选中文件的完整路径写入剪贴板，方便外部粘贴。
+   */
   const handleCopy = async (name: string) => {
     const filePath = currentPath + '/' + name
     await Pasteboard.setString(filePath)
     await Dialog.alert({ title: '已拷贝路径', message: filePath })
   }
 
+  /**
+   * 返回上一层目录，根目录时保持不动。
+   */
   const handleBack = () => {
     if (currentPath === initialRoot) return
     const parent = currentPath.substring(0, currentPath.lastIndexOf('/'))
     setCurrentPath(parent)
   }
 
+  /**
+   * 快速退出脚本，供右上角按钮调用。
+   */
   const handleExit = async () => {
     Script.exit()
   }
 
+  /**
+   * 展示文件/文件夹的基础信息（大小、时间戳、类型）。
+   */
   const handleInfo = async (name: string) => {
     const filePath = currentPath + '/' + name
     const stat = await FileManager.stat(filePath)
@@ -97,6 +115,9 @@ function FileListView({ initialRoot, tag, tabItem }: FileListViewProps) {
     await Dialog.alert({ title: 'File Info', message: info })
   }
 
+  /**
+   * 触发重命名对话框，并在成功后刷新列表。
+   */
   const handleRename = async (name: string) => {
     const filePath = currentPath + '/' + name
     const newName = await Dialog.prompt({
@@ -110,6 +131,9 @@ function FileListView({ initialRoot, tag, tabItem }: FileListViewProps) {
     }
   }
 
+  /**
+   * 复制一个副本，自动添加 “copy” 后缀并刷新目录。
+   */
   const handleDuplicate = async (name: string) => {
     const filePath = currentPath + '/' + name
     let newName = name
@@ -124,6 +148,9 @@ function FileListView({ initialRoot, tag, tabItem }: FileListViewProps) {
     setRefreshKey(k => k + 1)
   }
 
+  /**
+   * 删除文件前弹出确认框，防止误操作。
+   */
   const handleDelete = async (name: string) => {
     const filePath = currentPath + '/' + name
     const confirm = await Dialog.confirm({
@@ -137,6 +164,9 @@ function FileListView({ initialRoot, tag, tabItem }: FileListViewProps) {
     }
   }
 
+  /**
+   * 通过重命名实现移动，将条目迁移到用户输入的目录中。
+   */
   const handleMove = async (name: string) => {
     const targetDirInput = await Dialog.prompt({ title: '移动到目录', defaultValue: currentPath, confirmLabel: '移动' })
     if (!targetDirInput) return
@@ -155,6 +185,9 @@ function FileListView({ initialRoot, tag, tabItem }: FileListViewProps) {
     }
   }
 
+  /**
+   * 创建新文件/文件夹的入口，根据用户选择执行对应操作。
+   */
   const handleCreate = async () => {
     const index = await Dialog.actionSheet({
       title: 'Create New',

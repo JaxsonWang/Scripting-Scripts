@@ -51,7 +51,7 @@ export function FileRow({ name, path, isDirectory, stat, onPress, onCopy, onMove
                   <Image image={UIImage.fromSFSymbol('square.and.pencil')!} frame={{ width: 16, height: 16 }} />
                 </HStack>
               </Button>
-              <Button action={onDuplicate} tint="systemOrange">
+              <Button action={onDuplicate}>
                 <HStack alignment="center" frame={{ maxWidth: 'infinity' }}>
                   <Text>复制</Text>
                   <Spacer />
@@ -78,7 +78,7 @@ export function FileRow({ name, path, isDirectory, stat, onPress, onCopy, onMove
       }}
     >
       <Image image={icon} frame={{ width: 24, height: 24 }} />
-      <VStack padding={{ leading: 12 }} layoutPriority={1}>
+      <VStack padding={{ leading: 12 }} layoutPriority={1} alignment="leading">
         <Text styledText={{ content: name, font: 16, foregroundColor: isDark ? '#ffffff' : '#000000' }} />
         {stat && (
           <Text
