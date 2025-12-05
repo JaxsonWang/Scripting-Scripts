@@ -96,42 +96,42 @@ export function FileRow({ name, path, isDirectory, stat, onPress, onCopy, onMove
                 <HStack alignment="center" frame={{ maxWidth: 'infinity' }}>
                   <Text>拷贝</Text>
                   <Spacer />
-                  <Image image={UIImage.fromSFSymbol('doc.on.doc')!} frame={{ width: 16, height: 16 }} />
+                  <Image systemName="doc.on.doc" frame={{ width: 16, height: 16 }} />
                 </HStack>
               </Button>
               <Button action={onMove}>
                 <HStack alignment="center" frame={{ maxWidth: 'infinity' }}>
                   <Text>移动</Text>
                   <Spacer />
-                  <Image image={UIImage.fromSFSymbol('folder')!} frame={{ width: 16, height: 16 }} />
+                  <Image systemName="folder" frame={{ width: 16, height: 16 }} />
                 </HStack>
               </Button>
               <Button action={onInfo}>
                 <HStack alignment="center" frame={{ maxWidth: 'infinity' }}>
                   <Text>显示简介</Text>
                   <Spacer />
-                  <Image image={UIImage.fromSFSymbol('info.circle')!} frame={{ width: 16, height: 16 }} />
+                  <Image systemName="info.circle" frame={{ width: 16, height: 16 }} />
                 </HStack>
               </Button>
               <Button action={onRename}>
                 <HStack alignment="center" frame={{ maxWidth: 'infinity' }}>
                   <Text>重新命名</Text>
                   <Spacer />
-                  <Image image={UIImage.fromSFSymbol('square.and.pencil')!} frame={{ width: 16, height: 16 }} />
+                  <Image systemName="square.and.pencil" frame={{ width: 16, height: 16 }} />
                 </HStack>
               </Button>
               <Button action={onDuplicate}>
                 <HStack alignment="center" frame={{ maxWidth: 'infinity' }}>
                   <Text>复制</Text>
                   <Spacer />
-                  <Image image={UIImage.fromSFSymbol('plus.square.on.square')!} frame={{ width: 16, height: 16 }} />
+                  <Image systemName="plus.square.on.square" frame={{ width: 16, height: 16 }} />
                 </HStack>
               </Button>
               <Button role="destructive" action={onDelete}>
                 <HStack alignment="center" frame={{ maxWidth: 'infinity' }}>
                   <Text>删除</Text>
                   <Spacer />
-                  <Image image={UIImage.fromSFSymbol('trash')!} frame={{ width: 16, height: 16 }} />
+                  <Image systemName="trash" frame={{ width: 16, height: 16 }} />
                 </HStack>
               </Button>
             </VStack>

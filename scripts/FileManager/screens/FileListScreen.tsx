@@ -22,6 +22,7 @@ import {
 import { FileRow } from '../components/FileRow'
 import { PreferencesScreen } from './PreferencesScreen'
 type FileEntry = { name: string; path: string; isDir: boolean; stat?: FileStat }
+type TransferState = { sourcePath: string; isMove: boolean }
 
 type DirectoryViewProps = {
   rootPath: string
@@ -31,6 +32,10 @@ type DirectoryViewProps = {
   tabItem?: JSX.Element
   onToolbarChange?: (index: number, leading: JSX.Element, trailing: JSX.Element) => void
   disableInternalToolbar?: boolean
+  transfer: TransferState | null
+  setTransfer: (v: TransferState | null) => void
+  externalReloadPath: string | null
+  requestExternalReload: (path: string | null) => void
 }
 
 const ROOT_TABS = [
@@ -54,6 +59,8 @@ const formatRelativePath = (path: string): string => {
 export function FileListScreen() {
   const [tabIndex, setTabIndex] = useState(0)
   const [toolbarByTab, setToolbarByTab] = useState<Record<number, { leading: JSX.Element; trailing: JSX.Element }>>({})
+  const [transfer, setTransfer] = useState<TransferState | null>(null)
+  const [externalReloadPath, setExternalReloadPath] = useState<string | null>(null)
 
   const handleToolbarChange = useCallback((index: number, leading: JSX.Element, trailing: JSX.Element) => {
     setToolbarByTab(prev => {
@@ -81,22 +88,40 @@ export function FileListScreen() {
               path={tab.path}
               rootDisplayName={tab.title}
               tag={index}
-              tabItem={<Label title={tab.title} systemImage={tab.icon} />}
-              onToolbarChange={handleToolbarChange}
-              disableInternalToolbar
-            />
-          ))}
-        </TabView>
+            tabItem={<Label title={tab.title} systemImage={tab.icon} />}
+            onToolbarChange={handleToolbarChange}
+            disableInternalToolbar
+            transfer={transfer}
+            setTransfer={setTransfer}
+            externalReloadPath={externalReloadPath}
+            requestExternalReload={setExternalReloadPath}
+          />
+        ))}
+      </TabView>
       </VStack>
     </NavigationStack>
   )
 }
 
-function DirectoryView({ rootPath, path, rootDisplayName, tag, tabItem, onToolbarChange, disableInternalToolbar }: DirectoryViewProps) {
+function DirectoryView({
+  rootPath,
+  path,
+  rootDisplayName,
+  tag,
+  tabItem,
+  onToolbarChange,
+  disableInternalToolbar,
+  transfer,
+  setTransfer,
+  externalReloadPath,
+  requestExternalReload
+}: DirectoryViewProps) {
   const currentPath = path
   const [entries, setEntries] = useState<FileEntry[]>([])
   const [showHidden, setShowHidden] = useState(true)
   const [version, bumpVersion] = useState(0)
+  const [toastShown, setToastShown] = useState(false)
+  const [toastMessage, setToastMessage] = useState('已拷贝，切换到目标目录粘贴')
 
   const dismiss = Navigation.useDismiss()
 
@@ -139,6 +164,13 @@ function DirectoryView({ rootPath, path, rootDisplayName, tag, tabItem, onToolba
     loadFiles()
   }, [loadFiles, version])
 
+  useEffect(() => {
+    if (externalReloadPath && externalReloadPath === currentPath) {
+      loadFiles()
+      requestExternalReload(null)
+    }
+  }, [externalReloadPath, currentPath, loadFiles, requestExternalReload])
+
   const triggerReload = useCallback(() => bumpVersion(v => v + 1), [])
 
   /**
@@ -158,7 +190,9 @@ function DirectoryView({ rootPath, path, rootDisplayName, tag, tabItem, onToolba
   const handleCopy = async (name: string) => {
     const filePath = currentPath + '/' + name
     await Pasteboard.setString(filePath)
-    await Dialog.alert({ title: '已拷贝路径', message: filePath })
+    setTransfer({ sourcePath: filePath, isMove: false })
+    setToastMessage('已拷贝，前往目标目录粘贴')
+    setToastShown(true)
   }
 
   /**
@@ -210,11 +244,11 @@ function DirectoryView({ rootPath, path, rootDisplayName, tag, tabItem, onToolba
    * 粘贴剪贴板中的文件路径到当前目录，自动避免同名覆盖
    */
   const handlePaste = useCallback(async () => {
-    const source = await Pasteboard.getString?.()
-    if (!source) {
-      await Dialog.alert({ title: '没有可粘贴的路径', message: '请先在文件上长按选择“拷贝路径”' })
+    if (!transfer) {
+      await Dialog.alert({ title: '没有待粘贴的项目', message: '请先在文件上长按选择“拷贝/移动”。' })
       return
     }
+    const source = transfer.sourcePath
     const base = source.split('/').pop() || 'pasted'
     const ensureUnique = (name: string) => {
       let candidate = name
@@ -234,13 +268,20 @@ function DirectoryView({ rootPath, path, rootDisplayName, tag, tabItem, onToolba
     const targetName = ensureUnique(base)
     const target = currentPath + '/' + targetName
     try {
-      await FileManager.copyFile(source, target)
+      if (transfer?.isMove) {
+        await FileManager.rename(source, target)
+        const sourceDir = source.split('/').slice(0, -1).join('/') || '/'
+        requestExternalReload(sourceDir)
+      } else {
+        await FileManager.copyFile(source, target)
+      }
+      setTransfer(null)
       triggerReload()
     } catch (e) {
       console.error(e)
       await Dialog.alert({ title: '粘贴失败', message: String(e) })
     }
-  }, [currentPath, triggerReload])
+  }, [currentPath, transfer, triggerReload, setTransfer, requestExternalReload])
 
   /**
    * 删除文件前弹出确认框，防止误操作。
@@ -262,21 +303,10 @@ function DirectoryView({ rootPath, path, rootDisplayName, tag, tabItem, onToolba
    * 通过重命名实现移动，将条目迁移到用户输入的目录中。
    */
   const handleMove = async (name: string) => {
-    const targetDirInput = await Dialog.prompt({ title: '移动到目录', defaultValue: currentPath, confirmLabel: '移动' })
-    if (!targetDirInput) return
-    const targetDir = targetDirInput.endsWith('/') ? targetDirInput.slice(0, -1) : targetDirInput
-    const destination = `${targetDir}/${name}`
-    try {
-      if (!FileManager.isDirectorySync(targetDir)) {
-        await Dialog.alert({ title: '目标目录不存在', message: targetDir })
-        return
-      }
-      await FileManager.rename(currentPath + '/' + name, destination)
-      triggerReload()
-    } catch (e) {
-      console.error(e)
-      await Dialog.alert({ title: '移动失败', message: '请检查目标目录是否存在且可写' })
-    }
+    const filePath = currentPath + '/' + name
+    setTransfer({ sourcePath: filePath, isMove: true })
+    setToastMessage('已准备移动，前往目标目录粘贴')
+    setToastShown(true)
   }
 
   /**
@@ -353,10 +383,10 @@ function DirectoryView({ rootPath, path, rootDisplayName, tag, tabItem, onToolba
   const toolbarTrailing = useMemo(
     () => (
       <HStack>
-        <ControlGroup label={<Image image={UIImage.fromSFSymbol('ellipsis.circle')!} frame={{ width: 20, height: 20 }} />} controlGroupStyle="palette">
+        <ControlGroup label={<Image systemName="ellipsis.circle" frame={{ width: 20, height: 20 }} />} controlGroupStyle="palette">
           <Button title="新增文件夹" systemImage="folder.badge.plus" action={handleCreateFolder} />
           <Button title="新增文件" systemImage="doc.badge.plus" action={handleCreateFile} />
-          <Button title="粘贴" systemImage="doc.on.clipboard" action={handlePaste} />
+          {transfer ? <Button title="粘贴" systemImage="doc.on.clipboard" action={handlePaste} /> : null}
           <Button
             title="简介"
             systemImage="info.circle"
@@ -369,14 +399,14 @@ function DirectoryView({ rootPath, path, rootDisplayName, tag, tabItem, onToolba
           />
         </ControlGroup>
         <Button action={handlePreferences}>
-          <Image image={UIImage.fromSFSymbol('gearshape')!} frame={{ width: 20, height: 20 }} />
+          <Image systemName="gearshape" frame={{ width: 20, height: 20 }} />
         </Button>
         <Button action={handleExit}>
-          <Image image={UIImage.fromSFSymbol('xmark.circle')!} frame={{ width: 20, height: 20 }} />
+          <Image systemName="xmark.circle" frame={{ width: 20, height: 20 }} />
         </Button>
       </HStack>
     ),
-    [handleCreateFolder, handlePaste, currentDirName, currentPath, entries.length, handlePreferences, handleExit]
+    [handleCreateFolder, handleCreateFile, handlePaste, currentDirName, currentPath, entries.length, handlePreferences, handleExit, transfer]
   )
 
   useEffect(() => {
@@ -400,7 +430,16 @@ function DirectoryView({ rootPath, path, rootDisplayName, tag, tabItem, onToolba
           <Spacer />
         </VStack>
       ) : (
-        <List listStyle="inset">
+        <List
+          listStyle="inset"
+          toast={{
+            isPresented: toastShown,
+            onChanged: setToastShown,
+            message: toastMessage,
+            duration: 2,
+            position: 'bottom'
+          }}
+        >
           {entries.map(entry => {
             const { name, path: childPath, isDir, stat } = entry
             if (isDir) {
@@ -415,6 +454,10 @@ function DirectoryView({ rootPath, path, rootDisplayName, tag, tabItem, onToolba
                       tag={tag}
                       onToolbarChange={onToolbarChange}
                       disableInternalToolbar={false}
+                      transfer={transfer}
+                      setTransfer={setTransfer}
+                      externalReloadPath={externalReloadPath}
+                      requestExternalReload={requestExternalReload}
                     />
                   }
                 >
