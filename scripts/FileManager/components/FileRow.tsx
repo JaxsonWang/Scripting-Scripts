@@ -96,7 +96,12 @@ export function FileRow({ name, path, isDirectory, stat, onPress, onCopy, onMove
     <HStack
       frame={{ height: 60 }}
       alignment="center"
-      onTapGesture={onPress}
+      contentShape="rect"
+      onTapGesture={() => {
+        if (!onPress) return
+        console.log('[FileRow] tap', path)
+        onPress()
+      }}
       contextMenu={{
         menuItems: (
           <Group>

@@ -487,7 +487,7 @@ function DirectoryView({
       delete: l10n.delete,
       items: l10n.itemsLabel
     }
-    const row = (
+    return (
       <FileRow
         key={name}
         name={name}
@@ -503,14 +503,6 @@ function DirectoryView({
         onDuplicate={() => handleDuplicate(name)}
         onDelete={() => handleDelete(name)}
       />
-    )
-
-    if (isDirectoryEntry) return row
-
-    return (
-      <Button key={name} action={() => handleOpenFile(name)}>
-        {row}
-      </Button>
     )
   }
 
