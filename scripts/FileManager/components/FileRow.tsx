@@ -1,4 +1,4 @@
-import { Button, HStack, Image, Label, Spacer, Text, VStack, useColorScheme } from 'scripting'
+import { Button, Group, HStack, Image, Label, Spacer, Text, VStack, useColorScheme } from 'scripting'
 
 import { formatDate, formatSize } from '../utils/format'
 
@@ -8,13 +8,15 @@ interface FileRowProps {
   isDirectory: boolean
   stat?: FileStat
   onPress: () => void
+  onCopy: () => void
+  onMove: () => void
   onInfo: () => void
   onRename: () => void
   onDuplicate: () => void
   onDelete: () => void
 }
 
-export function FileRow({ name, path, isDirectory, stat, onPress, onInfo, onRename, onDuplicate, onDelete }: FileRowProps) {
+export function FileRow({ name, path, isDirectory, stat, onPress, onCopy, onMove, onInfo, onRename, onDuplicate, onDelete }: FileRowProps) {
   const colorScheme = useColorScheme()
   const isDark = colorScheme === 'dark'
 
@@ -27,23 +29,48 @@ export function FileRow({ name, path, isDirectory, stat, onPress, onInfo, onRena
       frame={{ height: 60 }}
       alignment="center"
       onTapGesture={onPress}
-      leadingSwipeActions={{
-        allowsFullSwipe: false,
-        actions: [
-          <Button action={onInfo} tint="systemBlue">
-            <Label title="Info" systemImage="info.circle" />
-          </Button>
-        ]
+      contextMenu={{
+        menuItems: (
+          <Group>
+            <VStack spacing={8}>
+              <HStack spacing={8}>
+                <Button title="拷贝" action={onCopy} />
+                <Button title="移动" action={onMove} />
+              </HStack>
+              <Button action={onInfo}>
+                <HStack alignment="center" frame={{ maxWidth: 'infinity' }}>
+                  <Text>显示简介</Text>
+                  <Spacer />
+                  <Image image={UIImage.fromSFSymbol('info.circle')!} frame={{ width: 16, height: 16 }} />
+                </HStack>
+              </Button>
+              <Button action={onRename}>
+                <HStack alignment="center" frame={{ maxWidth: 'infinity' }}>
+                  <Text>重新命名</Text>
+                  <Spacer />
+                  <Image image={UIImage.fromSFSymbol('square.and.pencil')!} frame={{ width: 16, height: 16 }} />
+                </HStack>
+              </Button>
+              <Button action={onDuplicate} tint="systemOrange">
+                <HStack alignment="center" frame={{ maxWidth: 'infinity' }}>
+                  <Text>复制</Text>
+                  <Spacer />
+                  <Image image={UIImage.fromSFSymbol('plus.square.on.square')!} frame={{ width: 16, height: 16 }} />
+                </HStack>
+              </Button>
+              <Button role="destructive" action={onDelete}>
+                <HStack alignment="center" frame={{ maxWidth: 'infinity' }}>
+                  <Text>删除</Text>
+                  <Spacer />
+                  <Image image={UIImage.fromSFSymbol('trash')!} frame={{ width: 16, height: 16 }} />
+                </HStack>
+              </Button>
+            </VStack>
+          </Group>
+        )
       }}
       trailingSwipeActions={{
-        allowsFullSwipe: false,
         actions: [
-          <Button action={onRename} tint="systemBlue">
-            <Label title="Rename" systemImage="square.and.pencil" />
-          </Button>,
-          <Button action={onDuplicate} tint="systemOrange">
-            <Label title="Duplicate" systemImage="plus.square.on.square" />
-          </Button>,
           <Button role="destructive" action={onDelete}>
             <Label title="Delete" systemImage="trash" />
           </Button>

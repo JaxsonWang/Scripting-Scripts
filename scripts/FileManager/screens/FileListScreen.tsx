@@ -1,4 +1,5 @@
 import { Button, HStack, Image, List, Spacer, Text, VStack, useCallback, useColorScheme, useEffect, useState } from 'scripting'
+
 import { FileRow } from '../components/FileRow'
 
 export function FileListScreen() {
@@ -43,6 +44,12 @@ export function FileListScreen() {
     } else {
       QuickLook.previewURLs([`file://${newPath}`])
     }
+  }
+
+  const handleCopy = async (name: string) => {
+    const filePath = currentPath + '/' + name
+    await Pasteboard.setString(filePath)
+    await Dialog.alert({ title: '已拷贝路径', message: filePath })
   }
 
   const handleBack = () => {
@@ -103,6 +110,24 @@ Type: ${stat.type}
     if (confirm) {
       await FileManager.remove(filePath)
       setRefreshKey(k => k + 1)
+    }
+  }
+
+  const handleMove = async (name: string) => {
+    const targetDirInput = await Dialog.prompt({ title: '移动到目录', defaultValue: currentPath, confirmLabel: '移动' })
+    if (!targetDirInput) return
+    const targetDir = targetDirInput.endsWith('/') ? targetDirInput.slice(0, -1) : targetDirInput
+    const destination = `${targetDir}/${name}`
+    try {
+      if (!FileManager.isDirectorySync(targetDir)) {
+        await Dialog.alert({ title: '目标目录不存在', message: targetDir })
+        return
+      }
+      await FileManager.rename(currentPath + '/' + name, destination)
+      setRefreshKey(k => k + 1)
+    } catch (e) {
+      console.error(e)
+      await Dialog.alert({ title: '移动失败', message: '请检查目标目录是否存在且可写' })
     }
   }
 
@@ -205,6 +230,8 @@ Type: ${stat.type}
               isDirectory={isDir}
               stat={stat}
               onPress={() => handleNavigate(name)}
+              onCopy={() => handleCopy(name)}
+              onMove={() => handleMove(name)}
               onInfo={() => handleInfo(name)}
               onRename={() => handleRename(name)}
               onDuplicate={() => handleDuplicate(name)}
