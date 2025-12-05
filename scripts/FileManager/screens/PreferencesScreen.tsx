@@ -1,4 +1,4 @@
-import { Button, Form, Navigation, NavigationStack, Section, Text, Toggle } from 'scripting'
+import { Button, Form, Navigation, NavigationStack, Section, Text, Toggle, Picker } from 'scripting'
 
 type PreferencesScreenProps = {
   showHidden: boolean
@@ -7,9 +7,26 @@ type PreferencesScreenProps = {
   doneLabel: string
   sectionTitle: string
   toggleLabel: string
+  languageSectionTitle: string
+  languagePickerTitle: string
+  locale: string
+  onLocaleChange: (value: string) => void
+  languageOptions: { value: string; label: string }[]
 }
 
-export function PreferencesScreen({ showHidden, onToggleHidden, title, doneLabel, sectionTitle, toggleLabel }: PreferencesScreenProps) {
+export function PreferencesScreen({
+  showHidden,
+  onToggleHidden,
+  title,
+  doneLabel,
+  sectionTitle,
+  toggleLabel,
+  languageSectionTitle,
+  languagePickerTitle,
+  locale,
+  onLocaleChange,
+  languageOptions
+}: PreferencesScreenProps) {
   const dismiss = Navigation.useDismiss()
 
   return (
@@ -22,6 +39,15 @@ export function PreferencesScreen({ showHidden, onToggleHidden, title, doneLabel
       >
         <Section header={<Text>{sectionTitle}</Text>}>
           <Toggle title={toggleLabel} value={showHidden} onChanged={onToggleHidden} />
+        </Section>
+        <Section header={<Text>{languageSectionTitle}</Text>}>
+          <Picker title={languagePickerTitle} value={locale} onChanged={onLocaleChange as any}>
+            {languageOptions.map(option => (
+              <Text key={option.value} tag={option.value}>
+                {option.label}
+              </Text>
+            ))}
+          </Picker>
         </Section>
       </Form>
     </NavigationStack>

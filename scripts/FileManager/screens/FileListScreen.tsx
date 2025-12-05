@@ -65,7 +65,11 @@ const translations = {
     preferences: 'Preferences',
     done: 'Done',
     listDisplay: 'List Display',
-    showHidden: 'Show Hidden Files'
+    showHidden: 'Show Hidden Files',
+    languageSection: 'Language',
+    languagePickerTitle: 'Choose Language',
+    languageEnglish: 'English',
+    languageChinese: 'Chinese'
   },
   zh: {
     documents: '文件',
@@ -104,12 +108,16 @@ const translations = {
     preferences: '偏好设置',
     done: '完成',
     listDisplay: '列表显示',
-    showHidden: '显示隐藏文件'
+    showHidden: '显示隐藏文件',
+    languageSection: '界面语言',
+    languagePickerTitle: '请选择语言',
+    languageEnglish: '英语',
+    languageChinese: '中文'
   }
 } satisfies Record<Locale, Record<string, any>>
 
 const detectLocale = (): Locale => {
-  const code = Device.preferredLanguages?.[0] ?? 'en'
+  const code = Device.preferredLanguages?.[0] ?? 'zh'
   return code.startsWith('zh') ? 'zh' : 'en'
 }
 
@@ -126,6 +134,9 @@ type DirectoryViewProps = {
   externalReloadPath: string | null
   requestExternalReload: (path: string | null) => void
   l10n: L10n
+  locale: Locale
+  onLocaleChange: (value: Locale) => void
+  languageOptions: { value: Locale; label: string }[]
 }
 
 const ROOT_TABS = [
@@ -147,12 +158,19 @@ const formatRelativePath = (path: string): string => {
 }
 
 export function FileListScreen() {
-  const [locale] = useState<Locale>(detectLocale())
+  const [locale, setLocale] = useState<Locale>(detectLocale())
   const l10n = useMemo(() => translations[locale], [locale])
   const [tabIndex, setTabIndex] = useState(0)
   const [toolbarByTab, setToolbarByTab] = useState<Record<number, { leading: JSX.Element; trailing: JSX.Element }>>({})
   const [transfer, setTransfer] = useState<TransferState | null>(null)
   const [externalReloadPath, setExternalReloadPath] = useState<string | null>(null)
+  const languageOptions = useMemo(
+    () => [
+      { value: 'en' as Locale, label: l10n.languageEnglish },
+      { value: 'zh' as Locale, label: l10n.languageChinese }
+    ],
+    [l10n]
+  )
 
   const handleToolbarChange = useCallback((index: number, leading: JSX.Element, trailing: JSX.Element) => {
     setToolbarByTab(prev => {
@@ -196,6 +214,9 @@ export function FileListScreen() {
               externalReloadPath={externalReloadPath}
               requestExternalReload={setExternalReloadPath}
               l10n={l10n}
+              locale={locale}
+              onLocaleChange={setLocale}
+              languageOptions={languageOptions}
             />
           ))}
         </TabView>
@@ -216,7 +237,10 @@ function DirectoryView({
   setTransfer,
   externalReloadPath,
   requestExternalReload,
-  l10n
+  l10n,
+  locale,
+  onLocaleChange,
+  languageOptions
 }: DirectoryViewProps) {
   const currentPath = path
   const [entries, setEntries] = useState<FileEntry[]>([])
@@ -224,6 +248,10 @@ function DirectoryView({
   const [version, bumpVersion] = useState(0)
   const [toastShown, setToastShown] = useState(false)
   const [toastMessage, setToastMessage] = useState(l10n.copiedToast)
+
+  useEffect(() => {
+    setToastMessage(l10n.copiedToast)
+  }, [l10n])
 
   const dismiss = Navigation.useDismiss()
 
@@ -459,10 +487,15 @@ function DirectoryView({
           doneLabel={l10n.done}
           sectionTitle={l10n.listDisplay}
           toggleLabel={l10n.showHidden}
+          languageSectionTitle={l10n.languageSection}
+          languagePickerTitle={l10n.languagePickerTitle}
+          locale={locale}
+          onLocaleChange={value => onLocaleChange(value as Locale)}
+          languageOptions={languageOptions}
         />
       )
     })
-  }, [showHidden, l10n])
+  }, [showHidden, l10n, locale, languageOptions, onLocaleChange])
 
   /**
    * 退出脚本
@@ -595,6 +628,9 @@ function DirectoryView({
                       externalReloadPath={externalReloadPath}
                       requestExternalReload={requestExternalReload}
                       l10n={l10n}
+                      locale={locale}
+                      onLocaleChange={onLocaleChange}
+                      languageOptions={languageOptions}
                     />
                   }
                 >

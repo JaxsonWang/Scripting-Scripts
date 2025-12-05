@@ -151,7 +151,7 @@ export function FileRow({ name, path, isDirectory, stat, onPress, onCopy, onMove
       trailingSwipeActions={{
         actions: [
           <Button role="destructive" action={onDelete}>
-            <Label title="Delete" systemImage="trash" />
+            <Label title={labels.delete} systemImage="trash" />
           </Button>
         ]
       }}
