@@ -178,8 +178,8 @@ function FileListView({ initialRoot, tag, tabItem }: FileListViewProps) {
   }
 
   const isRoot = currentPath === initialRoot
-  const defaultDirName = initialRoot === FileManager.appGroupDocumentsDirectory ? 'AppGroup' : 'Documents'
-  const currentDirName = currentPath.split('/').pop() || defaultDirName
+  const rootDisplayName = initialRoot === FileManager.appGroupDocumentsDirectory ? 'AppGroup' : 'Documents'
+  const currentDirName = isRoot ? rootDisplayName : currentPath.split('/').pop() || rootDisplayName
   const relativePath = currentPath.replace(initialRoot, '') || '/'
 
   return (
