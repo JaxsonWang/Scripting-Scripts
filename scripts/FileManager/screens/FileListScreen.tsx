@@ -15,6 +15,7 @@ import {
   VStack,
   useCallback,
   useEffect,
+  useMemo,
   useState
 } from 'scripting'
 import { FileRow } from '../components/FileRow'
@@ -43,7 +44,13 @@ export function FileListScreen() {
   const [toolbarByTab, setToolbarByTab] = useState<Record<number, { leading: JSX.Element; trailing: JSX.Element }>>({})
 
   const handleToolbarChange = useCallback((index: number, leading: JSX.Element, trailing: JSX.Element) => {
-    setToolbarByTab(prev => ({ ...prev, [index]: { leading, trailing } }))
+    setToolbarByTab(prev => {
+      const prevEntry = prev[index]
+      if (prevEntry && prevEntry.leading === leading && prevEntry.trailing === trailing) {
+        return prev
+      }
+      return { ...prev, [index]: { leading, trailing } }
+    })
   }, [])
 
   const currentToolbar = toolbarByTab[tabIndex]
@@ -83,9 +90,11 @@ type DirectoryViewProps = {
   disableInternalToolbar?: boolean
 }
 
+type FileEntry = { name: string; path: string; isDir: boolean; stat?: FileStat }
+
 function DirectoryView({ rootPath, path, rootDisplayName, tag, tabItem, onToolbarChange, disableInternalToolbar }: DirectoryViewProps) {
   const currentPath = path
-  const [files, setFiles] = useState<string[]>([])
+  const [entries, setEntries] = useState<FileEntry[]>([])
   const [showHidden, setShowHidden] = useState(true)
   const [refreshKey, setRefreshKey] = useState(0)
 
@@ -98,19 +107,27 @@ function DirectoryView({ rootPath, path, rootDisplayName, tag, tabItem, onToolba
     try {
       const names = await FileManager.readDirectory(currentPath)
       const filtered = names.filter(n => showHidden || !n.startsWith('.'))
-      const sorted = filtered.sort((a, b) => {
-        const pathA = currentPath + '/' + a
-        const pathB = currentPath + '/' + b
-        const isDirA = FileManager.isDirectorySync(pathA)
-        const isDirB = FileManager.isDirectorySync(pathB)
-        if (isDirA && !isDirB) return -1
-        if (!isDirA && isDirB) return 1
-        return a.localeCompare(b)
+      const withMeta: FileEntry[] = filtered.map(name => {
+        const fullPath = currentPath + '/' + name
+        let isDir = false
+        let stat: FileStat | undefined = undefined
+        try {
+          isDir = FileManager.isDirectorySync(fullPath)
+          stat = FileManager.statSync(fullPath)
+        } catch (e) {
+          console.error('[DirectoryView] stat failed', fullPath, e)
+        }
+        return { name, path: fullPath, isDir, stat }
       })
-      setFiles(sorted)
+      const sorted = withMeta.sort((a, b) => {
+        if (a.isDir && !b.isDir) return -1
+        if (!a.isDir && b.isDir) return 1
+        return a.name.localeCompare(b.name)
+      })
+      setEntries(sorted)
     } catch (e) {
       console.error(e)
-      Dialog.alert({ message: 'Failed to read directory' })
+      await Dialog.alert({ message: 'Failed to read directory' })
     }
   }, [currentPath, showHidden, refreshKey])
 
@@ -223,7 +240,7 @@ function DirectoryView({ rootPath, path, rootDisplayName, tag, tabItem, onToolba
   /**
    * 创建新文件/文件夹的入口，根据用户选择执行对应操作。
    */
-  const handleCreate = async () => {
+  const handleCreate = useCallback(async () => {
     const index = await Dialog.actionSheet({
       title: 'Create New',
       actions: [{ label: 'Folder' }, { label: 'Text File' }],
@@ -243,7 +260,7 @@ function DirectoryView({ rootPath, path, rootDisplayName, tag, tabItem, onToolba
         setRefreshKey(k => k + 1)
       }
     }
-  }
+  }, [currentPath])
 
   /**
    * 展示偏好设置页，目前仅包含“显示隐藏文件”开关。
@@ -253,6 +270,14 @@ function DirectoryView({ rootPath, path, rootDisplayName, tag, tabItem, onToolba
       element: <PreferencesScreen showHidden={showHidden} onToggleHidden={setShowHidden} />
     })
   }, [showHidden])
+
+  /**
+   * 退出脚本
+   */
+  const handleExit = useCallback(() => {
+    dismiss()
+    Script.exit()
+  }, [dismiss])
 
   const renderRow = (name: string, path: string, isDirectoryEntry: boolean, stat?: FileStat) => (
     <FileRow
@@ -276,33 +301,38 @@ function DirectoryView({ rootPath, path, rootDisplayName, tag, tabItem, onToolba
   const relativePathFull = currentPath === rootPath ? '/' : currentPath.replace(rootPath, '')
   const relativePath = formatRelativePath(relativePathFull)
 
-  const toolbarLeading = (
-    <VStack alignment="leading">
-      <Text styledText={{ content: currentDirName, font: 16, fontWeight: 'bold' }} />
-      <Text styledText={{ content: relativePath, font: 11, foregroundColor: '#8e8e93' }} />
-    </VStack>
+  const toolbarLeading = useMemo(
+    () => (
+      <VStack alignment="leading">
+        <Text styledText={{ content: currentDirName, font: 16, fontWeight: 'bold' }} />
+        <Text styledText={{ content: relativePath, font: 11, foregroundColor: '#8e8e93' }} />
+      </VStack>
+    ),
+    [currentDirName, relativePath]
   )
 
-  const toolbarTrailing = (
-    <HStack spacing={8}>
-      <Button action={handleCreate}>
-        <Image image={UIImage.fromSFSymbol('plus')!} frame={{ width: 20, height: 20 }} />
-      </Button>
-      <Button action={handlePreferences}>
-        <Image image={UIImage.fromSFSymbol('gearshape')!} frame={{ width: 20, height: 20 }} />
-      </Button>
-      <Button action={dismiss}>
-        <Image image={UIImage.fromSFSymbol('xmark.circle')!} frame={{ width: 20, height: 20 }} />
-      </Button>
-    </HStack>
+  const toolbarTrailing = useMemo(
+    () => (
+      <HStack spacing={8}>
+        <Button action={handleCreate}>
+          <Image image={UIImage.fromSFSymbol('plus')!} frame={{ width: 20, height: 20 }} />
+        </Button>
+        <Button action={handlePreferences}>
+          <Image image={UIImage.fromSFSymbol('gearshape')!} frame={{ width: 20, height: 20 }} />
+        </Button>
+        <Button action={handleExit}>
+          <Image image={UIImage.fromSFSymbol('xmark.circle')!} frame={{ width: 20, height: 20 }} />
+        </Button>
+      </HStack>
+    ),
+    [handleCreate, handlePreferences, handleExit]
   )
 
   useEffect(() => {
     if (disableInternalToolbar && onToolbarChange) {
       onToolbarChange(tag ?? 0, toolbarLeading, toolbarTrailing)
-      console.log('[DirectoryView] report toolbar to parent', { tag, currentDirName, relativePath })
     }
-  }, [disableInternalToolbar, onToolbarChange, tag, toolbarLeading, toolbarTrailing, currentDirName, relativePath])
+  }, [disableInternalToolbar, onToolbarChange, tag, toolbarLeading, toolbarTrailing])
 
   return (
     <VStack
@@ -311,7 +341,7 @@ function DirectoryView({ rootPath, path, rootDisplayName, tag, tabItem, onToolba
       frame={{ maxWidth: 'infinity', maxHeight: 'infinity' }}
       toolbar={disableInternalToolbar ? undefined : { topBarLeading: toolbarLeading, topBarTrailing: toolbarTrailing }}
     >
-      {files.length === 0 ? (
+      {entries.length === 0 ? (
         <VStack frame={{ maxWidth: 'infinity', maxHeight: 'infinity' }} alignment="center">
           <Spacer />
           <SVG filePath={`${Script.directory}/assets/icon/folder.svg`} resizable frame={{ width: 128, height: 128 }} />
@@ -320,16 +350,8 @@ function DirectoryView({ rootPath, path, rootDisplayName, tag, tabItem, onToolba
         </VStack>
       ) : (
         <List listStyle="inset">
-          {files.map(name => {
-            const childPath = currentPath + '/' + name
-            let isDir = false
-            let stat = undefined
-            try {
-              isDir = FileManager.isDirectorySync(childPath)
-              stat = FileManager.statSync(childPath)
-            } catch (e) {
-              console.error(e)
-            }
+          {entries.map(entry => {
+            const { name, path: childPath, isDir, stat } = entry
             if (isDir) {
               return (
                 <NavigationLink
