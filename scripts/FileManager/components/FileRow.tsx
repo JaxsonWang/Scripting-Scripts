@@ -1,4 +1,5 @@
 import { Button, Group, HStack, Image, Label, Spacer, Text, VStack, useColorScheme } from 'scripting'
+import { Button, Group, HStack, Image, Label, Spacer, Text, VStack, useColorScheme, useMemo } from 'scripting'
 
 import { formatDate, formatSize } from '../utils/format'
 
@@ -21,6 +22,21 @@ export function FileRow({ name, path, isDirectory, stat, onPress, onCopy, onMove
   const isDark = colorScheme === 'dark'
 
   const icon = UIImage.fromSFSymbol(isDirectory ? 'folder.fill' : 'doc.fill')!
+  /**
+   * 统计目录内的条目数量，用于替换“Item”文案，避免硬编码。
+   */
+  const directoryItemCount = useMemo(() => {
+    if (!isDirectory) return null
+    try {
+      return FileManager.readDirectorySync(path).length
+    } catch (error) {
+      console.error(error)
+      return null
+    }
+  }, [isDirectory, path])
+  const detailText =
+    stat &&
+    `${formatDate(stat.modificationDate)} - ${isDirectory ? `${directoryItemCount ?? 0} 项` : formatSize(stat.size)}`
 
   return (
     <HStack
@@ -80,10 +96,10 @@ export function FileRow({ name, path, isDirectory, stat, onPress, onCopy, onMove
       <Image image={icon} frame={{ width: 24, height: 24 }} />
       <VStack padding={{ leading: 12 }} layoutPriority={1} alignment="leading">
         <Text styledText={{ content: name, font: 16, foregroundColor: isDark ? '#ffffff' : '#000000' }} />
-        {stat && (
+        {detailText && (
           <Text
             styledText={{
-              content: `${formatDate(stat.modificationDate)} - ${isDirectory ? 'Item' : formatSize(stat.size)}`,
+              content: detailText,
               font: 12,
               foregroundColor: '#8e8e93'
             }}
