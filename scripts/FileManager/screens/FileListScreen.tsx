@@ -1,10 +1,32 @@
-import { Button, HStack, Image, List, Spacer, Text, VStack, useCallback, useColorScheme, useEffect, useState } from 'scripting'
+import { Button, HStack, Image, Label, List, Script, Spacer, TabView, Text, VStack, useCallback, useColorScheme, useEffect, useState } from 'scripting'
 
 import { FileRow } from '../components/FileRow'
 
+const ROOT_TABS = [
+  { title: 'Documents', icon: 'folder.fill', path: FileManager.documentsDirectory },
+  { title: 'AppGroup', icon: 'externaldrive.fill', path: FileManager.appGroupDocumentsDirectory }
+]
+
 export function FileListScreen() {
-  const [root, setRoot] = useState(FileManager.documentsDirectory)
-  const [currentPath, setCurrentPath] = useState(FileManager.documentsDirectory)
+  const [tabIndex, setTabIndex] = useState(0)
+
+  return (
+    <TabView tabIndex={tabIndex} onTabIndexChanged={setTabIndex}>
+      {ROOT_TABS.map((tab, index) => (
+        <FileListView key={tab.path} initialRoot={tab.path} tag={index} tabItem={<Label title={tab.title} systemImage={tab.icon} />} />
+      ))}
+    </TabView>
+  )
+}
+
+type FileListViewProps = {
+  initialRoot: string
+  tag: number
+  tabItem: JSX.Element
+}
+
+function FileListView({ initialRoot, tag, tabItem }: FileListViewProps) {
+  const [currentPath, setCurrentPath] = useState(initialRoot)
   const [files, setFiles] = useState<string[]>([])
   const [showHidden, setShowHidden] = useState(true)
   const [refreshKey, setRefreshKey] = useState(0)
@@ -12,11 +34,15 @@ export function FileListScreen() {
   const colorScheme = useColorScheme()
   const isDark = colorScheme === 'dark'
 
+  useEffect(() => {
+    setCurrentPath(initialRoot)
+    setRefreshKey(k => k + 1)
+  }, [initialRoot])
+
   const loadFiles = useCallback(async () => {
     try {
       const names = await FileManager.readDirectory(currentPath)
       const filtered = names.filter(n => showHidden || !n.startsWith('.'))
-      // Sort: Directories first, then files.
       const sorted = filtered.sort((a, b) => {
         const pathA = currentPath + '/' + a
         const pathB = currentPath + '/' + b
@@ -53,23 +79,21 @@ export function FileListScreen() {
   }
 
   const handleBack = () => {
-    if (currentPath === root) return
+    if (currentPath === initialRoot) return
     const parent = currentPath.substring(0, currentPath.lastIndexOf('/'))
     setCurrentPath(parent)
   }
 
-  const isRoot = currentPath === root
+  const handleExit = async () => {
+    Script.exit()
+  }
 
   const handleInfo = async (name: string) => {
     const filePath = currentPath + '/' + name
     const stat = await FileManager.stat(filePath)
-    const info = `
-Path: ${filePath}
-Size: ${stat.size} bytes
-Created: ${new Date(stat.creationDate).toLocaleString()}
-Modified: ${new Date(stat.modificationDate).toLocaleString()}
-Type: ${stat.type}
-    `
+    const info = `\nPath: ${filePath}\nSize: ${stat.size} bytes\nCreated: ${new Date(stat.creationDate).toLocaleString()}\nModified: ${new Date(
+      stat.modificationDate
+    ).toLocaleString()}\nType: ${stat.type}\n    `
     await Dialog.alert({ title: 'File Info', message: info })
   }
 
@@ -131,11 +155,6 @@ Type: ${stat.type}
     }
   }
 
-  const handleRootChange = (newRoot: string) => {
-    setRoot(newRoot)
-    setCurrentPath(newRoot)
-  }
-
   const handleCreate = async () => {
     const index = await Dialog.actionSheet({
       title: 'Create New',
@@ -158,12 +177,13 @@ Type: ${stat.type}
     }
   }
 
-  const currentDirName = currentPath.split('/').pop() || 'Documents'
-  const relativePath = currentPath.replace(root, '') || '/'
+  const isRoot = currentPath === initialRoot
+  const defaultDirName = initialRoot === FileManager.appGroupDocumentsDirectory ? 'AppGroup' : 'Documents'
+  const currentDirName = currentPath.split('/').pop() || defaultDirName
+  const relativePath = currentPath.replace(initialRoot, '') || '/'
 
   return (
-    <VStack frame={{ maxWidth: 'infinity', maxHeight: 'infinity' }} background="#ffffff">
-      {/* Header */}
+    <VStack tag={tag} tabItem={tabItem} frame={{ maxWidth: 'infinity', maxHeight: 'infinity' }} background="#ffffff">
       <VStack padding={16} background="#ffffff">
         <HStack alignment="center">
           {!isRoot && (
@@ -171,7 +191,7 @@ Type: ${stat.type}
               <Image image={UIImage.fromSFSymbol('chevron.left')!} frame={{ width: 24, height: 24 }} />
             </Button>
           )}
-          <VStack padding={{ leading: !isRoot ? 10 : 0 }} layoutPriority={1}>
+          <VStack layoutPriority={1} alignment="leading">
             <Text styledText={{ content: currentDirName, font: 20, fontWeight: 'bold', foregroundColor: isDark ? '#ffffff' : '#000000' }} />
             <Text styledText={{ content: relativePath, font: 12, foregroundColor: '#8e8e93' }} />
           </VStack>
@@ -179,29 +199,12 @@ Type: ${stat.type}
           <Button action={handleCreate}>
             <Image image={UIImage.fromSFSymbol('plus')!} frame={{ width: 24, height: 24 }} />
           </Button>
+          <Button action={handleExit}>
+            <Image image={UIImage.fromSFSymbol('xmark.circle')!} frame={{ width: 24, height: 24 }} />
+          </Button>
         </HStack>
 
-        <HStack padding={{ top: 10 }} spacing={10}>
-          <Button action={() => handleRootChange(FileManager.documentsDirectory)}>
-            <Text
-              styledText={{
-                content: 'Documents',
-                font: 14,
-                fontWeight: root === FileManager.documentsDirectory ? 'bold' : 'regular',
-                foregroundColor: root === FileManager.documentsDirectory ? '#007aff' : '#8e8e93'
-              }}
-            />
-          </Button>
-          <Button action={() => handleRootChange(FileManager.appGroupDocumentsDirectory)}>
-            <Text
-              styledText={{
-                content: 'App Group',
-                font: 14,
-                fontWeight: root === FileManager.appGroupDocumentsDirectory ? 'bold' : 'regular',
-                foregroundColor: root === FileManager.appGroupDocumentsDirectory ? '#007aff' : '#8e8e93'
-              }}
-            />
-          </Button>
+        <HStack padding={{ top: 10 }}>
           <Spacer />
           <Button action={() => setShowHidden(!showHidden)}>
             <Image image={UIImage.fromSFSymbol(showHidden ? 'eye' : 'eye.slash')!} frame={{ width: 20, height: 20 }} />
@@ -209,7 +212,6 @@ Type: ${stat.type}
         </HStack>
       </VStack>
 
-      {/* File List */}
       <List listStyle="inset">
         {files.map(name => {
           const path = currentPath + '/' + name
