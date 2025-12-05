@@ -21,6 +21,18 @@ import {
 import { FileRow } from '../components/FileRow'
 import { PreferencesScreen } from './PreferencesScreen'
 
+type FileEntry = { name: string; path: string; isDir: boolean; stat?: FileStat }
+
+type DirectoryViewProps = {
+  rootPath: string
+  path: string
+  rootDisplayName: string
+  tag?: number
+  tabItem?: JSX.Element
+  onToolbarChange?: (index: number, leading: JSX.Element, trailing: JSX.Element) => void
+  disableInternalToolbar?: boolean
+}
+
 const ROOT_TABS = [
   { title: 'Documents', icon: 'folder.fill', path: FileManager.documentsDirectory },
   { title: 'AppGroup', icon: 'externaldrive.fill', path: FileManager.appGroupDocumentsDirectory }
@@ -80,23 +92,11 @@ export function FileListScreen() {
   )
 }
 
-type DirectoryViewProps = {
-  rootPath: string
-  path: string
-  rootDisplayName: string
-  tag?: number
-  tabItem?: JSX.Element
-  onToolbarChange?: (index: number, leading: JSX.Element, trailing: JSX.Element) => void
-  disableInternalToolbar?: boolean
-}
-
-type FileEntry = { name: string; path: string; isDir: boolean; stat?: FileStat }
-
 function DirectoryView({ rootPath, path, rootDisplayName, tag, tabItem, onToolbarChange, disableInternalToolbar }: DirectoryViewProps) {
   const currentPath = path
   const [entries, setEntries] = useState<FileEntry[]>([])
   const [showHidden, setShowHidden] = useState(true)
-  const [refreshKey, setRefreshKey] = useState(0)
+  const [version, bumpVersion] = useState(0)
 
   const dismiss = Navigation.useDismiss()
 
@@ -135,11 +135,13 @@ function DirectoryView({ rootPath, path, rootDisplayName, tag, tabItem, onToolba
       console.error(e)
       await Dialog.alert({ message: 'Failed to read directory' })
     }
-  }, [currentPath, showHidden, refreshKey])
+  }, [currentPath, showHidden, version])
 
   useEffect(() => {
     loadFiles()
-  }, [loadFiles])
+  }, [loadFiles, version])
+
+  const triggerReload = useCallback(() => bumpVersion(v => v + 1), [])
 
   /**
    * 预览文件内容，目录由 NavigationLink 处理。
@@ -185,7 +187,7 @@ function DirectoryView({ rootPath, path, rootDisplayName, tag, tabItem, onToolba
     })
     if (newName && newName !== name) {
       await FileManager.rename(filePath, currentPath + '/' + newName)
-      setRefreshKey(k => k + 1)
+      triggerReload()
     }
   }
 
@@ -203,7 +205,7 @@ function DirectoryView({ rootPath, path, rootDisplayName, tag, tabItem, onToolba
       newName = name + ' copy'
     }
     await FileManager.copyFile(filePath, currentPath + '/' + newName)
-    setRefreshKey(k => k + 1)
+    triggerReload()
   }
 
   /**
@@ -218,7 +220,7 @@ function DirectoryView({ rootPath, path, rootDisplayName, tag, tabItem, onToolba
     })
     if (confirm) {
       await FileManager.remove(filePath)
-      setRefreshKey(k => k + 1)
+      triggerReload()
     }
   }
 
@@ -236,7 +238,7 @@ function DirectoryView({ rootPath, path, rootDisplayName, tag, tabItem, onToolba
         return
       }
       await FileManager.rename(currentPath + '/' + name, destination)
-      setRefreshKey(k => k + 1)
+      triggerReload()
     } catch (e) {
       console.error(e)
       await Dialog.alert({ title: '移动失败', message: '请检查目标目录是否存在且可写' })
@@ -257,13 +259,13 @@ function DirectoryView({ rootPath, path, rootDisplayName, tag, tabItem, onToolba
       const name = await Dialog.prompt({ title: 'New Folder Name' })
       if (name) {
         await FileManager.createDirectory(currentPath + '/' + name)
-        setRefreshKey(k => k + 1)
+        triggerReload()
       }
     } else if (index === 1) {
       const name = await Dialog.prompt({ title: 'New File Name', defaultValue: 'untitled.txt' })
       if (name) {
         await FileManager.writeAsString(currentPath + '/' + name, '')
-        setRefreshKey(k => k + 1)
+        triggerReload()
       }
     }
   }, [currentPath])
