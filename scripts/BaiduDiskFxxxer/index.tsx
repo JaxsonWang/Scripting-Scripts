@@ -1,4 +1,4 @@
-import { Button, HStack, Image, List, Navigation, NavigationStack, Section, Spacer, Text, TextField, VStack, useState, Form } from 'scripting'
+import { Button, Form, HStack, Image, List, Navigation, NavigationStack, Section, Spacer, Text, TextField, VStack, useState } from 'scripting'
 import type { BaiduFile } from './utils/baidu-client'
 import { BaiduDiskClient, getShareInfo } from './utils/baidu-client'
 import { processDownload } from './utils/processor'

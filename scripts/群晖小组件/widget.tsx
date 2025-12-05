@@ -284,11 +284,7 @@ const main = async () => {
 
       // 如果会话有效，获取数据
       if (isSessionValid()) {
-        const [dsmResult, systemResult, storageResult] = await Promise.all([
-          getDSMInfo(config),
-          getSystemUtilization(config),
-          getStorageInfo(config)
-        ])
+        const [dsmResult, systemResult, storageResult] = await Promise.all([getDSMInfo(config), getSystemUtilization(config), getStorageInfo(config)])
 
         dsmInfo = dsmResult
         systemData = systemResult

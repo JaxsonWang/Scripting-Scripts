@@ -1,4 +1,20 @@
-import { Button, ColorPicker, HStack, List, Navigation, NavigationStack, Picker, Section, Spacer, Text, TextField, Toggle, VStack, useEffect, useState } from 'scripting'
+import {
+  Button,
+  ColorPicker,
+  HStack,
+  List,
+  Navigation,
+  NavigationStack,
+  Picker,
+  Section,
+  Spacer,
+  Text,
+  TextField,
+  Toggle,
+  VStack,
+  useEffect,
+  useState
+} from 'scripting'
 import type { Color } from 'scripting'
 import {
   areaOptions,

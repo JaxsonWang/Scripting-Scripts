@@ -1,5 +1,6 @@
 import {
   Button,
+  ControlGroup,
   HStack,
   Image,
   Label,
@@ -20,7 +21,6 @@ import {
 } from 'scripting'
 import { FileRow } from '../components/FileRow'
 import { PreferencesScreen } from './PreferencesScreen'
-
 type FileEntry = { name: string; path: string; isDir: boolean; stat?: FileStat }
 
 type DirectoryViewProps = {
@@ -107,7 +107,6 @@ function DirectoryView({ rootPath, path, rootDisplayName, tag, tabItem, onToolba
     try {
       const names = await FileManager.readDirectory(currentPath)
       const filtered = names.filter(n => showHidden || !n.startsWith('.'))
-
       const withMeta: FileEntry[] = filtered.map(name => {
         const fullPath = currentPath + '/' + name
         let isDir = false
@@ -124,7 +123,6 @@ function DirectoryView({ rootPath, path, rootDisplayName, tag, tabItem, onToolba
         }
         return { name, path: fullPath, isDir, stat }
       })
-
       const sorted = withMeta.sort((a, b) => {
         if (a.isDir && !b.isDir) return -1
         if (!a.isDir && b.isDir) return 1
@@ -209,6 +207,42 @@ function DirectoryView({ rootPath, path, rootDisplayName, tag, tabItem, onToolba
   }
 
   /**
+   * 粘贴剪贴板中的文件路径到当前目录，自动避免同名覆盖
+   */
+  const handlePaste = useCallback(async () => {
+    const source = await Pasteboard.getString?.()
+    if (!source) {
+      await Dialog.alert({ title: '没有可粘贴的路径', message: '请先在文件上长按选择“拷贝路径”' })
+      return
+    }
+    const base = source.split('/').pop() || 'pasted'
+    const ensureUnique = (name: string) => {
+      let candidate = name
+      let idx = 1
+      while (FileManager.existsSync(currentPath + '/' + candidate)) {
+        const parts = candidate.split('.')
+        if (parts.length > 1) {
+          const ext = parts.pop()
+          candidate = `${parts.join('.')} (${idx}).${ext}`
+        } else {
+          candidate = `${name} (${idx})`
+        }
+        idx += 1
+      }
+      return candidate
+    }
+    const targetName = ensureUnique(base)
+    const target = currentPath + '/' + targetName
+    try {
+      await FileManager.copyFile(source, target)
+      triggerReload()
+    } catch (e) {
+      console.error(e)
+      await Dialog.alert({ title: '粘贴失败', message: String(e) })
+    }
+  }, [currentPath, triggerReload])
+
+  /**
    * 删除文件前弹出确认框，防止误操作。
    */
   const handleDelete = async (name: string) => {
@@ -246,29 +280,26 @@ function DirectoryView({ rootPath, path, rootDisplayName, tag, tabItem, onToolba
   }
 
   /**
-   * 创建新文件/文件夹的入口，根据用户选择执行对应操作。
+   * 创建新文件夹
    */
-  const handleCreate = useCallback(async () => {
-    const index = await Dialog.actionSheet({
-      title: 'Create New',
-      actions: [{ label: 'Folder' }, { label: 'Text File' }],
-      cancelButton: true
-    })
-
-    if (index === 0) {
-      const name = await Dialog.prompt({ title: 'New Folder Name' })
-      if (name) {
-        await FileManager.createDirectory(currentPath + '/' + name)
-        triggerReload()
-      }
-    } else if (index === 1) {
-      const name = await Dialog.prompt({ title: 'New File Name', defaultValue: 'untitled.txt' })
-      if (name) {
-        await FileManager.writeAsString(currentPath + '/' + name, '')
-        triggerReload()
-      }
+  const handleCreateFolder = useCallback(async () => {
+    const name = await Dialog.prompt({ title: '新建文件夹' })
+    if (name) {
+      await FileManager.createDirectory(currentPath + '/' + name)
+      triggerReload()
     }
-  }, [currentPath])
+  }, [currentPath, triggerReload])
+
+  /**
+   * 创建新文件
+   */
+  const handleCreateFile = useCallback(async () => {
+    const name = await Dialog.prompt({ title: 'New File Name', defaultValue: 'untitled.txt' })
+    if (name) {
+      await FileManager.writeAsString(currentPath + '/' + name, '')
+      triggerReload()
+    }
+  }, [currentPath, triggerReload])
 
   /**
    * 展示偏好设置页，目前仅包含“显示隐藏文件”开关。
@@ -284,8 +315,13 @@ function DirectoryView({ rootPath, path, rootDisplayName, tag, tabItem, onToolba
    */
   const handleExit = useCallback(() => {
     dismiss()
-    Script.exit()
+    // Script.exit()
   }, [dismiss])
+
+  const isRoot = currentPath === rootPath
+  const currentDirName = isRoot ? rootDisplayName : currentPath.split('/').pop() || rootDisplayName
+  const relativePathFull = currentPath === rootPath ? '/' : currentPath.replace(rootPath, '')
+  const relativePath = formatRelativePath(relativePathFull)
 
   const renderRow = (name: string, path: string, isDirectoryEntry: boolean, stat?: FileStat) => (
     <FileRow
@@ -304,11 +340,6 @@ function DirectoryView({ rootPath, path, rootDisplayName, tag, tabItem, onToolba
     />
   )
 
-  const isRoot = currentPath === rootPath
-  const currentDirName = isRoot ? rootDisplayName : currentPath.split('/').pop() || rootDisplayName
-  const relativePathFull = currentPath === rootPath ? '/' : currentPath.replace(rootPath, '')
-  const relativePath = formatRelativePath(relativePathFull)
-
   const toolbarLeading = useMemo(
     () => (
       <VStack alignment="leading">
@@ -321,10 +352,22 @@ function DirectoryView({ rootPath, path, rootDisplayName, tag, tabItem, onToolba
 
   const toolbarTrailing = useMemo(
     () => (
-      <HStack spacing={8}>
-        <Button action={handleCreate}>
-          <Image image={UIImage.fromSFSymbol('plus')!} frame={{ width: 20, height: 20 }} />
-        </Button>
+      <HStack>
+        <ControlGroup label={<Image image={UIImage.fromSFSymbol('ellipsis.circle')!} frame={{ width: 20, height: 20 }} />} controlGroupStyle="palette">
+          <Button title="新增文件夹" systemImage="folder.badge.plus" action={handleCreateFolder} />
+          <Button title="新增文件" systemImage="doc.badge.plus" action={handleCreateFile} />
+          <Button title="粘贴" systemImage="doc.on.clipboard" action={handlePaste} />
+          <Button
+            title="简介"
+            systemImage="info.circle"
+            action={() =>
+              Dialog.alert({
+                title: currentDirName,
+                message: `当前位置: ${currentPath}\n包含 ${entries.length} 项`
+              })
+            }
+          />
+        </ControlGroup>
         <Button action={handlePreferences}>
           <Image image={UIImage.fromSFSymbol('gearshape')!} frame={{ width: 20, height: 20 }} />
         </Button>
@@ -333,7 +376,7 @@ function DirectoryView({ rootPath, path, rootDisplayName, tag, tabItem, onToolba
         </Button>
       </HStack>
     ),
-    [handleCreate, handlePreferences, handleExit]
+    [handleCreateFolder, handlePaste, currentDirName, currentPath, entries.length, handlePreferences, handleExit]
   )
 
   useEffect(() => {

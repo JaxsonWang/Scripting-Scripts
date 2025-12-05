@@ -240,9 +240,7 @@ const CNRNewsDetail = () => {
         <Section
           footer={
             <VStack spacing={10} alignment="leading">
-              {bannerImageUrl ? (
-                <Image imageUrl={bannerImageUrl} resizable scaleToFit />
-              ) : null}
+              {bannerImageUrl ? <Image imageUrl={bannerImageUrl} resizable scaleToFit /> : null}
               <Text font="footnote" foregroundStyle="secondaryLabel">
                 央广头条小组件 v{getCurrentVersion()}
                 {'\n'}

@@ -1,4 +1,20 @@
-import { Button, ColorPicker, Form, HStack, List, Navigation, NavigationStack, Picker, Section, Spacer, Text, TextField, Toggle, VStack, useState } from 'scripting'
+import {
+  Button,
+  ColorPicker,
+  Form,
+  HStack,
+  List,
+  Navigation,
+  NavigationStack,
+  Picker,
+  Section,
+  Spacer,
+  Text,
+  TextField,
+  Toggle,
+  VStack,
+  useState
+} from 'scripting'
 import type { Color } from 'scripting'
 import { createStorageManager } from '../utils/storage'
 import { SettingsManager, getCurrentSettings as getCalendarSettings, saveSettings as saveCalendarSettings } from '../utils/calendar-service'

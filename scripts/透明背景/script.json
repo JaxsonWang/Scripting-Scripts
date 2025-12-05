@@ -5,13 +5,11 @@
   "icon": "photo.fill",
   "intentInputTypes": [],
   "version": "1.0.3",
-  "changelog": [
-    "修复 iOS26 版本无法生成坐标的问题"
-  ],
-  "localizedDescriptions" : {},
-  "description" : "透明背景",
-  "localizedNames" : {},
-  "contributors" : [],
+  "changelog": ["修复 iOS26 版本无法生成坐标的问题"],
+  "localizedDescriptions": {},
+  "description": "透明背景",
+  "localizedNames": {},
+  "contributors": [],
   "author": "淮城一只猫",
   "remoteResource": {
     "autoUpdateInterval": 86400,
