@@ -97,11 +97,7 @@ export function FileRow({ name, path, isDirectory, stat, onPress, onCopy, onMove
       frame={{ height: 60 }}
       alignment="center"
       contentShape="rect"
-      onTapGesture={() => {
-        if (!onPress) return
-        console.log('[FileRow] tap', path)
-        onPress()
-      }}
+      onTapGesture={onPress}
       contextMenu={{
         menuItems: (
           <Group>
