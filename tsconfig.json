@@ -7,6 +7,7 @@
       "esnext"
     ],
     "allowJs": true,
+    "noEmit": true,
     "strict": true,
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
