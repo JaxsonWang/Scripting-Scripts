@@ -107,18 +107,24 @@ function DirectoryView({ rootPath, path, rootDisplayName, tag, tabItem, onToolba
     try {
       const names = await FileManager.readDirectory(currentPath)
       const filtered = names.filter(n => showHidden || !n.startsWith('.'))
+
       const withMeta: FileEntry[] = filtered.map(name => {
         const fullPath = currentPath + '/' + name
         let isDir = false
         let stat: FileStat | undefined = undefined
         try {
           isDir = FileManager.isDirectorySync(fullPath)
+        } catch (err) {
+          console.error('[DirectoryView] isDirectorySync failed', fullPath, err)
+        }
+        try {
           stat = FileManager.statSync(fullPath)
-        } catch (e) {
-          console.error('[DirectoryView] stat failed', fullPath, e)
+        } catch (err) {
+          console.error('[DirectoryView] statSync failed', fullPath, err)
         }
         return { name, path: fullPath, isDir, stat }
       })
+
       const sorted = withMeta.sort((a, b) => {
         if (a.isDir && !b.isDir) return -1
         if (!a.isDir && b.isDir) return 1
