@@ -1,5 +1,6 @@
 import {
   Button,
+  Form,
   HStack,
   Image,
   Label,
@@ -7,11 +8,13 @@ import {
   Navigation,
   NavigationLink,
   NavigationStack,
+  Section,
   SVG,
   Script,
   Spacer,
   TabView,
   Text,
+  Toggle,
   VStack,
   useCallback,
   useEffect,
@@ -216,9 +219,13 @@ function DirectoryView({ rootPath, path, rootDisplayName, tag, tabItem }: Direct
   }
 
   /**
-   * 偏好设置
+   * 展示偏好设置页，目前仅包含“显示隐藏文件”开关。
    */
-  const handlePreferences = async () => {}
+  const handlePreferences = useCallback(() => {
+    Navigation.present({
+      element: <PreferencesView showHidden={showHidden} onToggleHidden={setShowHidden} />
+    })
+  }, [showHidden])
 
   const isRoot = currentPath === rootPath
   const currentDirName = isRoot ? rootDisplayName : currentPath.split('/').pop() || rootDisplayName
@@ -241,13 +248,6 @@ function DirectoryView({ rootPath, path, rootDisplayName, tag, tabItem }: Direct
           </Button>
           <Button action={dismiss}>
             <Image image={UIImage.fromSFSymbol('xmark.circle')!} frame={{ width: 24, height: 24 }} />
-          </Button>
-        </HStack>
-
-        <HStack padding={{ top: 10 }}>
-          <Spacer />
-          <Button action={() => setShowHidden(!showHidden)}>
-            <Image image={UIImage.fromSFSymbol(showHidden ? 'eye' : 'eye.slash')!} frame={{ width: 20, height: 20 }} />
           </Button>
         </HStack>
       </VStack>
@@ -310,5 +310,42 @@ function DirectoryView({ rootPath, path, rootDisplayName, tag, tabItem }: Direct
         </List>
       )}
     </VStack>
+  )
+}
+
+type PreferencesViewProps = {
+  showHidden: boolean
+  onToggleHidden: (value: boolean) => void
+}
+
+function PreferencesView({ showHidden, onToggleHidden }: PreferencesViewProps) {
+  const dismiss = Navigation.useDismiss()
+
+  return (
+    <NavigationStack>
+      <Form
+        navigationTitle="偏好设置"
+        toolbar={{
+          cancellationAction: (
+            <Button
+              title="完成"
+              action={() => {
+                dismiss()
+              }}
+            />
+          )
+        }}
+      >
+        <Section header={<Text>列表显示</Text>}>
+          <Toggle
+            title="显示隐藏文件"
+            value={showHidden}
+            onChanged={value => {
+              onToggleHidden(value)
+            }}
+          />
+        </Section>
+      </Form>
+    </NavigationStack>
   )
 }
