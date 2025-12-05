@@ -25,6 +25,19 @@ const ROOT_TABS = [
   { title: 'AppGroup', icon: 'externaldrive.fill', path: FileManager.appGroupDocumentsDirectory }
 ]
 
+/**
+ * 将完整相对路径压缩为“末三段 + 省略号”形式，方便在导航栏中显示
+ */
+const formatRelativePath = (path: string): string => {
+  if (path === '/' || path === '') return '/'
+  const segments = path.split('/').filter(Boolean)
+  if (segments.length <= 3) {
+    return `/${segments.join('/')}`
+  }
+  const tail = segments.slice(-3).join('/')
+  return `…/${tail}`
+}
+
 export function FileListScreen() {
   const [tabIndex, setTabIndex] = useState(0)
 
@@ -244,7 +257,8 @@ function DirectoryView({ rootPath, path, rootDisplayName, tag, tabItem }: Direct
 
   const isRoot = currentPath === rootPath
   const currentDirName = isRoot ? rootDisplayName : currentPath.split('/').pop() || rootDisplayName
-  const relativePath = currentPath === rootPath ? '/' : currentPath.replace(rootPath, '')
+  const relativePathFull = currentPath === rootPath ? '/' : currentPath.replace(rootPath, '')
+  const relativePath = formatRelativePath(relativePathFull)
 
   const toolbarLeading = (
     <VStack alignment="leading">
