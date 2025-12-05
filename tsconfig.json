@@ -1,5 +1,7 @@
 {
   "compilerOptions": {
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
     "target": "ESNext",
     "lib": [
       "esnext"
@@ -10,7 +12,6 @@
     "allowSyntheticDefaultImports": true,
     "forceConsistentCasingInFileNames": true,
     "noFallthroughCasesInSwitch": true,
-    "module": "ESNext",
     "resolveJsonModule": true,
     "skipLibCheck": true,
     "jsx": "react",
