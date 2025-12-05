@@ -1,4 +1,4 @@
-import { Button, Group, HStack, Image, Label, SVG, Spacer, Text, VStack, useColorScheme, useMemo, Script } from 'scripting'
+import { Button, Group, HStack, Image, Label, SVG, Script, Spacer, Text, VStack, useColorScheme, useMemo } from 'scripting'
 
 import { formatDate, formatSize } from '../utils/format'
 
@@ -74,7 +74,7 @@ export function FileRow({ name, path, isDirectory, stat, onPress, onCopy, onMove
 
   const iconPath = useMemo(() => `${Script.directory}/assets/icon/${resolveIconName(name, isDirectory)}.svg`, [isDirectory, name])
   /**
-   * 统计目录内的条目数量，用于替换“Item”文案，避免硬编码。
+   * 统计目录内的条目数量
    */
   const directoryItemCount = useMemo(() => {
     if (!isDirectory) return null
@@ -141,8 +141,8 @@ export function FileRow({ name, path, isDirectory, stat, onPress, onCopy, onMove
         ]
       }}
     >
-      <SVG filePath={iconPath} frame={{ width: 24, height: 24 }} />
-      <VStack padding={{ leading: 12 }} layoutPriority={1} alignment="leading">
+      <SVG filePath={iconPath} resizable frame={{ width: 64, height: 64 }} />
+      <VStack layoutPriority={1} alignment="leading">
         <Text styledText={{ content: name, font: 16, foregroundColor: isDark ? '#ffffff' : '#000000' }} />
         {detailText ? (
           <Text

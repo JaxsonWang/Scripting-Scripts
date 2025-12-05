@@ -1,4 +1,4 @@
-import { Button, HStack, Image, Label, List, Script, Spacer, TabView, Text, VStack, useCallback, useColorScheme, useEffect, useState } from 'scripting'
+import { Button, HStack, Image, Label, List, SVG, Script, Spacer, TabView, Text, VStack, useCallback, useColorScheme, useEffect, useState } from 'scripting'
 
 import { FileRow } from '../components/FileRow'
 
@@ -245,41 +245,45 @@ function FileListView({ initialRoot, tag, tabItem }: FileListViewProps) {
         </HStack>
       </VStack>
 
-      <List listStyle="inset">
-        {files.map(name => {
-          const path = currentPath + '/' + name
-          let isDir = false
-          let stat = undefined
-          try {
-            isDir = FileManager.isDirectorySync(path)
-            stat = FileManager.statSync(path)
-          } catch (e) {
-            console.error(e)
-          }
+      {files.length === 0 ? (
+        <VStack frame={{ maxWidth: 'infinity', maxHeight: 'infinity' }} alignment="center">
+          <Spacer />
+          <SVG filePath={`${Script.directory}/assets/icon/folder.svg`} resizable frame={{ width: 128, height: 128 }} />
+          <Text styledText={{ content: '文件夹空', font: 16, fontWeight: 'bold', foregroundColor: '#8e8e93' }} />
+          <Spacer />
+        </VStack>
+      ) : (
+        <List listStyle="inset">
+          {files.map(name => {
+            const path = currentPath + '/' + name
+            let isDir = false
+            let stat = undefined
+            try {
+              isDir = FileManager.isDirectorySync(path)
+              stat = FileManager.statSync(path)
+            } catch (e) {
+              console.error(e)
+            }
 
-          return (
-            <FileRow
-              key={name}
-              name={name}
-              path={path}
-              isDirectory={isDir}
-              stat={stat}
-              onPress={() => handleNavigate(name)}
-              onCopy={() => handleCopy(name)}
-              onMove={() => handleMove(name)}
-              onInfo={() => handleInfo(name)}
-              onRename={() => handleRename(name)}
-              onDuplicate={() => handleDuplicate(name)}
-              onDelete={() => handleDelete(name)}
-            />
-          )
-        })}
-        {files.length === 0 && (
-          <VStack alignment="center" padding={{ top: 50 }}>
-            <Text styledText={{ content: 'Empty Folder', font: 14, foregroundColor: '#8e8e93' }} />
-          </VStack>
-        )}
-      </List>
+            return (
+              <FileRow
+                key={name}
+                name={name}
+                path={path}
+                isDirectory={isDir}
+                stat={stat}
+                onPress={() => handleNavigate(name)}
+                onCopy={() => handleCopy(name)}
+                onMove={() => handleMove(name)}
+                onInfo={() => handleInfo(name)}
+                onRename={() => handleRename(name)}
+                onDuplicate={() => handleDuplicate(name)}
+                onDelete={() => handleDelete(name)}
+              />
+            )
+          })}
+        </List>
+      )}
     </VStack>
   )
 }
