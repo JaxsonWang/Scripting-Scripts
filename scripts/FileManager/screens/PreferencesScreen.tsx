@@ -3,21 +3,25 @@ import { Button, Form, Navigation, NavigationStack, Section, Text, Toggle } from
 type PreferencesScreenProps = {
   showHidden: boolean
   onToggleHidden: (value: boolean) => void
+  title: string
+  doneLabel: string
+  sectionTitle: string
+  toggleLabel: string
 }
 
-export function PreferencesScreen({ showHidden, onToggleHidden }: PreferencesScreenProps) {
+export function PreferencesScreen({ showHidden, onToggleHidden, title, doneLabel, sectionTitle, toggleLabel }: PreferencesScreenProps) {
   const dismiss = Navigation.useDismiss()
 
   return (
     <NavigationStack>
       <Form
-        navigationTitle="偏好设置"
+        navigationTitle={title}
         toolbar={{
-          cancellationAction: <Button title="完成" action={dismiss} />
+          cancellationAction: <Button title={doneLabel} action={dismiss} />
         }}
       >
-        <Section header={<Text>列表显示</Text>}>
-          <Toggle title="显示隐藏文件" value={showHidden} onChanged={onToggleHidden} />
+        <Section header={<Text>{sectionTitle}</Text>}>
+          <Toggle title={toggleLabel} value={showHidden} onChanged={onToggleHidden} />
         </Section>
       </Form>
     </NavigationStack>

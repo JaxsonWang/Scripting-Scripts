@@ -66,9 +66,18 @@ interface FileRowProps {
   onRename: () => void
   onDuplicate: () => void
   onDelete: () => void
+  labels: {
+    copy: string
+    move: string
+    info: string
+    rename: string
+    duplicate: string
+    delete: string
+    items: (n: number) => string
+  }
 }
 
-export function FileRow({ name, path, isDirectory, stat, onPress, onCopy, onMove, onInfo, onRename, onDuplicate, onDelete }: FileRowProps) {
+export function FileRow({ name, path, isDirectory, stat, onPress, onCopy, onMove, onInfo, onRename, onDuplicate, onDelete, labels }: FileRowProps) {
   const iconPath = useMemo(() => `${Script.directory}/assets/icon/${resolveIconName(name, isDirectory)}.svg`, [isDirectory, name])
   /**
    * 统计目录内的条目数量
@@ -82,7 +91,11 @@ export function FileRow({ name, path, isDirectory, stat, onPress, onCopy, onMove
       return null
     }
   }, [isDirectory, path])
-  const detailText = stat && `${formatDate(stat.modificationDate)} - ${isDirectory ? `${directoryItemCount ?? 0} 项` : formatSize(stat.size)}`
+  const detailText =
+    stat &&
+    `${formatDate(stat.modificationDate)} - ${
+      isDirectory ? labels.items(directoryItemCount ?? 0) : formatSize(stat.size)
+    }`
   return (
     <HStack
       frame={{ height: 60 }}
@@ -94,42 +107,42 @@ export function FileRow({ name, path, isDirectory, stat, onPress, onCopy, onMove
             <VStack spacing={8}>
               <Button action={onCopy}>
                 <HStack alignment="center" frame={{ maxWidth: 'infinity' }}>
-                  <Text>拷贝</Text>
+                  <Text>{labels.copy}</Text>
                   <Spacer />
                   <Image systemName="doc.on.doc" frame={{ width: 16, height: 16 }} />
                 </HStack>
               </Button>
               <Button action={onMove}>
                 <HStack alignment="center" frame={{ maxWidth: 'infinity' }}>
-                  <Text>移动</Text>
+                  <Text>{labels.move}</Text>
                   <Spacer />
                   <Image systemName="folder" frame={{ width: 16, height: 16 }} />
                 </HStack>
               </Button>
               <Button action={onInfo}>
                 <HStack alignment="center" frame={{ maxWidth: 'infinity' }}>
-                  <Text>显示简介</Text>
+                  <Text>{labels.info}</Text>
                   <Spacer />
                   <Image systemName="info.circle" frame={{ width: 16, height: 16 }} />
                 </HStack>
               </Button>
               <Button action={onRename}>
                 <HStack alignment="center" frame={{ maxWidth: 'infinity' }}>
-                  <Text>重新命名</Text>
+                  <Text>{labels.rename}</Text>
                   <Spacer />
                   <Image systemName="square.and.pencil" frame={{ width: 16, height: 16 }} />
                 </HStack>
               </Button>
               <Button action={onDuplicate}>
                 <HStack alignment="center" frame={{ maxWidth: 'infinity' }}>
-                  <Text>复制</Text>
+                  <Text>{labels.duplicate}</Text>
                   <Spacer />
                   <Image systemName="plus.square.on.square" frame={{ width: 16, height: 16 }} />
                 </HStack>
               </Button>
               <Button role="destructive" action={onDelete}>
                 <HStack alignment="center" frame={{ maxWidth: 'infinity' }}>
-                  <Text>删除</Text>
+                  <Text>{labels.delete}</Text>
                   <Spacer />
                   <Image systemName="trash" frame={{ width: 16, height: 16 }} />
                 </HStack>

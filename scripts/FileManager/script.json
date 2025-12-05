@@ -1,14 +1,7 @@
 {
   "localizedDescriptions": {
-    "en": "",
-    "fr": "",
-    "pt": "",
-    "de": "",
-    "ru": "",
-    "it": "",
-    "es": "",
-    "ja": "",
-    "zh": ""
+    "en": "Manage files stored in Documents and App Group sandboxes.",
+    "zh": "管理 Documents 以及 App Group 目录中的文件。"
   },
   "runInApp": false,
   "name": "FileManager",
@@ -23,15 +16,8 @@
   "version": "1.0.0",
   "remoteResource": null,
   "localizedNames": {
-    "ru": "",
-    "de": "",
-    "en": "",
-    "ja": "",
-    "pt": "",
-    "zh": "",
-    "it": "",
-    "fr": "",
-    "es": ""
+    "en": "File Manager",
+    "zh": "文件管理器"
   },
   "contributors": [],
   "icon": "folder.fill"

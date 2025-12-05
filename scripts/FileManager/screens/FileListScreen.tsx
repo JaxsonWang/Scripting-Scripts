@@ -1,6 +1,7 @@
 import {
   Button,
   ControlGroup,
+  Device,
   HStack,
   Image,
   Label,
@@ -23,6 +24,94 @@ import { FileRow } from '../components/FileRow'
 import { PreferencesScreen } from './PreferencesScreen'
 type FileEntry = { name: string; path: string; isDir: boolean; stat?: FileStat }
 type TransferState = { sourcePath: string; isMove: boolean }
+type Locale = 'en' | 'zh'
+type L10n = (typeof translations)['en']
+
+const translations = {
+  en: {
+    documents: 'Documents',
+    appGroup: 'App Group',
+    failedRead: 'Failed to read directory',
+    fileNotFound: 'File not found',
+    previewFailed: 'Preview failed',
+    copiedToast: 'Copied, go to target directory to paste',
+    moveToast: 'Ready to move, go to target directory to paste',
+    noPasteTitle: 'Nothing to paste',
+    noPasteMessage: 'Long-press a file and choose Copy/Move first.',
+    deleteTitle: 'Delete',
+    deleteConfirm: (name: string) => `Are you sure you want to delete "${name}"?`,
+    deleteConfirmLabel: 'Delete',
+    fileInfoTitle: 'File Info',
+    renameTitle: 'Rename',
+    renameConfirm: 'Rename',
+    newFolderTitle: 'New Folder',
+    newFileTitle: 'New File Name',
+    introTitle: 'Info',
+    introMessage: (path: string, count: number) => `Path: ${path}\nItems: ${count}`,
+    emptyFolder: 'Folder is empty',
+    pasteLabel: 'Paste',
+    addFolder: 'New Folder',
+    addFile: 'New File',
+    summary: 'Info',
+    settings: 'Settings',
+    exit: 'Close',
+    copy: 'Copy',
+    move: 'Move',
+    info: 'Info',
+    rename: 'Rename',
+    duplicate: 'Duplicate',
+    delete: 'Delete',
+    itemsLabel: (n: number) => `${n} items`,
+    preferences: 'Preferences',
+    done: 'Done',
+    listDisplay: 'List Display',
+    showHidden: 'Show Hidden Files'
+  },
+  zh: {
+    documents: '文件',
+    appGroup: '应用群组',
+    failedRead: '读取目录失败',
+    fileNotFound: '文件不存在',
+    previewFailed: '预览失败',
+    copiedToast: '已拷贝，前往目标目录粘贴',
+    moveToast: '已准备移动，前往目标目录粘贴',
+    noPasteTitle: '没有待粘贴的项目',
+    noPasteMessage: '请先在文件上长按选择“拷贝/移动”。',
+    deleteTitle: '删除',
+    deleteConfirm: (name: string) => `确定删除“${name}”吗？`,
+    deleteConfirmLabel: '删除',
+    fileInfoTitle: '文件信息',
+    renameTitle: '重命名',
+    renameConfirm: '重命名',
+    newFolderTitle: '新建文件夹',
+    newFileTitle: '新建文件名',
+    introTitle: '简介',
+    introMessage: (path: string, count: number) => `当前位置: ${path}\n包含 ${count} 项`,
+    emptyFolder: '文件夹空',
+    pasteLabel: '粘贴',
+    addFolder: '新增文件夹',
+    addFile: '新增文件',
+    summary: '简介',
+    settings: '设置',
+    exit: '关闭',
+    copy: '拷贝',
+    move: '移动',
+    info: '显示简介',
+    rename: '重新命名',
+    duplicate: '复制',
+    delete: '删除',
+    itemsLabel: (n: number) => `${n} 项`,
+    preferences: '偏好设置',
+    done: '完成',
+    listDisplay: '列表显示',
+    showHidden: '显示隐藏文件'
+  }
+} satisfies Record<Locale, Record<string, any>>
+
+const detectLocale = (): Locale => {
+  const code = Device.preferredLanguages?.[0] ?? 'en'
+  return code.startsWith('zh') ? 'zh' : 'en'
+}
 
 type DirectoryViewProps = {
   rootPath: string
@@ -36,6 +125,7 @@ type DirectoryViewProps = {
   setTransfer: (v: TransferState | null) => void
   externalReloadPath: string | null
   requestExternalReload: (path: string | null) => void
+  l10n: L10n
 }
 
 const ROOT_TABS = [
@@ -57,6 +147,8 @@ const formatRelativePath = (path: string): string => {
 }
 
 export function FileListScreen() {
+  const [locale] = useState<Locale>(detectLocale())
+  const l10n = useMemo(() => translations[locale], [locale])
   const [tabIndex, setTabIndex] = useState(0)
   const [toolbarByTab, setToolbarByTab] = useState<Record<number, { leading: JSX.Element; trailing: JSX.Element }>>({})
   const [transfer, setTransfer] = useState<TransferState | null>(null)
@@ -74,6 +166,14 @@ export function FileListScreen() {
 
   const currentToolbar = toolbarByTab[tabIndex]
 
+  const tabs = useMemo(
+    () => [
+      { title: l10n.documents, icon: 'folder.fill', path: FileManager.documentsDirectory },
+      { title: l10n.appGroup, icon: 'externaldrive.fill', path: FileManager.appGroupDocumentsDirectory }
+    ],
+    [l10n]
+  )
+
   return (
     <NavigationStack>
       <VStack
@@ -81,23 +181,24 @@ export function FileListScreen() {
         toolbar={currentToolbar ? { topBarLeading: currentToolbar.leading, topBarTrailing: currentToolbar.trailing } : undefined}
       >
         <TabView tabIndex={tabIndex} onTabIndexChanged={setTabIndex}>
-          {ROOT_TABS.map((tab, index) => (
+          {tabs.map((tab, index) => (
             <DirectoryView
               key={tab.path}
               rootPath={tab.path}
               path={tab.path}
               rootDisplayName={tab.title}
               tag={index}
-            tabItem={<Label title={tab.title} systemImage={tab.icon} />}
-            onToolbarChange={handleToolbarChange}
-            disableInternalToolbar
-            transfer={transfer}
-            setTransfer={setTransfer}
-            externalReloadPath={externalReloadPath}
-            requestExternalReload={setExternalReloadPath}
-          />
-        ))}
-      </TabView>
+              tabItem={<Label title={tab.title} systemImage={tab.icon} />}
+              onToolbarChange={handleToolbarChange}
+              disableInternalToolbar
+              transfer={transfer}
+              setTransfer={setTransfer}
+              externalReloadPath={externalReloadPath}
+              requestExternalReload={setExternalReloadPath}
+              l10n={l10n}
+            />
+          ))}
+        </TabView>
       </VStack>
     </NavigationStack>
   )
@@ -114,14 +215,15 @@ function DirectoryView({
   transfer,
   setTransfer,
   externalReloadPath,
-  requestExternalReload
+  requestExternalReload,
+  l10n
 }: DirectoryViewProps) {
   const currentPath = path
   const [entries, setEntries] = useState<FileEntry[]>([])
   const [showHidden, setShowHidden] = useState(true)
   const [version, bumpVersion] = useState(0)
   const [toastShown, setToastShown] = useState(false)
-  const [toastMessage, setToastMessage] = useState('已拷贝，切换到目标目录粘贴')
+  const [toastMessage, setToastMessage] = useState(l10n.copiedToast)
 
   const dismiss = Navigation.useDismiss()
 
@@ -156,7 +258,7 @@ function DirectoryView({
       setEntries(sorted)
     } catch (e) {
       console.error(e)
-      await Dialog.alert({ message: 'Failed to read directory' })
+      await Dialog.alert({ message: l10n.failedRead })
     }
   }, [currentPath, showHidden, version])
 
@@ -184,17 +286,17 @@ function DirectoryView({
       try {
         if (!FileManager.existsSync(newPath)) {
           console.error('[QuickLook] file not found', newPath)
-          await Dialog.alert({ title: '文件不存在', message: newPath })
+          await Dialog.alert({ title: l10n.fileNotFound, message: newPath })
           return
         }
         console.log('[QuickLook] preview', { path: newPath, encodedURL })
         await QuickLook.previewURLs([encodedURL])
       } catch (e) {
         console.error(e)
-        await Dialog.alert({ title: '预览失败', message: String(e) })
+        await Dialog.alert({ title: l10n.previewFailed, message: String(e) })
       }
     },
-    [currentPath]
+    [currentPath, l10n]
   )
 
   /**
@@ -204,7 +306,7 @@ function DirectoryView({
     const filePath = currentPath + '/' + name
     await Pasteboard.setString(filePath)
     setTransfer({ sourcePath: filePath, isMove: false })
-    setToastMessage('已拷贝，前往目标目录粘贴')
+    setToastMessage(l10n.copiedToast)
     setToastShown(true)
   }
 
@@ -217,7 +319,7 @@ function DirectoryView({
     const info = `\nPath: ${filePath}\nSize: ${stat.size} bytes\nCreated: ${new Date(stat.creationDate).toLocaleString()}\nModified: ${new Date(
       stat.modificationDate
     ).toLocaleString()}\nType: ${stat.type}\n    `
-    await Dialog.alert({ title: 'File Info', message: info })
+    await Dialog.alert({ title: l10n.fileInfoTitle, message: info })
   }
 
   /**
@@ -226,9 +328,9 @@ function DirectoryView({
   const handleRename = async (name: string) => {
     const filePath = currentPath + '/' + name
     const newName = await Dialog.prompt({
-      title: 'Rename',
+      title: l10n.renameTitle,
       defaultValue: name,
-      confirmLabel: 'Rename'
+      confirmLabel: l10n.renameConfirm
     })
     if (newName && newName !== name) {
       await FileManager.rename(filePath, currentPath + '/' + newName)
@@ -258,7 +360,7 @@ function DirectoryView({
    */
   const handlePaste = useCallback(async () => {
     if (!transfer) {
-      await Dialog.alert({ title: '没有待粘贴的项目', message: '请先在文件上长按选择“拷贝/移动”。' })
+      await Dialog.alert({ title: l10n.noPasteTitle, message: l10n.noPasteMessage })
       return
     }
     const source = transfer.sourcePath
@@ -292,9 +394,9 @@ function DirectoryView({
       triggerReload()
     } catch (e) {
       console.error(e)
-      await Dialog.alert({ title: '粘贴失败', message: String(e) })
+      await Dialog.alert({ title: l10n.previewFailed, message: String(e) })
     }
-  }, [currentPath, transfer, triggerReload, setTransfer, requestExternalReload])
+  }, [currentPath, transfer, triggerReload, setTransfer, requestExternalReload, l10n])
 
   /**
    * 删除文件前弹出确认框，防止误操作。
@@ -302,9 +404,9 @@ function DirectoryView({
   const handleDelete = async (name: string) => {
     const filePath = currentPath + '/' + name
     const confirm = await Dialog.confirm({
-      title: 'Delete',
-      message: `Are you sure you want to delete "${name}"?`,
-      confirmLabel: 'Delete'
+      title: l10n.deleteTitle,
+      message: l10n.deleteConfirm(name),
+      confirmLabel: l10n.deleteConfirmLabel
     })
     if (confirm) {
       await FileManager.remove(filePath)
@@ -318,7 +420,7 @@ function DirectoryView({
   const handleMove = async (name: string) => {
     const filePath = currentPath + '/' + name
     setTransfer({ sourcePath: filePath, isMove: true })
-    setToastMessage('已准备移动，前往目标目录粘贴')
+    setToastMessage(l10n.moveToast)
     setToastShown(true)
   }
 
@@ -326,7 +428,7 @@ function DirectoryView({
    * 创建新文件夹
    */
   const handleCreateFolder = useCallback(async () => {
-    const name = await Dialog.prompt({ title: '新建文件夹' })
+    const name = await Dialog.prompt({ title: l10n.newFolderTitle })
     if (name) {
       await FileManager.createDirectory(currentPath + '/' + name)
       triggerReload()
@@ -337,7 +439,7 @@ function DirectoryView({
    * 创建新文件
    */
   const handleCreateFile = useCallback(async () => {
-    const name = await Dialog.prompt({ title: 'New File Name', defaultValue: 'untitled.txt' })
+    const name = await Dialog.prompt({ title: l10n.newFileTitle, defaultValue: 'untitled.txt' })
     if (name) {
       await FileManager.writeAsString(currentPath + '/' + name, '')
       triggerReload()
@@ -349,9 +451,18 @@ function DirectoryView({
    */
   const handlePreferences = useCallback(() => {
     Navigation.present({
-      element: <PreferencesScreen showHidden={showHidden} onToggleHidden={setShowHidden} />
+      element: (
+        <PreferencesScreen
+          showHidden={showHidden}
+          onToggleHidden={setShowHidden}
+          title={l10n.preferences}
+          doneLabel={l10n.done}
+          sectionTitle={l10n.listDisplay}
+          toggleLabel={l10n.showHidden}
+        />
+      )
     })
-  }, [showHidden])
+  }, [showHidden, l10n])
 
   /**
    * 退出脚本
@@ -367,6 +478,15 @@ function DirectoryView({
   const relativePath = formatRelativePath(relativePathFull)
 
   const renderRow = (name: string, path: string, isDirectoryEntry: boolean, stat?: FileStat) => {
+    const labels = {
+      copy: l10n.copy,
+      move: l10n.move,
+      info: l10n.info,
+      rename: l10n.rename,
+      duplicate: l10n.duplicate,
+      delete: l10n.delete,
+      items: l10n.itemsLabel
+    }
     const row = (
       <FileRow
         key={name}
@@ -374,6 +494,8 @@ function DirectoryView({
         path={path}
         isDirectory={isDirectoryEntry}
         stat={stat}
+        onPress={!isDirectoryEntry ? () => handleOpenFile(name) : undefined}
+        labels={labels}
         onCopy={() => handleCopy(name)}
         onMove={() => handleMove(name)}
         onInfo={() => handleInfo(name)}
@@ -406,16 +528,16 @@ function DirectoryView({
     () => (
       <HStack>
         <ControlGroup label={<Image systemName="ellipsis.circle" frame={{ width: 20, height: 20 }} />} controlGroupStyle="palette">
-          <Button title="新增文件夹" systemImage="folder.badge.plus" action={handleCreateFolder} />
-          <Button title="新增文件" systemImage="doc.badge.plus" action={handleCreateFile} />
-          {transfer ? <Button title="粘贴" systemImage="doc.on.clipboard" action={handlePaste} /> : null}
+          <Button title={l10n.addFolder} systemImage="folder.badge.plus" action={handleCreateFolder} />
+          <Button title={l10n.addFile} systemImage="doc.badge.plus" action={handleCreateFile} />
+          {transfer ? <Button title={l10n.pasteLabel} systemImage="doc.on.clipboard" action={handlePaste} /> : null}
           <Button
-            title="简介"
+            title={l10n.summary}
             systemImage="info.circle"
             action={() =>
               Dialog.alert({
-                title: currentDirName,
-                message: `当前位置: ${currentPath}\n包含 ${entries.length} 项`
+                title: l10n.summary,
+                message: l10n.introMessage(currentPath, entries.length)
               })
             }
           />
@@ -448,7 +570,7 @@ function DirectoryView({
         <VStack frame={{ maxWidth: 'infinity', maxHeight: 'infinity' }} alignment="center">
           <Spacer />
           <SVG filePath={`${Script.directory}/assets/icon/folder.svg`} resizable frame={{ width: 128, height: 128 }} />
-          <Text styledText={{ content: '文件夹空', font: 16, fontWeight: 'bold', foregroundColor: '#8e8e93' }} />
+          <Text styledText={{ content: l10n.emptyFolder, font: 16, fontWeight: 'bold', foregroundColor: '#8e8e93' }} />
           <Spacer />
         </VStack>
       ) : (
@@ -480,6 +602,7 @@ function DirectoryView({
                       setTransfer={setTransfer}
                       externalReloadPath={externalReloadPath}
                       requestExternalReload={requestExternalReload}
+                      l10n={l10n}
                     />
                   }
                 >
