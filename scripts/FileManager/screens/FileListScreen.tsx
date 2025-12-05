@@ -261,12 +261,7 @@ function DirectoryView({ rootPath, path, rootDisplayName, tag, tabItem }: Direct
       <Button action={handlePreferences}>
         <Image image={UIImage.fromSFSymbol('gearshape')!} frame={{ width: 20, height: 20 }} />
       </Button>
-      <Button
-        action={() => {
-          dismiss()
-          Script.exit()
-        }}
-      >
+      <Button action={dismiss}>
         <Image image={UIImage.fromSFSymbol('xmark.circle')!} frame={{ width: 20, height: 20 }} />
       </Button>
     </HStack>
