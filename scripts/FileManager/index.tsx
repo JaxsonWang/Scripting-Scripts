@@ -1,7 +1,12 @@
-import { Navigation } from 'scripting'
+import { Navigation, Script } from 'scripting'
 import { FileListScreen } from './screens/FileListScreen'
 
-await Navigation.present({
-  element: <FileListScreen />,
-  modalPresentationStyle: 'fullScreen'
-})
+const run = async () => {
+  await Navigation.present({
+    element: <FileListScreen />,
+    modalPresentationStyle: 'fullScreen'
+  })
+  Script.exit()
+}
+
+run()
