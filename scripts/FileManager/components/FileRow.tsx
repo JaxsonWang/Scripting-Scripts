@@ -88,7 +88,6 @@ export function FileRow({ name, path, isDirectory, stat, onPress, onCopy, onMove
   const detailText = stat && `${formatDate(stat.modificationDate)} - ${isDirectory ? `${directoryItemCount ?? 0} 项` : formatSize(stat.size)}`
   return (
     <HStack
-      padding={12}
       background={isDark ? '#1c1c1e' : '#ffffff'}
       frame={{ height: 60 }}
       alignment="center"
