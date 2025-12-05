@@ -40,21 +40,35 @@ const formatRelativePath = (path: string): string => {
 
 export function FileListScreen() {
   const [tabIndex, setTabIndex] = useState(0)
+  const [toolbarByTab, setToolbarByTab] = useState<Record<number, { leading: JSX.Element; trailing: JSX.Element }>>({})
+
+  const handleToolbarChange = useCallback((index: number, leading: JSX.Element, trailing: JSX.Element) => {
+    setToolbarByTab(prev => ({ ...prev, [index]: { leading, trailing } }))
+  }, [])
+
+  const currentToolbar = toolbarByTab[tabIndex]
 
   return (
     <NavigationStack>
-      <TabView tabIndex={tabIndex} onTabIndexChanged={setTabIndex}>
-        {ROOT_TABS.map((tab, index) => (
-          <DirectoryView
-            key={tab.path}
-            rootPath={tab.path}
-            path={tab.path}
-            rootDisplayName={tab.title}
-            tag={index}
-            tabItem={<Label title={tab.title} systemImage={tab.icon} />}
-          />
-        ))}
-      </TabView>
+      <VStack
+        frame={{ maxWidth: 'infinity', maxHeight: 'infinity' }}
+        toolbar={currentToolbar ? { topBarLeading: currentToolbar.leading, topBarTrailing: currentToolbar.trailing } : undefined}
+      >
+        <TabView tabIndex={tabIndex} onTabIndexChanged={setTabIndex}>
+          {ROOT_TABS.map((tab, index) => (
+            <DirectoryView
+              key={tab.path}
+              rootPath={tab.path}
+              path={tab.path}
+              rootDisplayName={tab.title}
+              tag={index}
+              tabItem={<Label title={tab.title} systemImage={tab.icon} />}
+              onToolbarChange={handleToolbarChange}
+              disableInternalToolbar
+            />
+          ))}
+        </TabView>
+      </VStack>
     </NavigationStack>
   )
 }
@@ -65,9 +79,11 @@ type DirectoryViewProps = {
   rootDisplayName: string
   tag?: number
   tabItem?: JSX.Element
+  onToolbarChange?: (index: number, leading: JSX.Element, trailing: JSX.Element) => void
+  disableInternalToolbar?: boolean
 }
 
-function DirectoryView({ rootPath, path, rootDisplayName, tag, tabItem }: DirectoryViewProps) {
+function DirectoryView({ rootPath, path, rootDisplayName, tag, tabItem, onToolbarChange, disableInternalToolbar }: DirectoryViewProps) {
   const currentPath = path
   const [files, setFiles] = useState<string[]>([])
   const [showHidden, setShowHidden] = useState(true)
@@ -281,12 +297,19 @@ function DirectoryView({ rootPath, path, rootDisplayName, tag, tabItem }: Direct
     </HStack>
   )
 
+  useEffect(() => {
+    if (disableInternalToolbar && onToolbarChange) {
+      onToolbarChange(tag ?? 0, toolbarLeading, toolbarTrailing)
+      console.log('[DirectoryView] report toolbar to parent', { tag, currentDirName, relativePath })
+    }
+  }, [disableInternalToolbar, onToolbarChange, tag, toolbarLeading, toolbarTrailing, currentDirName, relativePath])
+
   return (
     <VStack
       tag={tag}
       tabItem={tabItem}
       frame={{ maxWidth: 'infinity', maxHeight: 'infinity' }}
-      toolbar={{ topBarLeading: toolbarLeading, topBarTrailing: toolbarTrailing }}
+      toolbar={disableInternalToolbar ? undefined : { topBarLeading: toolbarLeading, topBarTrailing: toolbarTrailing }}
     >
       {files.length === 0 ? (
         <VStack frame={{ maxWidth: 'infinity', maxHeight: 'infinity' }} alignment="center">
@@ -309,7 +332,19 @@ function DirectoryView({ rootPath, path, rootDisplayName, tag, tabItem }: Direct
             }
             if (isDir) {
               return (
-                <NavigationLink key={name} destination={<DirectoryView rootPath={rootPath} path={childPath} rootDisplayName={rootDisplayName} />}>
+                <NavigationLink
+                  key={name}
+                  destination={
+                    <DirectoryView
+                      rootPath={rootPath}
+                      path={childPath}
+                      rootDisplayName={rootDisplayName}
+                      tag={tag}
+                      onToolbarChange={onToolbarChange}
+                      disableInternalToolbar={false}
+                    />
+                  }
+                >
                   {renderRow(name, childPath, true, stat)}
                 </NavigationLink>
               )
