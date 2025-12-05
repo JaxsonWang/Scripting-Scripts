@@ -177,9 +177,22 @@ function DirectoryView({
    * 预览文件内容，目录由 NavigationLink 处理。
    */
   const handleOpenFile = useCallback(
-    (name: string) => {
+    async (name: string) => {
       const newPath = currentPath + '/' + name
-      QuickLook.previewURLs([`file://${newPath}`])
+      const encodedURL = `file://${encodeURI(newPath)}`
+      console.log('[handleOpenFile] tap', { newPath, encodedURL })
+      try {
+        if (!FileManager.existsSync(newPath)) {
+          console.error('[QuickLook] file not found', newPath)
+          await Dialog.alert({ title: '文件不存在', message: newPath })
+          return
+        }
+        console.log('[QuickLook] preview', { path: newPath, encodedURL })
+        await QuickLook.previewURLs([encodedURL])
+      } catch (e) {
+        console.error(e)
+        await Dialog.alert({ title: '预览失败', message: String(e) })
+      }
     },
     [currentPath]
   )
@@ -353,22 +366,31 @@ function DirectoryView({
   const relativePathFull = currentPath === rootPath ? '/' : currentPath.replace(rootPath, '')
   const relativePath = formatRelativePath(relativePathFull)
 
-  const renderRow = (name: string, path: string, isDirectoryEntry: boolean, stat?: FileStat) => (
-    <FileRow
-      key={name}
-      name={name}
-      path={path}
-      isDirectory={isDirectoryEntry}
-      stat={stat}
-      onPress={!isDirectoryEntry ? () => handleOpenFile(name) : undefined}
-      onCopy={() => handleCopy(name)}
-      onMove={() => handleMove(name)}
-      onInfo={() => handleInfo(name)}
-      onRename={() => handleRename(name)}
-      onDuplicate={() => handleDuplicate(name)}
-      onDelete={() => handleDelete(name)}
-    />
-  )
+  const renderRow = (name: string, path: string, isDirectoryEntry: boolean, stat?: FileStat) => {
+    const row = (
+      <FileRow
+        key={name}
+        name={name}
+        path={path}
+        isDirectory={isDirectoryEntry}
+        stat={stat}
+        onCopy={() => handleCopy(name)}
+        onMove={() => handleMove(name)}
+        onInfo={() => handleInfo(name)}
+        onRename={() => handleRename(name)}
+        onDuplicate={() => handleDuplicate(name)}
+        onDelete={() => handleDelete(name)}
+      />
+    )
+
+    if (isDirectoryEntry) return row
+
+    return (
+      <Button key={name} action={() => handleOpenFile(name)}>
+        {row}
+      </Button>
+    )
+  }
 
   const toolbarLeading = useMemo(
     () => (
