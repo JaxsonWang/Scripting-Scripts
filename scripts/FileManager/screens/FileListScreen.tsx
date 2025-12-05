@@ -72,8 +72,8 @@ const translations = {
     languageChinese: 'Chinese'
   },
   zh: {
-    documents: '文件',
-    appGroup: '应用群组',
+    documents: 'Documents',
+    appGroup: 'App Group',
     failedRead: '读取目录失败',
     fileNotFound: '文件不存在',
     previewFailed: '预览失败',
@@ -502,7 +502,7 @@ function DirectoryView({
    */
   const handleExit = useCallback(() => {
     dismiss()
-    // Script.exit()
+    Script.exit()
   }, [dismiss])
 
   const isRoot = currentPath === rootPath
