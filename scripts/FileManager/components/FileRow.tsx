@@ -91,11 +91,7 @@ export function FileRow({ name, path, isDirectory, stat, onPress, onCopy, onMove
       return null
     }
   }, [isDirectory, path])
-  const detailText =
-    stat &&
-    `${formatDate(stat.modificationDate)} - ${
-      isDirectory ? labels.items(directoryItemCount ?? 0) : formatSize(stat.size)
-    }`
+  const detailText = stat && `${formatDate(stat.modificationDate)} - ${isDirectory ? labels.items(directoryItemCount ?? 0) : formatSize(stat.size)}`
   return (
     <HStack
       frame={{ height: 60 }}
