@@ -1,5 +1,22 @@
-import { Button, HStack, Image, Label, List, SVG, Script, Spacer, TabView, Text, VStack, useCallback, useColorScheme, useEffect, useState } from 'scripting'
-
+import {
+  Button,
+  DragGesture,
+  HStack,
+  Image,
+  Label,
+  List,
+  SVG,
+  Script,
+  Spacer,
+  TabView,
+  Text,
+  VStack,
+  useCallback,
+  useColorScheme,
+  useEffect,
+  useMemo,
+  useState
+} from 'scripting'
 import { FileRow } from '../components/FileRow'
 
 const ROOT_TABS = [
@@ -90,11 +107,11 @@ function FileListView({ initialRoot, tag, tabItem }: FileListViewProps) {
   /**
    * 返回上一层目录，根目录时保持不动。
    */
-  const handleBack = () => {
+  const handleBack = useCallback(() => {
     if (currentPath === initialRoot) return
     const parent = currentPath.substring(0, currentPath.lastIndexOf('/'))
     setCurrentPath(parent)
-  }
+  }, [currentPath, initialRoot])
 
   /**
    * 快速退出脚本，供右上角按钮调用。
@@ -215,8 +232,25 @@ function FileListView({ initialRoot, tag, tabItem }: FileListViewProps) {
   const currentDirName = isRoot ? rootDisplayName : currentPath.split('/').pop() || rootDisplayName
   const relativePath = currentPath.replace(initialRoot, '') || '/'
 
+  const backSwipeGesture = useMemo(() => {
+    if (isRoot) return undefined
+    return DragGesture({ minDistance: 25, coordinateSpace: 'local' }).onEnded(details => {
+      if (details.startLocation.x > 80) return
+      if (details.translation.width > 60 && Math.abs(details.translation.height) < 40) {
+        handleBack()
+      }
+    })
+  }, [handleBack, isRoot])
+
   return (
-    <VStack tag={tag} tabItem={tabItem} frame={{ maxWidth: 'infinity', maxHeight: 'infinity' }} background="#ffffff">
+    <VStack
+      tag={tag}
+      tabItem={tabItem}
+      frame={{ maxWidth: 'infinity', maxHeight: 'infinity' }}
+      background="#ffffff"
+      gesture={backSwipeGesture}
+      defersSystemGestures="leading"
+    >
       <VStack padding={16} background="#ffffff">
         <HStack alignment="center">
           {!isRoot && (
