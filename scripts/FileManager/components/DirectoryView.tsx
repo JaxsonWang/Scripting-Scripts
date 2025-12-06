@@ -7,7 +7,7 @@ import { useFilePreview } from '../hooks/useFilePreview'
 import { useDirectoryToolbar } from '../hooks/useDirectoryToolbar'
 import { usePreferencesSheet } from '../hooks/usePreferencesSheet'
 import { useFileRowRenderer } from '../hooks/useFileRowRenderer'
-import { getEditorExtension, canEditWithEditor } from '../utils/text_file'
+import { getEditorExtension, canEditWithEditor, isImageFile } from '../utils/text_file'
 
 export type DirectoryViewProps = {
   rootPath: string
@@ -176,9 +176,28 @@ export function DirectoryView({
         await previewTextFile(name)
         return
       }
+      if (isImageFile(name)) {
+        const imagePath = currentPath + '/' + name
+        try {
+          if (!FileManager.existsSync(imagePath)) {
+            await Dialog.alert({ title: l10n.fileNotFound, message: imagePath })
+            return
+          }
+          const image = UIImage.fromFile(imagePath)
+          if (!image) {
+            await Dialog.alert({ title: l10n.previewFailed, message: l10n.fileNotFound })
+            return
+          }
+          await QuickLook.previewImage(image)
+        } catch (error) {
+          console.error('[handleOpenFile] image preview failed', imagePath, error)
+          await Dialog.alert({ title: l10n.previewFailed, message: String(error) })
+        }
+        return
+      }
       await quickLookFile(name)
     },
-    [previewTextFile, quickLookFile]
+    [previewTextFile, quickLookFile, currentPath, l10n]
   )
 
   const handleExit = useCallback(() => {

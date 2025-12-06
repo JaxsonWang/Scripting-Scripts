@@ -1,4 +1,5 @@
 const EDITABLE_EXTENSIONS = ['tsx', 'ts', 'js', 'jsx', 'txt', 'md', 'css', 'html', 'json'] as const
+const IMAGE_EXTENSIONS = ['png', 'jpg', 'jpeg', 'heic', 'heif', 'gif', 'webp', 'bmp', 'tiff'] as const
 
 type EditorExt = (typeof EDITABLE_EXTENSIONS)[number]
 
@@ -17,3 +18,9 @@ export const getEditorExtension = (fileName: string): EditorExt => {
 }
 
 const extractExtension = (fileName: string) => fileName.split('.').pop()?.toLowerCase()
+
+export const isImageFile = (fileName: string): boolean => {
+  const ext = extractExtension(fileName)
+  if (!ext) return false
+  return IMAGE_EXTENSIONS.includes(ext as typeof IMAGE_EXTENSIONS[number])
+}
