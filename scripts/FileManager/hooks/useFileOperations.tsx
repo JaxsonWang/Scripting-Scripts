@@ -1,17 +1,6 @@
 import { Navigation, useCallback } from 'scripting'
-import type { L10n, TransferState } from '../types'
+import type { FileOperationsConfig } from '../types'
 import { FileInfoView } from '../components/FileInfoView'
-
-type FileOperationsConfig = {
-  currentPath: string
-  transfer: TransferState | null
-  setTransfer: (value: TransferState | null) => void
-  requestExternalReload: (path: string | null) => void
-  setToastMessage: (value: string) => void
-  setToastShown: (value: boolean) => void
-  l10n: L10n
-  triggerReload: () => void
-}
 
 export const useFileOperations = ({
   currentPath,

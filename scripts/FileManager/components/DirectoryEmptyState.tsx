@@ -1,8 +1,5 @@
 import { SVG, Script, Spacer, Text, VStack } from 'scripting'
-
-type DirectoryEmptyStateProps = {
-  message: string
-}
+import type { DirectoryEmptyStateProps } from '../types'
 
 export function DirectoryEmptyState({ message }: DirectoryEmptyStateProps) {
   return (

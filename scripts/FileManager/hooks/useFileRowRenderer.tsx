@@ -1,19 +1,7 @@
 import { useCallback, useMemo } from 'scripting'
-import type { FileEntry, L10n } from '../types'
+import type { FileEntry, FileRowRendererConfig } from '../types'
 import { FileRow } from '../components/FileRow'
 import { canEditWithEditor } from '../utils/text_file'
-
-type FileRowRendererConfig = {
-  l10n: L10n
-  handleOpenFile: (name: string) => void | Promise<void>
-  handleCopy: (name: string) => void | Promise<void>
-  handleMove: (name: string) => void | Promise<void>
-  handleEdit?: (entry: FileEntry) => void | Promise<void>
-  handleInfo: (name: string) => void | Promise<void>
-  handleRename: (name: string) => void | Promise<void>
-  handleDuplicate: (name: string) => void | Promise<void>
-  handleDelete: (name: string) => void | Promise<void>
-}
 
 export const useFileRowRenderer = ({
   l10n,

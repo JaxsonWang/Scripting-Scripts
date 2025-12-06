@@ -1,18 +1,8 @@
 import { Navigation, useCallback } from 'scripting'
 import { PreferencesScreen } from '../screens/PreferencesScreen'
-import type { L10n, LanguageOption, Locale } from '../types'
+import type { PreferencesSheetOptions, Locale } from '../types'
 
-type Options = {
-  showHidden: boolean
-  setShowHidden: (value: boolean) => void
-  l10n: L10n
-  locale: Locale
-  onLocaleChange: (value: Locale) => void
-  languageOptions: LanguageOption[]
-  onLanguageChanged?: () => void
-}
-
-export const usePreferencesSheet = ({ showHidden, setShowHidden, l10n, locale, onLocaleChange, languageOptions, onLanguageChanged }: Options) => {
+export const usePreferencesSheet = ({ showHidden, setShowHidden, l10n, locale, onLocaleChange, languageOptions, onLanguageChanged }: PreferencesSheetOptions) => {
   return useCallback(() => {
     Navigation.present({
       element: (

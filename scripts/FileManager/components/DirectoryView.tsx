@@ -14,7 +14,15 @@ import {
   useRef,
   useState
 } from 'scripting'
-import type { FileEntry, L10n, LanguageOption, Locale, TransferState } from '../types'
+import type {
+  FileEntry,
+  DirectoryViewProps,
+  L10n,
+  LanguageOption,
+  Locale,
+  TransferState,
+  MarkdownPreviewProps
+} from '../types'
 import { DirectoryEmptyState } from './DirectoryEmptyState'
 import { useFileOperations } from '../hooks/useFileOperations'
 import { useDirectoryEntries } from '../hooks/useDirectoryEntries'
@@ -23,24 +31,6 @@ import { useDirectoryToolbar } from '../hooks/useDirectoryToolbar'
 import { usePreferencesSheet } from '../hooks/usePreferencesSheet'
 import { useFileRowRenderer } from '../hooks/useFileRowRenderer'
 import { canEditWithEditor, getEditorExtension, isImageFile, isMarkdownFile } from '../utils/text_file'
-
-export type DirectoryViewProps = {
-  rootPath: string
-  path: string
-  rootDisplayName: string
-  tag?: number
-  tabItem?: JSX.Element
-  onToolbarChange?: (index: number, leading: JSX.Element, trailing: JSX.Element) => void
-  disableInternalToolbar?: boolean
-  transfer: TransferState | null
-  setTransfer: (value: TransferState | null) => void
-  externalReloadPath: string | null
-  requestExternalReload: (path: string | null) => void
-  l10n: L10n
-  locale: Locale
-  onLocaleChange: (value: Locale) => void
-  languageOptions: LanguageOption[]
-}
 
 const formatRelativePath = (path: string, rootPath: string): string => {
   const relative = path === rootPath ? '/' : path.replace(rootPath, '') || '/'
@@ -345,12 +335,6 @@ export function DirectoryView({
       )}
     </VStack>
   )
-}
-
-type MarkdownPreviewProps = {
-  name: string
-  content: string
-  l10n: L10n
 }
 
 function MarkdownPreviewView({ name, content, l10n }: MarkdownPreviewProps) {

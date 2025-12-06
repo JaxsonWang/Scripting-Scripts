@@ -1,17 +1,7 @@
 import { Button, Form, HStack, Navigation, NavigationStack, SVG, Script, Section, Spacer, Text, VStack, useEffect, useMemo, useState } from 'scripting'
-import type { L10n } from '../types'
+import type { FileInfoViewProps } from '../types'
 import { resolveIconName } from '../utils/file_icon'
 import { computeDirectorySize } from '../utils/file_size'
-
-type FileInfoViewProps = {
-  name: string
-  path: string
-  stat: FileStat
-  isDirectory: boolean
-  sizeOverride?: number
-  autoComputeSize?: boolean
-  l10n: L10n
-}
 
 const formatSize = (size: number): string => {
   if (size === 0) return '0 B'

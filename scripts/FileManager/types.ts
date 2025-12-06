@@ -67,3 +67,112 @@ export type FileEntry = {
   isDir: boolean
   stat?: FileStat
 }
+
+export type DirectoryViewProps = {
+  rootPath: string
+  path: string
+  rootDisplayName: string
+  tag?: number
+  tabItem?: JSX.Element
+  onToolbarChange?: (index: number, leading: JSX.Element, trailing: JSX.Element) => void
+  disableInternalToolbar?: boolean
+  transfer: TransferState | null
+  setTransfer: (value: TransferState | null) => void
+  externalReloadPath: string | null
+  requestExternalReload: (path: string | null) => void
+  l10n: L10n
+  locale: Locale
+  onLocaleChange: (value: Locale) => void
+  languageOptions: LanguageOption[]
+}
+
+export type PreferencesScreenProps = {
+  showHidden: boolean
+  onToggleHidden: (value: boolean) => void
+  title: string
+  doneLabel: string
+  sectionTitle: string
+  toggleLabel: string
+  languageSectionTitle: string
+  languagePickerTitle: string
+  locale: Locale
+  onLocaleChange: (value: Locale) => void
+  languageOptions: LanguageOption[]
+  onLanguageChanged?: () => void
+}
+
+export type DirectoryEmptyStateProps = {
+  message: string
+}
+
+export type FileInfoViewProps = {
+  name: string
+  path: string
+  stat: FileStat
+  isDirectory: boolean
+  sizeOverride?: number
+  autoComputeSize?: boolean
+  l10n: L10n
+}
+
+export type MarkdownPreviewProps = {
+  name: string
+  content: string
+  l10n: L10n
+}
+
+export type UseDirectoryEntriesOptions = {
+  path: string
+  l10n: L10n
+  externalReloadPath: string | null
+  requestExternalReload: (path: string | null) => void
+  showHiddenDefault?: boolean
+}
+
+export type FileRowRendererConfig = {
+  l10n: L10n
+  handleOpenFile: (name: string) => void | Promise<void>
+  handleCopy: (name: string) => void | Promise<void>
+  handleMove: (name: string) => void | Promise<void>
+  handleEdit?: (entry: FileEntry) => void | Promise<void>
+  handleInfo: (name: string) => void | Promise<void>
+  handleRename: (name: string) => void | Promise<void>
+  handleDuplicate: (name: string) => void | Promise<void>
+  handleDelete: (name: string) => void | Promise<void>
+}
+
+export type FileOperationsConfig = {
+  currentPath: string
+  transfer: TransferState | null
+  setTransfer: (value: TransferState | null) => void
+  requestExternalReload: (path: string | null) => void
+  setToastMessage: (value: string) => void
+  setToastShown: (value: boolean) => void
+  l10n: L10n
+  triggerReload: () => void
+}
+
+export type PreferencesSheetOptions = {
+  showHidden: boolean
+  setShowHidden: (value: boolean) => void
+  l10n: L10n
+  locale: Locale
+  onLocaleChange: (value: Locale) => void
+  languageOptions: LanguageOption[]
+  onLanguageChanged?: () => void
+}
+
+export type DirectoryToolbarOptions = {
+  currentDirName: string
+  relativePath: string
+  currentPath: string
+  entriesCount: number
+  transfer: TransferState | null
+  l10n: L10n
+  handleCreateFolder: () => Promise<void>
+  handleCreateFile: () => Promise<void>
+  handlePaste: () => Promise<void>
+  handlePreferences: () => void
+  handleExit: () => void
+  currentDirStat?: FileStat
+}

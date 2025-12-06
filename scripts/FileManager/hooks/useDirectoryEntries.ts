@@ -1,13 +1,5 @@
 import { useCallback, useEffect, useState } from 'scripting'
-import type { FileEntry, L10n } from '../types'
-
-type UseDirectoryEntriesOptions = {
-  path: string
-  l10n: L10n
-  externalReloadPath: string | null
-  requestExternalReload: (path: string | null) => void
-  showHiddenDefault?: boolean
-}
+import type { FileEntry, UseDirectoryEntriesOptions } from '../types'
 
 export const useDirectoryEntries = ({ path, l10n, externalReloadPath, requestExternalReload, showHiddenDefault = true }: UseDirectoryEntriesOptions) => {
   const [entries, setEntries] = useState<FileEntry[]>([])

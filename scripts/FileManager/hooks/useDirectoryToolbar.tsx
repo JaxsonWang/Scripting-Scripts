@@ -1,21 +1,6 @@
 import { Button, ControlGroup, HStack, Image, Navigation, Text, VStack, useMemo } from 'scripting'
-import type { L10n, TransferState } from '../types'
+import type { DirectoryToolbarOptions } from '../types'
 import { FileInfoView } from '../components/FileInfoView'
-
-type ToolbarOptions = {
-  currentDirName: string
-  relativePath: string
-  currentPath: string
-  entriesCount: number
-  transfer: TransferState | null
-  l10n: L10n
-  handleCreateFolder: () => Promise<void>
-  handleCreateFile: () => Promise<void>
-  handlePaste: () => Promise<void>
-  handlePreferences: () => void
-  handleExit: () => void
-  currentDirStat?: FileStat
-}
 
 export const useDirectoryToolbar = ({
   currentDirName,
@@ -30,7 +15,7 @@ export const useDirectoryToolbar = ({
   handlePreferences,
   handleExit,
   currentDirStat
-}: ToolbarOptions) => {
+}: DirectoryToolbarOptions) => {
   const toolbarLeading = useMemo(
     () => (
       <VStack alignment="leading">

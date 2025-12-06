@@ -1,20 +1,6 @@
 import { Button, Form, Navigation, NavigationStack, Picker, Section, Text, Toggle, VStack } from 'scripting'
 import script from '../script.json'
-
-type PreferencesScreenProps = {
-  showHidden: boolean
-  onToggleHidden: (value: boolean) => void
-  title: string
-  doneLabel: string
-  sectionTitle: string
-  toggleLabel: string
-  languageSectionTitle: string
-  languagePickerTitle: string
-  locale: string
-  onLocaleChange: (value: string) => void
-  languageOptions: { value: string; label: string }[]
-  onLanguageChanged?: () => void
-}
+import type { PreferencesScreenProps, Locale } from '../types'
 
 export function PreferencesScreen({
   showHidden,
@@ -59,7 +45,7 @@ export function PreferencesScreen({
             title={languagePickerTitle}
             value={locale}
             onChanged={(value: string) => {
-              onLocaleChange(value)
+              onLocaleChange(value as Locale)
               dismiss()
               if (onLanguageChanged) {
                 setTimeout(() => {
