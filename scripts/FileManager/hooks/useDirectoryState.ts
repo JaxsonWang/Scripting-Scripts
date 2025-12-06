@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'scripting'
-import type { DirectoryStateOptions, DirectoryState } from '../types'
+import type { DirectoryState, DirectoryStateOptions } from '../types'
 import { useDirectoryEntries } from './useDirectoryEntries'
 
 export const useDirectoryState = ({ path, l10n, externalReloadPath, requestExternalReload }: DirectoryStateOptions): DirectoryState => {

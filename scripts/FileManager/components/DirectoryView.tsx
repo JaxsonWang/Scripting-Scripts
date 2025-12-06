@@ -43,29 +43,23 @@ export function DirectoryView({
   const currentPath = path
   const dismiss = Navigation.useDismiss()
 
-  const {
-    entries,
-    showHidden,
-    setShowHidden,
-    toastMessage,
-    setToastMessage,
-    toastShown,
-    setToastShown,
-    currentStat,
-    triggerReload
-  } = useDirectoryState({ path: currentPath, l10n, externalReloadPath, requestExternalReload })
+  const { entries, showHidden, setShowHidden, toastMessage, setToastMessage, toastShown, setToastShown, currentStat, triggerReload } = useDirectoryState({
+    path: currentPath,
+    l10n,
+    externalReloadPath,
+    requestExternalReload
+  })
 
-  const { handleCopy, handleMove, handleDelete, handleCreateFolder, handleCreateFile, handleRename, handleDuplicate, handlePaste } =
-    useFileOperations({
-      currentPath,
-      transfer,
-      setTransfer,
-      requestExternalReload,
-      setToastMessage,
-      setToastShown,
-      l10n,
-      triggerReload
-    })
+  const { handleCopy, handleMove, handleDelete, handleCreateFolder, handleCreateFile, handleRename, handleDuplicate, handlePaste } = useFileOperations({
+    currentPath,
+    transfer,
+    setTransfer,
+    requestExternalReload,
+    setToastMessage,
+    setToastShown,
+    l10n,
+    triggerReload
+  })
 
   const { handleOpenFile, handleEdit } = usePreviewHandlers({ currentPath, l10n, triggerReload })
   const { showInfo } = useFileInfoPresenter({ l10n })
@@ -74,10 +68,7 @@ export function DirectoryView({
   const currentDirName = isRoot ? rootDisplayName : currentPath.split('/').pop() || rootDisplayName
   const relativePath = formatRelativePath(currentPath, rootPath)
 
-  const handleInfo = useCallback(
-    (name: string) => showInfo({ name, path: `${currentPath}/${name}` }),
-    [showInfo, currentPath]
-  )
+  const handleInfo = useCallback((name: string) => showInfo({ name, path: `${currentPath}/${name}` }), [showInfo, currentPath])
 
   const handleCurrentDirInfo = useCallback(() => {
     if (!currentStat) {
