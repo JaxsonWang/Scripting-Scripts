@@ -52,6 +52,12 @@ export type L10n = {
   languagePickerTitle: string
   languageEnglish: string
   languageChinese: string
+  infoSectionTitle: string
+  fileTypeLabel: string
+  fileSizeLabel: string
+  fileCreatedLabel: string
+  fileModifiedLabel: string
+  fileLocationLabel: string
 }
 
 export type FileEntry = {

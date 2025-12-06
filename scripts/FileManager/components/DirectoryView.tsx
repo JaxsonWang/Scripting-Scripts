@@ -73,6 +73,8 @@ export function DirectoryView({
     requestExternalReload
   })
 
+  const handleOpenFile = useFilePreview(currentPath, l10n)
+
   const { handleCopy, handleMove, handleDelete, handleCreateFolder, handleCreateFile, handleRename, handleDuplicate, handlePaste, handleInfo } =
     useFileOperations({
       currentPath,
@@ -84,7 +86,6 @@ export function DirectoryView({
       l10n,
       triggerReload
     })
-  const handleOpenFile = useFilePreview(currentPath, l10n)
 
   const handlePreferences = usePreferencesSheet({
     showHidden,

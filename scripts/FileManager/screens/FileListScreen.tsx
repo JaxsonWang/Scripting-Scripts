@@ -44,7 +44,13 @@ const translations: Record<Locale, L10n> = {
     languageSection: 'Language',
     languagePickerTitle: 'Choose Language',
     languageEnglish: 'English',
-    languageChinese: 'Chinese'
+    languageChinese: 'Chinese',
+    infoSectionTitle: 'Info',
+    fileTypeLabel: 'Type',
+    fileSizeLabel: 'Size',
+    fileCreatedLabel: 'Created',
+    fileModifiedLabel: 'Modified',
+    fileLocationLabel: 'Location'
   },
   zh: {
     documents: 'Documents',
@@ -87,7 +93,13 @@ const translations: Record<Locale, L10n> = {
     languageSection: '界面语言',
     languagePickerTitle: '请选择语言',
     languageEnglish: '英语',
-    languageChinese: '中文'
+    languageChinese: '中文',
+    infoSectionTitle: '信息',
+    fileTypeLabel: '种类',
+    fileSizeLabel: '大小',
+    fileCreatedLabel: '创建时间',
+    fileModifiedLabel: '修改时间',
+    fileLocationLabel: '位置'
   }
 }
 

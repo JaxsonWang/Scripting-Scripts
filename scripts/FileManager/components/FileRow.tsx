@@ -1,58 +1,7 @@
 import { Button, Group, HStack, Image, Label, SVG, Script, Spacer, Text, VStack, useMemo } from 'scripting'
 
 import { formatDate, formatSize } from '../utils/format'
-
-const extensionIconMap: Record<string, string> = {
-  apk: 'apk',
-  css: 'css',
-  csv: 'file',
-  doc: 'doc',
-  docx: 'doc',
-  exe: 'exe',
-  gif: 'image-gif',
-  heic: 'image',
-  heif: 'image',
-  html: 'code',
-  ipa: 'ipa',
-  jpeg: 'image-jpeg',
-  jpg: 'image-jpeg',
-  js: 'js',
-  json: 'code',
-  jsx: 'code',
-  key: 'ppt',
-  m4a: 'music',
-  md: 'txt',
-  mkv: 'video',
-  mov: 'video',
-  mp3: 'mp3',
-  mp4: 'mp4',
-  numbers: 'numbers',
-  pdf: 'pdf',
-  png: 'image-png',
-  ppt: 'ppt',
-  pptx: 'ppt',
-  rar: 'rar',
-  svg: 'image',
-  ts: 'code',
-  tsx: 'code',
-  txt: 'txt',
-  wav: 'music',
-  webp: 'image',
-  xls: 'els',
-  xlsx: 'els',
-  xt: 'xt',
-  zip: 'zip'
-}
-
-/**
- * 根据文件名和目录标记解析出对应的 SVG 图标文件名，未知类型统一回退为 `untitled`.
- */
-const resolveIconName = (fileName: string, isDirectory: boolean): string => {
-  if (isDirectory) return 'folder'
-  const extension = fileName.split('.').pop()?.toLowerCase()
-  if (!extension || extension === fileName.toLowerCase()) return 'untitled'
-  return extensionIconMap[extension] ?? 'untitled'
-}
+import { resolveIconName } from '../utils/file_icon'
 
 interface FileRowProps {
   name: string

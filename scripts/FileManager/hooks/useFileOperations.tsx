@@ -1,5 +1,6 @@
-import { useCallback } from 'scripting'
+import { Navigation, useCallback } from 'scripting'
 import type { L10n, TransferState } from '../types'
+import { FileInfoView } from '../components/FileInfoView'
 
 type FileOperationsConfig = {
   currentPath: string
@@ -152,10 +153,17 @@ export const useFileOperations = ({
     async (name: string) => {
       const filePath = currentPath + '/' + name
       const stat = await FileManager.stat(filePath)
-      const info = `\nPath: ${filePath}\nSize: ${stat.size} bytes\nCreated: ${new Date(stat.creationDate).toLocaleString()}\nModified: ${new Date(
-        stat.modificationDate
-      ).toLocaleString()}\nType: ${stat.type}\n    `
-      await Dialog.alert({ title: l10n.fileInfoTitle, message: info })
+      let isDirectory = stat.type === 'directory'
+      if (!isDirectory) {
+        try {
+          isDirectory = FileManager.isDirectorySync(filePath)
+        } catch (error) {
+          console.error('[FileInfo] isDirectorySync failed', filePath, error)
+        }
+      }
+      await Navigation.present({
+        element: <FileInfoView name={name} path={filePath} stat={stat} isDirectory={isDirectory} l10n={l10n} />
+      })
     },
     [currentPath, l10n]
   )
