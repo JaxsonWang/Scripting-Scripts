@@ -19,6 +19,7 @@ import {
 import type { L10n, LanguageOption, Locale, TransferState } from '../types'
 import { FileRow } from './FileRow'
 import { PreferencesScreen } from '../screens/PreferencesScreen'
+import { useFileOperations } from '../hooks/useFileOperations'
 
 type FileEntry = { name: string; path: string; isDir: boolean; stat?: FileStat }
 
@@ -128,6 +129,18 @@ export function DirectoryView({
 
   const triggerReload = useCallback(() => bumpVersion(v => v + 1), [])
 
+  const { handleCopy, handleMove, handleDelete, handleCreateFolder, handleCreateFile, handleRename, handleDuplicate, handlePaste, handleInfo } =
+    useFileOperations({
+      currentPath,
+      transfer,
+      setTransfer,
+      requestExternalReload,
+      setToastMessage,
+      setToastShown,
+      l10n,
+      triggerReload
+    })
+
   const handleOpenFile = useCallback(
     async (name: string) => {
       const newPath = currentPath + '/' + name
@@ -148,126 +161,6 @@ export function DirectoryView({
     },
     [currentPath, l10n]
   )
-
-  const handleCopy = async (name: string) => {
-    const filePath = currentPath + '/' + name
-    await Pasteboard.setString(filePath)
-    setTransfer({ sourcePath: filePath, isMove: false })
-    setToastMessage(l10n.copiedToast)
-    setToastShown(true)
-  }
-
-  const handleInfo = async (name: string) => {
-    const filePath = currentPath + '/' + name
-    const stat = await FileManager.stat(filePath)
-    const info = `\nPath: ${filePath}\nSize: ${stat.size} bytes\nCreated: ${new Date(stat.creationDate).toLocaleString()}\nModified: ${new Date(
-      stat.modificationDate
-    ).toLocaleString()}\nType: ${stat.type}\n    `
-    await Dialog.alert({ title: l10n.fileInfoTitle, message: info })
-  }
-
-  const handleRename = async (name: string) => {
-    const filePath = currentPath + '/' + name
-    const newName = await Dialog.prompt({
-      title: l10n.renameTitle,
-      defaultValue: name,
-      confirmLabel: l10n.renameConfirm
-    })
-    if (newName && newName !== name) {
-      await FileManager.rename(filePath, currentPath + '/' + newName)
-      triggerReload()
-    }
-  }
-
-  const handleDuplicate = async (name: string) => {
-    const filePath = currentPath + '/' + name
-    let newName = name
-    if (name.includes('.')) {
-      const parts = name.split('.')
-      const ext = parts.pop()
-      newName = parts.join('.') + ' copy.' + ext
-    } else {
-      newName = name + ' copy'
-    }
-    await FileManager.copyFile(filePath, currentPath + '/' + newName)
-    triggerReload()
-  }
-
-  const handlePaste = useCallback(async () => {
-    if (!transfer) {
-      await Dialog.alert({ title: l10n.noPasteTitle, message: l10n.noPasteMessage })
-      return
-    }
-    const source = transfer.sourcePath
-    const base = source.split('/').pop() || 'pasted'
-    const ensureUnique = (name: string) => {
-      let candidate = name
-      let idx = 1
-      while (FileManager.existsSync(currentPath + '/' + candidate)) {
-        const parts = candidate.split('.')
-        if (parts.length > 1) {
-          const ext = parts.pop()
-          candidate = `${parts.join('.')} (${idx}).${ext}`
-        } else {
-          candidate = `${name} (${idx})`
-        }
-        idx += 1
-      }
-      return candidate
-    }
-    const targetName = ensureUnique(base)
-    const target = currentPath + '/' + targetName
-    try {
-      if (transfer?.isMove) {
-        await FileManager.rename(source, target)
-        const sourceDir = source.split('/').slice(0, -1).join('/') || '/'
-        requestExternalReload(sourceDir)
-      } else {
-        await FileManager.copyFile(source, target)
-      }
-      setTransfer(null)
-      triggerReload()
-    } catch (error) {
-      console.error(error)
-      await Dialog.alert({ title: l10n.previewFailed, message: String(error) })
-    }
-  }, [currentPath, transfer, triggerReload, setTransfer, requestExternalReload, l10n])
-
-  const handleDelete = async (name: string) => {
-    const filePath = currentPath + '/' + name
-    const confirm = await Dialog.confirm({
-      title: l10n.deleteTitle,
-      message: l10n.deleteConfirm(name),
-      confirmLabel: l10n.deleteConfirmLabel
-    })
-    if (confirm) {
-      await FileManager.remove(filePath)
-      triggerReload()
-    }
-  }
-
-  const handleMove = async (name: string) => {
-    const filePath = currentPath + '/' + name
-    setTransfer({ sourcePath: filePath, isMove: true })
-    setToastMessage(l10n.moveToast)
-    setToastShown(true)
-  }
-
-  const handleCreateFolder = useCallback(async () => {
-    const name = await Dialog.prompt({ title: l10n.newFolderTitle })
-    if (name) {
-      await FileManager.createDirectory(currentPath + '/' + name)
-      triggerReload()
-    }
-  }, [currentPath, triggerReload, l10n])
-
-  const handleCreateFile = useCallback(async () => {
-    const name = await Dialog.prompt({ title: l10n.newFileTitle, defaultValue: 'untitled.txt' })
-    if (name) {
-      await FileManager.writeAsString(currentPath + '/' + name, '')
-      triggerReload()
-    }
-  }, [currentPath, triggerReload, l10n])
 
   const handlePreferences = useCallback(() => {
     Navigation.present({
