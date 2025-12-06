@@ -8,7 +8,7 @@ import { getL10n, supportedLanguages } from '../l10n'
  * @returns 首选语言
  */
 const detectLocale = (): Locale => {
-  const code = Device.preferredLanguages?.[0] ?? 'zh'
+  const code = Device.systemLanguageCode ?? 'zh'
   return code.startsWith('zh') ? 'zh' : 'en'
 }
 
