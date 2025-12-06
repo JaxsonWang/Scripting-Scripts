@@ -22,5 +22,5 @@ const extractExtension = (fileName: string) => fileName.split('.').pop()?.toLowe
 export const isImageFile = (fileName: string): boolean => {
   const ext = extractExtension(fileName)
   if (!ext) return false
-  return IMAGE_EXTENSIONS.includes(ext as typeof IMAGE_EXTENSIONS[number])
+  return IMAGE_EXTENSIONS.includes(ext as (typeof IMAGE_EXTENSIONS)[number])
 }

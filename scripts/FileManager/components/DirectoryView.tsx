@@ -7,7 +7,7 @@ import { useFilePreview } from '../hooks/useFilePreview'
 import { useDirectoryToolbar } from '../hooks/useDirectoryToolbar'
 import { usePreferencesSheet } from '../hooks/usePreferencesSheet'
 import { useFileRowRenderer } from '../hooks/useFileRowRenderer'
-import { getEditorExtension, canEditWithEditor, isImageFile } from '../utils/text_file'
+import { canEditWithEditor, getEditorExtension, isImageFile } from '../utils/text_file'
 
 export type DirectoryViewProps = {
   rootPath: string
