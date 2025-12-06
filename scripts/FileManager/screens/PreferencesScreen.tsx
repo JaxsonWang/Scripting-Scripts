@@ -1,4 +1,5 @@
 import { Button, Form, Navigation, NavigationStack, Picker, Section, Text, Toggle, VStack } from 'scripting'
+import script from '../script.json'
 
 type PreferencesScreenProps = {
   showHidden: boolean
@@ -45,7 +46,7 @@ export function PreferencesScreen({
           footer={
             <VStack spacing={10} alignment="leading">
               <Text font="footnote" foregroundStyle="secondaryLabel">
-                File Manager
+                File Manager {'v' + script.version}
                 {'\n'}
                 淮城一只猫© - Power by Scripting
               </Text>
