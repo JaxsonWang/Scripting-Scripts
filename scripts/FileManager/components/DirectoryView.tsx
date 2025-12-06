@@ -1,27 +1,12 @@
-import {
-  Button,
-  ControlGroup,
-  HStack,
-  Image,
-  List,
-  Navigation,
-  NavigationLink,
-  SVG,
-  Script,
-  Spacer,
-  Text,
-  VStack,
-  useCallback,
-  useEffect,
-  useMemo,
-  useState
-} from 'scripting'
+import { List, Navigation, NavigationLink, Script, VStack, useCallback, useEffect, useState } from 'scripting'
 import type { FileEntry, L10n, LanguageOption, Locale, TransferState } from '../types'
 import { FileRow } from './FileRow'
 import { PreferencesScreen } from '../screens/PreferencesScreen'
+import { DirectoryEmptyState } from './DirectoryEmptyState'
 import { useFileOperations } from '../hooks/useFileOperations'
 import { useDirectoryEntries } from '../hooks/useDirectoryEntries'
 import { useFilePreview } from '../hooks/useFilePreview'
+import { useDirectoryToolbar } from '../hooks/useDirectoryToolbar'
 
 export type DirectoryViewProps = {
   rootPath: string
@@ -159,44 +144,19 @@ export function DirectoryView({
     )
   }
 
-  const toolbarLeading = useMemo(
-    () => (
-      <VStack alignment="leading">
-        <Text styledText={{ content: currentDirName, font: 16, fontWeight: 'bold' }} />
-        <Text styledText={{ content: relativePath, font: 11, foregroundColor: '#8e8e93' }} />
-      </VStack>
-    ),
-    [currentDirName, relativePath]
-  )
-
-  const toolbarTrailing = useMemo(
-    () => (
-      <HStack>
-        <ControlGroup label={<Image systemName="ellipsis.circle" frame={{ width: 20, height: 20 }} />} controlGroupStyle="palette">
-          <Button title={l10n.addFolder} systemImage="folder.badge.plus" action={handleCreateFolder} />
-          <Button title={l10n.addFile} systemImage="doc.badge.plus" action={handleCreateFile} />
-          {transfer ? <Button title={l10n.pasteLabel} systemImage="doc.on.clipboard" action={handlePaste} /> : null}
-          <Button
-            title={l10n.summary}
-            systemImage="info.circle"
-            action={() =>
-              Dialog.alert({
-                title: l10n.summary,
-                message: l10n.introMessage(currentPath, entries.length)
-              })
-            }
-          />
-        </ControlGroup>
-        <Button action={handlePreferences}>
-          <Image systemName="gearshape" frame={{ width: 20, height: 20 }} />
-        </Button>
-        <Button action={handleExit}>
-          <Image systemName="xmark.circle" frame={{ width: 20, height: 20 }} />
-        </Button>
-      </HStack>
-    ),
-    [handleCreateFolder, handleCreateFile, handlePaste, currentPath, entries.length, handlePreferences, handleExit, transfer, l10n]
-  )
+  const { toolbarLeading, toolbarTrailing } = useDirectoryToolbar({
+    currentDirName,
+    relativePath,
+    currentPath,
+    entriesCount: entries.length,
+    transfer,
+    l10n,
+    handleCreateFolder,
+    handleCreateFile,
+    handlePaste,
+    handlePreferences,
+    handleExit
+  })
 
   useEffect(() => {
     if (disableInternalToolbar && onToolbarChange) {
@@ -212,12 +172,7 @@ export function DirectoryView({
       toolbar={disableInternalToolbar ? undefined : { topBarLeading: toolbarLeading, topBarTrailing: toolbarTrailing }}
     >
       {entries.length === 0 ? (
-        <VStack frame={{ maxWidth: 'infinity', maxHeight: 'infinity' }} alignment="center">
-          <Spacer />
-          <SVG filePath={`${Script.directory}/assets/icon/folder.svg`} resizable frame={{ width: 128, height: 128 }} />
-          <Text styledText={{ content: l10n.emptyFolder, font: 16, fontWeight: 'bold', foregroundColor: '#8e8e93' }} />
-          <Spacer />
-        </VStack>
+        <DirectoryEmptyState message={l10n.emptyFolder} />
       ) : (
         <List
           listStyle="inset"
