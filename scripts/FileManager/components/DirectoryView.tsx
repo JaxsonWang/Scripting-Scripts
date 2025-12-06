@@ -1,4 +1,18 @@
-import { List, Navigation, NavigationLink, Script, VStack, useCallback, useEffect, useState } from 'scripting'
+import {
+  Button,
+  List,
+  Markdown,
+  Navigation,
+  NavigationLink,
+  NavigationStack,
+  ScrollView,
+  Script,
+  Text,
+  VStack,
+  useCallback,
+  useEffect,
+  useState
+} from 'scripting'
 import type { FileEntry, L10n, LanguageOption, Locale, TransferState } from '../types'
 import { DirectoryEmptyState } from './DirectoryEmptyState'
 import { useFileOperations } from '../hooks/useFileOperations'
@@ -7,7 +21,7 @@ import { useFilePreview } from '../hooks/useFilePreview'
 import { useDirectoryToolbar } from '../hooks/useDirectoryToolbar'
 import { usePreferencesSheet } from '../hooks/usePreferencesSheet'
 import { useFileRowRenderer } from '../hooks/useFileRowRenderer'
-import { canEditWithEditor, getEditorExtension, isImageFile } from '../utils/text_file'
+import { canEditWithEditor, getEditorExtension, isImageFile, isMarkdownFile } from '../utils/text_file'
 
 export type DirectoryViewProps = {
   rootPath: string
@@ -170,8 +184,30 @@ export function DirectoryView({
     [currentPath, l10n]
   )
 
+  const previewMarkdownFile = useCallback(
+    async (name: string) => {
+      const filePath = currentPath + '/' + name
+      let content: string
+      try {
+        content = await FileManager.readAsString(filePath)
+      } catch (error) {
+        console.error('[handleOpenFile] read markdown failed', filePath, error)
+        await Dialog.alert({ title: l10n.previewFailed, message: String(error) })
+        return
+      }
+      await Navigation.present({
+        element: <MarkdownPreviewView name={name} content={content} l10n={l10n} />
+      })
+    },
+    [currentPath, l10n]
+  )
+
   const handleOpenFile = useCallback(
     async (name: string) => {
+      if (isMarkdownFile(name)) {
+        await previewMarkdownFile(name)
+        return
+      }
       if (canEditWithEditor(name)) {
         await previewTextFile(name)
         return
@@ -197,7 +233,7 @@ export function DirectoryView({
       }
       await quickLookFile(name)
     },
-    [previewTextFile, quickLookFile, currentPath, l10n]
+    [previewMarkdownFile, previewTextFile, quickLookFile, currentPath, l10n]
   )
 
   const handleExit = useCallback(() => {
@@ -297,5 +333,28 @@ export function DirectoryView({
         </List>
       )}
     </VStack>
+  )
+}
+
+type MarkdownPreviewProps = {
+  name: string
+  content: string
+  l10n: L10n
+}
+
+function MarkdownPreviewView({ name, content, l10n }: MarkdownPreviewProps) {
+  const dismiss = Navigation.useDismiss()
+  return (
+    <NavigationStack
+      toolbar={{
+        topBarLeading: <Text styledText={{ content: name, font: 16, fontWeight: 'bold' }} />,
+        topBarTrailing: <Button title={l10n.done} action={dismiss} />
+      }}
+      padding={{ horizontal: 20, top: 30 }}
+    >
+      <ScrollView>
+        <Markdown content={content} theme="github" useDefaultHighlighterTheme scrollable={false} />
+      </ScrollView>
+    </NavigationStack>
   )
 }

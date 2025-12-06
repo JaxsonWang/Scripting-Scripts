@@ -3,7 +3,7 @@ const IMAGE_EXTENSIONS = ['png', 'jpg', 'jpeg', 'heic', 'heif', 'gif', 'webp', '
 
 type EditorExt = (typeof EDITABLE_EXTENSIONS)[number]
 
-export const canEditWithEditor = (fileName: string): fileName is string => {
+export const canEditWithEditor = (fileName: string): boolean => {
   const ext = extractExtension(fileName)
   if (!ext) return false
   return EDITABLE_EXTENSIONS.includes(ext as EditorExt)
@@ -24,3 +24,5 @@ export const isImageFile = (fileName: string): boolean => {
   if (!ext) return false
   return IMAGE_EXTENSIONS.includes(ext as (typeof IMAGE_EXTENSIONS)[number])
 }
+
+export const isMarkdownFile = (fileName: string): boolean => extractExtension(fileName) === 'md'
