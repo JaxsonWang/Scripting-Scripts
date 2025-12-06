@@ -1,12 +1,9 @@
-import { Button, ControlGroup, HStack, Image, Navigation, Text, VStack, useMemo } from 'scripting'
+import { Button, ControlGroup, HStack, Image, Text, VStack, useMemo } from 'scripting'
 import type { DirectoryToolbarOptions } from '../types'
-import { FileInfoView } from '../components/FileInfoView'
 
 export const useDirectoryToolbar = ({
   currentDirName,
   relativePath,
-  currentPath,
-  entriesCount,
   transfer,
   l10n,
   handleCreateFolder,
@@ -14,7 +11,7 @@ export const useDirectoryToolbar = ({
   handlePaste,
   handlePreferences,
   handleExit,
-  currentDirStat
+  handleShowInfo
 }: DirectoryToolbarOptions) => {
   const toolbarLeading = useMemo(
     () => (
@@ -33,19 +30,7 @@ export const useDirectoryToolbar = ({
           <Button title={l10n.addFolder} systemImage="folder.badge.plus" action={handleCreateFolder} />
           <Button title={l10n.addFile} systemImage="doc.badge.plus" action={handleCreateFile} />
           {transfer ? <Button title={l10n.pasteLabel} systemImage="doc.on.clipboard" action={handlePaste} /> : null}
-          <Button
-            title={l10n.info}
-            systemImage="info.circle"
-            action={async () => {
-              if (!currentDirStat) {
-                console.warn('[DirectoryToolbar] summary pressed without currentDirStat')
-                return
-              }
-              await Navigation.present({
-                element: <FileInfoView name={currentDirName} path={currentPath} stat={currentDirStat} isDirectory autoComputeSize l10n={l10n} />
-              })
-            }}
-          />
+          <Button title={l10n.info} systemImage="info.circle" action={handleShowInfo} />
         </ControlGroup>
         <Button action={handlePreferences}>
           <Image systemName="gearshape" frame={{ width: 20, height: 20 }} />
@@ -55,7 +40,7 @@ export const useDirectoryToolbar = ({
         </Button>
       </HStack>
     ),
-    [l10n, handleCreateFolder, handleCreateFile, handlePaste, currentPath, currentDirName, currentDirStat, handlePreferences, handleExit, transfer]
+    [l10n, handleCreateFolder, handleCreateFile, handlePaste, handlePreferences, handleExit, transfer, handleShowInfo]
   )
 
   return { toolbarLeading, toolbarTrailing }

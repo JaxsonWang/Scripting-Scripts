@@ -68,6 +68,25 @@ export type FileEntry = {
   stat?: FileStat
 }
 
+export type DirectoryStateOptions = {
+  path: string
+  l10n: L10n
+  externalReloadPath: string | null
+  requestExternalReload: (path: string | null) => void
+}
+
+export type DirectoryState = {
+  entries: FileEntry[]
+  showHidden: boolean
+  setShowHidden: (value: boolean) => void
+  toastMessage: string
+  setToastMessage: (value: string) => void
+  toastShown: boolean
+  setToastShown: (value: boolean) => void
+  currentStat: FileStat | null
+  triggerReload: () => void
+}
+
 export type DirectoryViewProps = {
   rootPath: string
   path: string
@@ -115,6 +134,17 @@ export type FileInfoViewProps = {
   l10n: L10n
 }
 
+export type FileInfoPresenterOptions = {
+  l10n: L10n
+}
+
+export type FileInfoRequest = {
+  name: string
+  path: string
+  stat?: FileStat
+  autoComputeSize?: boolean
+}
+
 export type MarkdownPreviewProps = {
   name: string
   content: string
@@ -141,6 +171,12 @@ export type FileRowRendererConfig = {
   handleDelete: (name: string) => void | Promise<void>
 }
 
+export type PreviewHandlersOptions = {
+  currentPath: string
+  l10n: L10n
+  triggerReload: () => void
+}
+
 export type FileOperationsConfig = {
   currentPath: string
   transfer: TransferState | null
@@ -165,8 +201,6 @@ export type PreferencesSheetOptions = {
 export type DirectoryToolbarOptions = {
   currentDirName: string
   relativePath: string
-  currentPath: string
-  entriesCount: number
   transfer: TransferState | null
   l10n: L10n
   handleCreateFolder: () => Promise<void>
@@ -174,5 +208,5 @@ export type DirectoryToolbarOptions = {
   handlePaste: () => Promise<void>
   handlePreferences: () => void
   handleExit: () => void
-  currentDirStat?: FileStat
+  handleShowInfo: () => void | Promise<void>
 }

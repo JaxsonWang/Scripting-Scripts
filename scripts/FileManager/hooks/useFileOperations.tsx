@@ -1,6 +1,5 @@
-import { Navigation, useCallback } from 'scripting'
+import { useCallback } from 'scripting'
 import type { FileOperationsConfig } from '../types'
-import { FileInfoView } from '../components/FileInfoView'
 
 export const useFileOperations = ({
   currentPath,
@@ -12,78 +11,96 @@ export const useFileOperations = ({
   l10n,
   triggerReload
 }: FileOperationsConfig) => {
+  const buildPath = useCallback((name: string) => currentPath + '/' + name, [currentPath])
+
+  const alertFailure = useCallback(
+    async (context: string, error: unknown) => {
+      console.error(`[useFileOperations][${context}]`, error)
+      await Dialog.alert({ title: l10n.previewFailed, message: String(error) })
+    },
+    [l10n]
+  )
+
+  const executeAndReload = useCallback(
+    async (context: string, task: () => Promise<void>) => {
+      try {
+        await task()
+        triggerReload()
+      } catch (error) {
+        await alertFailure(context, error)
+      }
+    },
+    [alertFailure, triggerReload]
+  )
+
   const handleCopy = useCallback(
     async (name: string) => {
-      const filePath = currentPath + '/' + name
+      const filePath = buildPath(name)
       await Pasteboard.setString(filePath)
       setTransfer({ sourcePath: filePath, isMove: false })
       setToastMessage(l10n.copiedToast)
       setToastShown(true)
     },
-    [currentPath, setTransfer, setToastMessage, setToastShown, l10n]
+    [buildPath, setTransfer, setToastMessage, setToastShown, l10n]
   )
 
   const handleMove = useCallback(
     (name: string) => {
-      const filePath = currentPath + '/' + name
+      const filePath = buildPath(name)
       setTransfer({ sourcePath: filePath, isMove: true })
       setToastMessage(l10n.moveToast)
       setToastShown(true)
     },
-    [currentPath, setTransfer, setToastMessage, setToastShown, l10n]
+    [buildPath, setTransfer, setToastMessage, setToastShown, l10n]
   )
 
   const handleDelete = useCallback(
     async (name: string) => {
-      const filePath = currentPath + '/' + name
+      const filePath = buildPath(name)
       const confirm = await Dialog.confirm({
         title: l10n.deleteTitle,
         message: l10n.deleteConfirm(name),
         confirmLabel: l10n.deleteConfirmLabel
       })
       if (confirm) {
-        await FileManager.remove(filePath)
-        triggerReload()
+        await executeAndReload('delete', () => FileManager.remove(filePath))
       }
     },
-    [currentPath, triggerReload, l10n]
+    [buildPath, executeAndReload, l10n]
   )
 
   const handleCreateFolder = useCallback(async () => {
     const name = await Dialog.prompt({ title: l10n.newFolderTitle })
     if (name) {
-      await FileManager.createDirectory(currentPath + '/' + name)
-      triggerReload()
+      await executeAndReload('createDirectory', () => FileManager.createDirectory(buildPath(name)))
     }
-  }, [currentPath, triggerReload, l10n])
+  }, [buildPath, executeAndReload, l10n])
 
   const handleCreateFile = useCallback(async () => {
     const name = await Dialog.prompt({ title: l10n.newFileTitle, defaultValue: 'untitled.txt' })
     if (name) {
-      await FileManager.writeAsString(currentPath + '/' + name, '')
-      triggerReload()
+      await executeAndReload('createFile', () => FileManager.writeAsString(buildPath(name), ''))
     }
-  }, [currentPath, triggerReload, l10n])
+  }, [buildPath, executeAndReload, l10n])
 
   const handleRename = useCallback(
     async (name: string) => {
-      const filePath = currentPath + '/' + name
+      const filePath = buildPath(name)
       const newName = await Dialog.prompt({
         title: l10n.renameTitle,
         defaultValue: name,
         confirmLabel: l10n.renameConfirm
       })
       if (newName && newName !== name) {
-        await FileManager.rename(filePath, currentPath + '/' + newName)
-        triggerReload()
+        await executeAndReload('rename', () => FileManager.rename(filePath, buildPath(newName)))
       }
     },
-    [currentPath, triggerReload, l10n]
+    [buildPath, executeAndReload, l10n]
   )
 
   const handleDuplicate = useCallback(
     async (name: string) => {
-      const filePath = currentPath + '/' + name
+      const filePath = buildPath(name)
       let newName = name
       if (name.includes('.')) {
         const parts = name.split('.')
@@ -92,10 +109,9 @@ export const useFileOperations = ({
       } else {
         newName = name + ' copy'
       }
-      await FileManager.copyFile(filePath, currentPath + '/' + newName)
-      triggerReload()
+      await executeAndReload('duplicate', () => FileManager.copyFile(filePath, buildPath(newName)))
     },
-    [currentPath, triggerReload]
+    [buildPath, executeAndReload]
   )
 
   const handlePaste = useCallback(async () => {
@@ -108,7 +124,7 @@ export const useFileOperations = ({
     const ensureUnique = (name: string) => {
       let candidate = name
       let idx = 1
-      while (FileManager.existsSync(currentPath + '/' + candidate)) {
+      while (FileManager.existsSync(buildPath(candidate))) {
         const parts = candidate.split('.')
         if (parts.length > 1) {
           const ext = parts.pop()
@@ -121,7 +137,7 @@ export const useFileOperations = ({
       return candidate
     }
     const targetName = ensureUnique(base)
-    const target = currentPath + '/' + targetName
+    const target = buildPath(targetName)
     try {
       if (transfer?.isMove) {
         await FileManager.rename(source, target)
@@ -133,29 +149,9 @@ export const useFileOperations = ({
       setTransfer(null)
       triggerReload()
     } catch (error) {
-      console.error(error)
-      await Dialog.alert({ title: l10n.previewFailed, message: String(error) })
+      await alertFailure('paste', error)
     }
-  }, [currentPath, transfer, setTransfer, requestExternalReload, triggerReload, l10n])
-
-  const handleInfo = useCallback(
-    async (name: string) => {
-      const filePath = currentPath + '/' + name
-      const stat = await FileManager.stat(filePath)
-      let isDirectory = stat.type === 'directory'
-      if (!isDirectory) {
-        try {
-          isDirectory = FileManager.isDirectorySync(filePath)
-        } catch (error) {
-          console.error('[FileInfo] isDirectorySync failed', filePath, error)
-        }
-      }
-      await Navigation.present({
-        element: <FileInfoView name={name} path={filePath} stat={stat} isDirectory={isDirectory} autoComputeSize={isDirectory} l10n={l10n} />
-      })
-    },
-    [currentPath, l10n]
-  )
+  }, [buildPath, transfer, setTransfer, requestExternalReload, triggerReload, l10n, alertFailure])
 
   return {
     handleCopy,
@@ -165,7 +161,6 @@ export const useFileOperations = ({
     handleCreateFile,
     handleRename,
     handleDuplicate,
-    handlePaste,
-    handleInfo
+    handlePaste
   }
 }

@@ -14,11 +14,23 @@
   },
   "description": "Manage files in Documents and AppGroup directories.",
   "version": "1.0.1",
-  "remoteResource": null,
   "localizedNames": {
     "en": "File Manager",
     "zh": "文件管理器"
   },
   "contributors": [],
-  "icon": "folder.fill"
+  "icon": "folder.fill",
+  "changelog": [
+    "在目录显示简介支持显示统计当前文件夹大小",
+    "支持对特定文本类型进行查看和编辑",
+    "支持 markdown 文件预览",
+    "支持图片文件预览",
+    "修复偏好设置切换语言面板不生效的问题",
+    "优化代码和新增翻译"
+  ],
+  "remoteResource": {
+    "autoUpdateInterval": 86400,
+    "url": "https://raw.githubusercontent.com/JaxsonWang/Scripting-Scripts/refs/heads/main/releases/FileManager.scripting",
+    "hash": "00783b94652970dc0250169d974fa77b"
+  }
 }

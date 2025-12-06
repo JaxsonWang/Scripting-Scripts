@@ -1,28 +1,14 @@
-import {
-  Button,
-  List,
-  Markdown,
-  Navigation,
-  NavigationLink,
-  NavigationStack,
-  Script,
-  ScrollView,
-  Text,
-  VStack,
-  useCallback,
-  useEffect,
-  useRef,
-  useState
-} from 'scripting'
-import type { DirectoryViewProps, FileEntry, MarkdownPreviewProps } from '../types'
+import { List, Navigation, NavigationLink, Script, Text, VStack, useCallback, useEffect } from 'scripting'
+import type { DirectoryViewProps } from '../types'
 import { DirectoryEmptyState } from './DirectoryEmptyState'
 import { useFileOperations } from '../hooks/useFileOperations'
-import { useDirectoryEntries } from '../hooks/useDirectoryEntries'
-import { useFilePreview } from '../hooks/useFilePreview'
 import { useDirectoryToolbar } from '../hooks/useDirectoryToolbar'
 import { usePreferencesSheet } from '../hooks/usePreferencesSheet'
 import { useFileRowRenderer } from '../hooks/useFileRowRenderer'
-import { canEditWithEditor, getEditorExtension, isImageFile, isMarkdownFile } from '../utils/text_file'
+import { useDirectoryState } from '../hooks/useDirectoryState'
+import { usePreviewHandlers } from '../hooks/usePreviewHandlers'
+import { useFileInfoPresenter } from '../hooks/useFileInfoPresenter'
+import { useReopenableSheet } from '../hooks/useReopenableSheet'
 
 const formatRelativePath = (path: string, rootPath: string): string => {
   const relative = path === rootPath ? '/' : path.replace(rootPath, '') || '/'
@@ -55,45 +41,21 @@ export function DirectoryView({
   languageOptions
 }: DirectoryViewProps) {
   const currentPath = path
-  const [toastShown, setToastShown] = useState(false)
-  const [toastMessage, setToastMessage] = useState(l10n.copiedToast)
-  const [currentStat, setCurrentStat] = useState<FileStat | null>(null)
-
-  useEffect(() => {
-    setToastMessage(l10n.copiedToast)
-  }, [l10n])
-
   const dismiss = Navigation.useDismiss()
 
-  useEffect(() => {
-    let cancelled = false
-    FileManager.stat(currentPath)
-      .then(stat => {
-        if (!cancelled) {
-          setCurrentStat(stat)
-        }
-      })
-      .catch(err => {
-        console.error('[DirectoryView] failed to load current stat', currentPath, err)
-        if (!cancelled) {
-          setCurrentStat(null)
-        }
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [currentPath])
+  const {
+    entries,
+    showHidden,
+    setShowHidden,
+    toastMessage,
+    setToastMessage,
+    toastShown,
+    setToastShown,
+    currentStat,
+    triggerReload
+  } = useDirectoryState({ path: currentPath, l10n, externalReloadPath, requestExternalReload })
 
-  const { entries, showHidden, setShowHidden, triggerReload } = useDirectoryEntries({
-    path: currentPath,
-    l10n,
-    externalReloadPath,
-    requestExternalReload
-  })
-
-  const quickLookFile = useFilePreview(currentPath, l10n)
-
-  const { handleCopy, handleMove, handleDelete, handleCreateFolder, handleCreateFile, handleRename, handleDuplicate, handlePaste, handleInfo } =
+  const { handleCopy, handleMove, handleDelete, handleCreateFolder, handleCreateFile, handleRename, handleDuplicate, handlePaste } =
     useFileOperations({
       currentPath,
       transfer,
@@ -105,138 +67,45 @@ export function DirectoryView({
       triggerReload
     })
 
-  const preferencesOpenerRef = useRef<() => void>(() => {})
+  const { handleOpenFile, handleEdit } = usePreviewHandlers({ currentPath, l10n, triggerReload })
+  const { showInfo } = useFileInfoPresenter({ l10n })
 
-  preferencesOpenerRef.current = usePreferencesSheet({
+  const isRoot = currentPath === rootPath
+  const currentDirName = isRoot ? rootDisplayName : currentPath.split('/').pop() || rootDisplayName
+  const relativePath = formatRelativePath(currentPath, rootPath)
+
+  const handleInfo = useCallback(
+    (name: string) => showInfo({ name, path: `${currentPath}/${name}` }),
+    [showInfo, currentPath]
+  )
+
+  const handleCurrentDirInfo = useCallback(() => {
+    if (!currentStat) {
+      console.warn('[DirectoryView] summary pressed without current stat', currentPath)
+      return
+    }
+    return showInfo({ name: currentDirName, path: currentPath, stat: currentStat, autoComputeSize: true })
+  }, [currentDirName, currentPath, currentStat, showInfo])
+
+  const { register: registerPreferencesOpener, open: handlePreferences, reopen } = useReopenableSheet()
+  const preferencesSheetOpener = usePreferencesSheet({
     showHidden,
     setShowHidden,
     l10n,
     locale,
     onLocaleChange,
     languageOptions,
-    onLanguageChanged: () => {
-      setTimeout(() => {
-        preferencesOpenerRef.current()
-      }, 0)
-    }
+    onLanguageChanged: reopen
   })
-  const handlePreferences = useCallback(() => {
-    preferencesOpenerRef.current()
-  }, [])
 
-  const handleEdit = useCallback(
-    async (entry: FileEntry) => {
-      if (!canEditWithEditor(entry.name)) {
-        return
-      }
-      const filePath = entry.path
-      let content: string
-      try {
-        content = await FileManager.readAsString(filePath)
-      } catch (error) {
-        console.error('[handleEdit] read failed', filePath, error)
-        await Dialog.alert({ title: l10n.previewFailed, message: String(error) })
-        return
-      }
-      const controller = new EditorController({ content, ext: getEditorExtension(entry.name) })
-      try {
-        await controller.present({ navigationTitle: entry.name })
-        await FileManager.writeAsString(filePath, controller.content)
-        triggerReload()
-      } catch (error) {
-        console.error('[handleEdit] editor failed', filePath, error)
-        await Dialog.alert({ title: l10n.previewFailed, message: String(error) })
-      } finally {
-        controller.dispose()
-      }
-    },
-    [triggerReload, l10n]
-  )
-
-  const previewTextFile = useCallback(
-    async (name: string) => {
-      const filePath = currentPath + '/' + name
-      let content: string
-      try {
-        content = await FileManager.readAsString(filePath)
-      } catch (error) {
-        console.error('[handleOpenFile] read text failed', filePath, error)
-        await Dialog.alert({ title: l10n.previewFailed, message: String(error) })
-        return
-      }
-      const controller = new EditorController({ content, ext: getEditorExtension(name), readOnly: true })
-      try {
-        await controller.present({ navigationTitle: name })
-      } catch (error) {
-        console.error('[handleOpenFile] editor preview failed', filePath, error)
-        await Dialog.alert({ title: l10n.previewFailed, message: String(error) })
-      } finally {
-        controller.dispose()
-      }
-    },
-    [currentPath, l10n]
-  )
-
-  const previewMarkdownFile = useCallback(
-    async (name: string) => {
-      const filePath = currentPath + '/' + name
-      let content: string
-      try {
-        content = await FileManager.readAsString(filePath)
-      } catch (error) {
-        console.error('[handleOpenFile] read markdown failed', filePath, error)
-        await Dialog.alert({ title: l10n.previewFailed, message: String(error) })
-        return
-      }
-      await Navigation.present({
-        element: <MarkdownPreviewView name={name} content={content} l10n={l10n} />
-      })
-    },
-    [currentPath, l10n]
-  )
-
-  const handleOpenFile = useCallback(
-    async (name: string) => {
-      if (isMarkdownFile(name)) {
-        await previewMarkdownFile(name)
-        return
-      }
-      if (canEditWithEditor(name)) {
-        await previewTextFile(name)
-        return
-      }
-      if (isImageFile(name)) {
-        const imagePath = currentPath + '/' + name
-        try {
-          if (!FileManager.existsSync(imagePath)) {
-            await Dialog.alert({ title: l10n.fileNotFound, message: imagePath })
-            return
-          }
-          const image = UIImage.fromFile(imagePath)
-          if (!image) {
-            await Dialog.alert({ title: l10n.previewFailed, message: l10n.fileNotFound })
-            return
-          }
-          await QuickLook.previewImage(image)
-        } catch (error) {
-          console.error('[handleOpenFile] image preview failed', imagePath, error)
-          await Dialog.alert({ title: l10n.previewFailed, message: String(error) })
-        }
-        return
-      }
-      await quickLookFile(name)
-    },
-    [previewMarkdownFile, previewTextFile, quickLookFile, currentPath, l10n]
-  )
+  useEffect(() => {
+    registerPreferencesOpener(preferencesSheetOpener)
+  }, [preferencesSheetOpener, registerPreferencesOpener])
 
   const handleExit = useCallback(() => {
     dismiss()
     Script.exit()
   }, [dismiss])
-
-  const isRoot = currentPath === rootPath
-  const currentDirName = isRoot ? rootDisplayName : currentPath.split('/').pop() || rootDisplayName
-  const relativePath = formatRelativePath(currentPath, rootPath)
 
   const renderFileRow = useFileRowRenderer({
     l10n,
@@ -253,8 +122,6 @@ export function DirectoryView({
   const { toolbarLeading, toolbarTrailing } = useDirectoryToolbar({
     currentDirName,
     relativePath,
-    currentPath,
-    entriesCount: entries.length,
     transfer,
     l10n,
     handleCreateFolder,
@@ -262,12 +129,12 @@ export function DirectoryView({
     handlePaste,
     handlePreferences,
     handleExit,
-    currentDirStat: currentStat || undefined
+    handleShowInfo: handleCurrentDirInfo
   })
 
   useEffect(() => {
-    if (disableInternalToolbar && onToolbarChange) {
-      onToolbarChange(tag ?? 0, toolbarLeading, toolbarTrailing)
+    if (disableInternalToolbar && onToolbarChange && tag != null) {
+      onToolbarChange(tag, toolbarLeading, toolbarTrailing)
     }
   }, [disableInternalToolbar, onToolbarChange, tag, toolbarLeading, toolbarTrailing])
 
@@ -326,22 +193,5 @@ export function DirectoryView({
         </List>
       )}
     </VStack>
-  )
-}
-
-function MarkdownPreviewView({ name, content, l10n }: MarkdownPreviewProps) {
-  const dismiss = Navigation.useDismiss()
-  return (
-    <NavigationStack
-      toolbar={{
-        topBarLeading: <Text styledText={{ content: name, font: 16, fontWeight: 'bold' }} />,
-        topBarTrailing: <Button title={l10n.done} action={dismiss} />
-      }}
-      padding={{ horizontal: 20, top: 30 }}
-    >
-      <ScrollView>
-        <Markdown content={content} theme="github" useDefaultHighlighterTheme scrollable={false} />
-      </ScrollView>
-    </NavigationStack>
   )
 }
