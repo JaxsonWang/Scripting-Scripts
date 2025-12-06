@@ -2,6 +2,10 @@ import { Navigation, useCallback } from 'scripting'
 import { FileInfoView } from '../components/FileInfoView'
 import type { FileInfoPresenterOptions, FileInfoRequest } from '../types'
 
+/**
+ * 提供 showInfo 方法，封装 stat 获取与视图展示
+ * @param options presenter 依赖
+ */
 export const useFileInfoPresenter = ({ l10n }: FileInfoPresenterOptions) => {
   const showInfo = useCallback(
     async ({ name, path, stat, autoComputeSize }: FileInfoRequest) => {

@@ -1,6 +1,10 @@
 import { useCallback } from 'scripting'
 import type { FileOperationsConfig } from '../types'
 
+/**
+ * 集中管理剪贴板、重命名、删除等文件操作
+ * @param config 操作依赖项
+ */
 export const useFileOperations = ({
   currentPath,
   transfer,
@@ -11,8 +15,17 @@ export const useFileOperations = ({
   l10n,
   triggerReload
 }: FileOperationsConfig) => {
+  /**
+   * 构造当前目录下的绝对路径
+   * @param name 子项名称
+   */
   const buildPath = useCallback((name: string) => currentPath + '/' + name, [currentPath])
 
+  /**
+   * 统一捕获错误并提示用户
+   * @param context 操作名
+   * @param error 报错对象
+   */
   const alertFailure = useCallback(
     async (context: string, error: unknown) => {
       console.error(`[useFileOperations][${context}]`, error)
@@ -21,6 +34,11 @@ export const useFileOperations = ({
     [l10n]
   )
 
+  /**
+   * 执行异步写操作并在完成后刷新列表
+   * @param context 操作名
+   * @param task 具体操作
+   */
   const executeAndReload = useCallback(
     async (context: string, task: () => Promise<void>) => {
       try {

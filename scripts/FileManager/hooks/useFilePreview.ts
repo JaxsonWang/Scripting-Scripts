@@ -1,6 +1,11 @@
 import { useCallback } from 'scripting'
 import type { L10n } from '../types'
 
+/**
+ * 提供 QuickLook 预览文件的回调
+ * @param currentPath 当前目录
+ * @param l10n 文案
+ */
 export const useFilePreview = (currentPath: string, l10n: L10n) => {
   const handleOpenFile = useCallback(
     async (name: string) => {

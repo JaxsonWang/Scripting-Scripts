@@ -1,11 +1,18 @@
 import { useCallback, useEffect, useState } from 'scripting'
 import type { FileEntry, UseDirectoryEntriesOptions } from '../types'
 
+/**
+ * 管理当前目录的文件列表及隐藏项状态
+ * @param options 目录参数
+ */
 export const useDirectoryEntries = ({ path, l10n, externalReloadPath, requestExternalReload, showHiddenDefault = true }: UseDirectoryEntriesOptions) => {
   const [entries, setEntries] = useState<FileEntry[]>([])
   const [showHidden, setShowHidden] = useState(showHiddenDefault)
   const [version, bumpVersion] = useState(0)
 
+  /**
+   * 读取目录并缓存排序结果
+   */
   const loadFiles = useCallback(async () => {
     try {
       const names = await FileManager.readDirectory(path)
@@ -49,6 +56,9 @@ export const useDirectoryEntries = ({ path, l10n, externalReloadPath, requestExt
     }
   }, [externalReloadPath, path, loadFiles, requestExternalReload])
 
+  /**
+   * 手动触发一次刷新
+   */
   const triggerReload = useCallback(() => bumpVersion(v => v + 1), [])
 
   return { entries, showHidden, setShowHidden, triggerReload }

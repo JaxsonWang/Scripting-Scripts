@@ -3,6 +3,10 @@ import type { FileInfoViewProps } from '../types'
 import { resolveIconName } from '../utils/file_icon'
 import { computeDirectorySize } from '../utils/file_size'
 
+/**
+ * 格式化文件大小
+ * @param size 字节数
+ */
 const formatSize = (size: number): string => {
   if (size === 0) return '0 B'
   const units = ['B', 'KB', 'MB', 'GB', 'TB']
@@ -11,7 +15,11 @@ const formatSize = (size: number): string => {
   return `${value.toFixed(exponent === 0 ? 0 : 1)} ${units[exponent]}`
 }
 
-export function FileInfoView({ name, path, stat, isDirectory, sizeOverride, autoComputeSize, l10n }: FileInfoViewProps) {
+/**
+ * 文件信息视图，显示图标及基本元数据
+ * @param props 信息视图参数
+ */
+export const FileInfoView = ({ name, path, stat, isDirectory, sizeOverride, autoComputeSize, l10n }: FileInfoViewProps) => {
   const dismiss = Navigation.useDismiss()
   const [size, setSize] = useState(sizeOverride ?? stat.size)
   const [sizeLoading, setSizeLoading] = useState<boolean>(Boolean(autoComputeSize && sizeOverride == null && isDirectory))

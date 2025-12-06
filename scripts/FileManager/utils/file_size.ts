@@ -1,3 +1,7 @@
+/**
+ * 递归计算目录大小
+ * @param dirPath 目录路径
+ */
 export const computeDirectorySize = async (dirPath: string): Promise<number> => {
   let total = 0
   let entries: string[] = []

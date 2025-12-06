@@ -2,6 +2,10 @@ import { Navigation, useCallback } from 'scripting'
 import { PreferencesScreen } from '../screens/PreferencesScreen'
 import type { Locale, PreferencesSheetOptions } from '../types'
 
+/**
+ * 提供打开偏好设置面板的方法
+ * @param options 偏好面板依赖
+ */
 export const usePreferencesSheet = ({
   showHidden,
   setShowHidden,

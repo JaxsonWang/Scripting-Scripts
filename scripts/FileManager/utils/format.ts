@@ -1,8 +1,8 @@
 /**
  * 格式化文件大小
- * @param size
+ * @param size 字节数
  */
-export function formatSize(size: number): string {
+export const formatSize = (size: number): string => {
   if (size < 1024) {
     return size + ' B'
   } else if (size < 1024 * 1024) {
@@ -14,7 +14,11 @@ export function formatSize(size: number): string {
   }
 }
 
-export function formatDate(timestamp: number): string {
+/**
+ * 格式化时间戳
+ * @param timestamp 毫秒值
+ */
+export const formatDate = (timestamp: number): string => {
   const date = new Date(timestamp)
   return date.toLocaleString()
 }

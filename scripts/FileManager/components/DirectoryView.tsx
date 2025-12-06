@@ -10,6 +10,11 @@ import { usePreviewHandlers } from '../hooks/usePreviewHandlers'
 import { useFileInfoPresenter } from '../hooks/useFileInfoPresenter'
 import { useReopenableSheet } from '../hooks/useReopenableSheet'
 
+/**
+ * 将绝对路径压缩为 3 层以内的相对路径，便于顶栏展示
+ * @param path 当前路径
+ * @param rootPath 根目录
+ */
 const formatRelativePath = (path: string, rootPath: string): string => {
   const relative = path === rootPath ? '/' : path.replace(rootPath, '') || '/'
   if (relative === '/') {
@@ -23,7 +28,11 @@ const formatRelativePath = (path: string, rootPath: string): string => {
   return `…/${tail}`
 }
 
-export function DirectoryView({
+/**
+ * 目录浏览入口组件，负责聚合状态与渲染逻辑
+ * @param props DirectoryView 输入参数
+ */
+export const DirectoryView = ({
   rootPath,
   path,
   rootDisplayName,
@@ -39,7 +48,7 @@ export function DirectoryView({
   locale,
   onLocaleChange,
   languageOptions
-}: DirectoryViewProps) {
+}: DirectoryViewProps) => {
   const currentPath = path
   const dismiss = Navigation.useDismiss()
 
@@ -68,8 +77,15 @@ export function DirectoryView({
   const currentDirName = isRoot ? rootDisplayName : currentPath.split('/').pop() || rootDisplayName
   const relativePath = formatRelativePath(currentPath, rootPath)
 
+  /**
+   * 行级“简介”点击事件，拼接路径后交给信息面板
+   * @param name 文件或目录名称
+   */
   const handleInfo = useCallback((name: string) => showInfo({ name, path: `${currentPath}/${name}` }), [showInfo, currentPath])
 
+  /**
+   * 顶栏“简介”按钮，优先使用缓存 stat，必要时自动计算大小
+   */
   const handleCurrentDirInfo = useCallback(() => {
     if (!currentStat) {
       console.warn('[DirectoryView] summary pressed without current stat', currentPath)
@@ -93,6 +109,9 @@ export function DirectoryView({
     registerPreferencesOpener(preferencesSheetOpener)
   }, [preferencesSheetOpener, registerPreferencesOpener])
 
+  /**
+   * 关闭按钮回调，确保 dismiss 后退出脚本
+   */
   const handleExit = useCallback(() => {
     dismiss()
     Script.exit()

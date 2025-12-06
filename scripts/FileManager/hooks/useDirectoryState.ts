@@ -2,10 +2,17 @@ import { useEffect, useState } from 'scripting'
 import type { DirectoryState, DirectoryStateOptions } from '../types'
 import { useDirectoryEntries } from './useDirectoryEntries'
 
+/**
+ * 汇总目录级别状态（entries/stat/toast）供 DirectoryView 使用
+ * @param options hook 依赖项
+ */
 export const useDirectoryState = ({ path, l10n, externalReloadPath, requestExternalReload }: DirectoryStateOptions): DirectoryState => {
   const [toastMessage, setToastMessage] = useState(l10n.copiedToast)
   const [toastShown, setToastShown] = useState(false)
 
+  /**
+   * 路径变化时刷新当前目录信息
+   */
   useEffect(() => {
     setToastMessage(l10n.copiedToast)
   }, [l10n])

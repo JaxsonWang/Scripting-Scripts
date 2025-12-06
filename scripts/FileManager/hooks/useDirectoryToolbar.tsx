@@ -1,6 +1,10 @@
 import { Button, ControlGroup, HStack, Image, Text, VStack, useMemo } from 'scripting'
 import type { DirectoryToolbarOptions } from '../types'
 
+/**
+ * 构建目录视图顶部工具栏
+ * @param options 工具栏配置
+ */
 export const useDirectoryToolbar = ({
   currentDirName,
   relativePath,

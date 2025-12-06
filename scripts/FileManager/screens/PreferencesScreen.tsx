@@ -3,7 +3,11 @@ import script from '../script.json'
 import type { Locale, PreferencesScreenProps } from '../types'
 import { ChangelogScreen } from './ChangelogScreen'
 
-export function PreferencesScreen({
+/**
+ * 偏好面板，控制显示隐藏项、语言与查看更新日志
+ * @param props 偏好设置属性
+ */
+export const PreferencesScreen = ({
   showHidden,
   onToggleHidden,
   title,
@@ -21,7 +25,7 @@ export function PreferencesScreen({
   onLocaleChange,
   languageOptions,
   onLanguageChanged
-}: PreferencesScreenProps) {
+}: PreferencesScreenProps) => {
   const dismiss = Navigation.useDismiss()
   const changelogEntries = Array.isArray(script.changelog) ? (script.changelog as string[]) : []
   const version = script.version ?? '1.0.0'

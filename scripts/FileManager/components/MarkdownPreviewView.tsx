@@ -1,7 +1,11 @@
 import { Button, Markdown, Navigation, NavigationStack, ScrollView, Text } from 'scripting'
 import type { MarkdownPreviewProps } from '../types'
 
-export function MarkdownPreviewView({ name, content, l10n }: MarkdownPreviewProps) {
+/**
+ * Markdown 预览组件，包装滚动视图以保持可滚动性
+ * @param props Markdown 预览参数
+ */
+export const MarkdownPreviewView = ({ name, content, l10n }: MarkdownPreviewProps) => {
   const dismiss = Navigation.useDismiss()
 
   return (

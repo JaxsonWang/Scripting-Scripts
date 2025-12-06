@@ -1,7 +1,11 @@
 import { SVG, Script, Spacer, Text, VStack } from 'scripting'
 import type { DirectoryEmptyStateProps } from '../types'
 
-export function DirectoryEmptyState({ message }: DirectoryEmptyStateProps) {
+/**
+ * 空目录占位视图
+ * @param props 包含提示文案
+ */
+export const DirectoryEmptyState = ({ message }: DirectoryEmptyStateProps) => {
   return (
     <VStack frame={{ maxWidth: 'infinity', maxHeight: 'infinity' }} alignment="center">
       <Spacer />

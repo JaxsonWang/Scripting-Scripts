@@ -3,6 +3,10 @@ import type { FileEntry, FileRowRendererConfig } from '../types'
 import { FileRow } from '../components/FileRow'
 import { canEditWithEditor } from '../utils/text_file'
 
+/**
+ * 构建渲染文件行的回调，封装所有操作事件
+ * @param config 依赖事件处理器
+ */
 export const useFileRowRenderer = ({
   l10n,
   handleOpenFile,
@@ -28,6 +32,9 @@ export const useFileRowRenderer = ({
     [l10n]
   )
 
+  /**
+   * 渲染单个文件/文件夹行
+   */
   const renderRow = useCallback(
     (entry: FileEntry) => {
       const { name, path, isDir, stat } = entry

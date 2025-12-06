@@ -28,7 +28,25 @@ interface FileRowProps {
   }
 }
 
-export function FileRow({ name, path, isDirectory, stat, onPress, onCopy, onMove, onEdit, onInfo, onRename, onDuplicate, onDelete, labels }: FileRowProps) {
+/**
+ * 单行文件展示组件，包含点击和上下文菜单
+ * @param props 文件行参数
+ */
+export const FileRow = ({
+  name,
+  path,
+  isDirectory,
+  stat,
+  onPress,
+  onCopy,
+  onMove,
+  onEdit,
+  onInfo,
+  onRename,
+  onDuplicate,
+  onDelete,
+  labels
+}: FileRowProps) => {
   const iconPath = useMemo(() => `${Script.directory}/assets/icon/${resolveIconName(name, isDirectory)}.svg`, [isDirectory, name])
   /**
    * 统计目录内的条目数量

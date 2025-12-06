@@ -2,7 +2,11 @@ import { Form, NavigationStack, Section, Text, VStack } from 'scripting'
 import type { ChangelogScreenProps } from '../types'
 import script from '../script.json'
 
-export function ChangelogScreen({ title, versionLabel, version, entries, emptyLabel }: ChangelogScreenProps) {
+/**
+ * 展示脚本版本及更新内容
+ * @param props 变更日志参数
+ */
+export const ChangelogScreen = ({ title, versionLabel, version, entries, emptyLabel }: ChangelogScreenProps) => {
   const list = entries ?? []
 
   return (

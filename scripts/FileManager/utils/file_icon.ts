@@ -40,6 +40,11 @@ const extensionIconMap: Record<string, string> = {
   zip: 'zip'
 }
 
+/**
+ * 根据文件扩展名或目录类型选择 SVG 名称
+ * @param fileName 文件名
+ * @param isDirectory 是否为目录
+ */
 export const resolveIconName = (fileName: string, isDirectory: boolean): string => {
   if (isDirectory) return 'folder'
   const extension = fileName.split('.').pop()?.toLowerCase()
