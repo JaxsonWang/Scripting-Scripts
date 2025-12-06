@@ -53,3 +53,10 @@ export type L10n = {
   languageEnglish: string
   languageChinese: string
 }
+
+export type FileEntry = {
+  name: string
+  path: string
+  isDir: boolean
+  stat?: FileStat
+}

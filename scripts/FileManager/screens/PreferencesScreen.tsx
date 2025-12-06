@@ -1,4 +1,4 @@
-import { Button, Form, Navigation, NavigationStack, Picker, Section, Text, Toggle } from 'scripting'
+import { Button, Form, Navigation, NavigationStack, Picker, Section, Text, Toggle, VStack } from 'scripting'
 
 type PreferencesScreenProps = {
   showHidden: boolean
@@ -40,7 +40,18 @@ export function PreferencesScreen({
         <Section header={<Text>{sectionTitle}</Text>}>
           <Toggle title={toggleLabel} value={showHidden} onChanged={onToggleHidden} />
         </Section>
-        <Section header={<Text>{languageSectionTitle}</Text>}>
+        <Section
+          header={<Text>{languageSectionTitle}</Text>}
+          footer={
+            <VStack spacing={10} alignment="leading">
+              <Text font="footnote" foregroundStyle="secondaryLabel">
+                File Manager
+                {'\n'}
+                淮城一只猫© - Power by Scripting
+              </Text>
+            </VStack>
+          }
+        >
           <Picker title={languagePickerTitle} value={locale} onChanged={onLocaleChange as any}>
             {languageOptions.map(option => (
               <Text key={option.value} tag={option.value}>

@@ -16,12 +16,12 @@ import {
   useMemo,
   useState
 } from 'scripting'
-import type { L10n, LanguageOption, Locale, TransferState } from '../types'
+import type { FileEntry, L10n, LanguageOption, Locale, TransferState } from '../types'
 import { FileRow } from './FileRow'
 import { PreferencesScreen } from '../screens/PreferencesScreen'
 import { useFileOperations } from '../hooks/useFileOperations'
-
-type FileEntry = { name: string; path: string; isDir: boolean; stat?: FileStat }
+import { useDirectoryEntries } from '../hooks/useDirectoryEntries'
+import { useFilePreview } from '../hooks/useFilePreview'
 
 export type DirectoryViewProps = {
   rootPath: string
@@ -72,9 +72,6 @@ export function DirectoryView({
   languageOptions
 }: DirectoryViewProps) {
   const currentPath = path
-  const [entries, setEntries] = useState<FileEntry[]>([])
-  const [showHidden, setShowHidden] = useState(true)
-  const [version, bumpVersion] = useState(0)
   const [toastShown, setToastShown] = useState(false)
   const [toastMessage, setToastMessage] = useState(l10n.copiedToast)
 
@@ -84,50 +81,12 @@ export function DirectoryView({
 
   const dismiss = Navigation.useDismiss()
 
-  const loadFiles = useCallback(async () => {
-    try {
-      const names = await FileManager.readDirectory(currentPath)
-      const filtered = names.filter(name => showHidden || !name.startsWith('.'))
-      const withMeta: FileEntry[] = filtered.map(name => {
-        const fullPath = currentPath + '/' + name
-        let isDir = false
-        let stat: FileStat | undefined = undefined
-        try {
-          isDir = FileManager.isDirectorySync(fullPath)
-        } catch (err) {
-          console.error('[DirectoryView] isDirectorySync failed', fullPath, err)
-        }
-        try {
-          stat = FileManager.statSync(fullPath)
-        } catch (err) {
-          console.error('[DirectoryView] statSync failed', fullPath, err)
-        }
-        return { name, path: fullPath, isDir, stat }
-      })
-      const sorted = withMeta.sort((a, b) => {
-        if (a.isDir && !b.isDir) return -1
-        if (!a.isDir && b.isDir) return 1
-        return a.name.localeCompare(b.name)
-      })
-      setEntries(sorted)
-    } catch (error) {
-      console.error(error)
-      await Dialog.alert({ message: l10n.failedRead })
-    }
-  }, [currentPath, showHidden, version, l10n])
-
-  useEffect(() => {
-    loadFiles()
-  }, [loadFiles, version])
-
-  useEffect(() => {
-    if (externalReloadPath && externalReloadPath === currentPath) {
-      loadFiles()
-      requestExternalReload(null)
-    }
-  }, [externalReloadPath, currentPath, loadFiles, requestExternalReload])
-
-  const triggerReload = useCallback(() => bumpVersion(v => v + 1), [])
+  const { entries, showHidden, setShowHidden, triggerReload } = useDirectoryEntries({
+    path: currentPath,
+    l10n,
+    externalReloadPath,
+    requestExternalReload
+  })
 
   const { handleCopy, handleMove, handleDelete, handleCreateFolder, handleCreateFile, handleRename, handleDuplicate, handlePaste, handleInfo } =
     useFileOperations({
@@ -140,27 +99,7 @@ export function DirectoryView({
       l10n,
       triggerReload
     })
-
-  const handleOpenFile = useCallback(
-    async (name: string) => {
-      const newPath = currentPath + '/' + name
-      const encodedURL = `file://${encodeURI(newPath)}`
-      console.log('[handleOpenFile] tap', { newPath, encodedURL })
-      try {
-        if (!FileManager.existsSync(newPath)) {
-          console.error('[QuickLook] file not found', newPath)
-          await Dialog.alert({ title: l10n.fileNotFound, message: newPath })
-          return
-        }
-        console.log('[QuickLook] preview', { path: newPath, encodedURL })
-        await QuickLook.previewURLs([encodedURL])
-      } catch (error) {
-        console.error(error)
-        await Dialog.alert({ title: l10n.previewFailed, message: String(error) })
-      }
-    },
-    [currentPath, l10n]
-  )
+  const handleOpenFile = useFilePreview(currentPath, l10n)
 
   const handlePreferences = useCallback(() => {
     Navigation.present({
