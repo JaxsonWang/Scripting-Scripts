@@ -59,12 +59,32 @@ export function DirectoryView({
   const currentPath = path
   const [toastShown, setToastShown] = useState(false)
   const [toastMessage, setToastMessage] = useState(l10n.copiedToast)
+  const [currentStat, setCurrentStat] = useState<FileStat | null>(null)
 
   useEffect(() => {
     setToastMessage(l10n.copiedToast)
   }, [l10n])
 
   const dismiss = Navigation.useDismiss()
+
+  useEffect(() => {
+    let cancelled = false
+    FileManager.stat(currentPath)
+      .then(stat => {
+        if (!cancelled) {
+          setCurrentStat(stat)
+        }
+      })
+      .catch(err => {
+        console.error('[DirectoryView] failed to load current stat', currentPath, err)
+        if (!cancelled) {
+          setCurrentStat(null)
+        }
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [currentPath])
 
   const { entries, showHidden, setShowHidden, triggerReload } = useDirectoryEntries({
     path: currentPath,
@@ -127,7 +147,8 @@ export function DirectoryView({
     handleCreateFile,
     handlePaste,
     handlePreferences,
-    handleExit
+    handleExit,
+    currentDirStat: currentStat || undefined
   })
 
   useEffect(() => {

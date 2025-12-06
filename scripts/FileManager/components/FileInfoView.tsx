@@ -7,6 +7,7 @@ type FileInfoViewProps = {
   path: string
   stat: FileStat
   isDirectory: boolean
+  sizeOverride?: number
   l10n: L10n
 }
 
@@ -18,13 +19,13 @@ const formatSize = (size: number): string => {
   return `${value.toFixed(exponent === 0 ? 0 : 1)} ${units[exponent]}`
 }
 
-export function FileInfoView({ name, path, stat, isDirectory, l10n }: FileInfoViewProps) {
+export function FileInfoView({ name, path, stat, isDirectory, sizeOverride, l10n }: FileInfoViewProps) {
   const dismiss = Navigation.useDismiss()
 
   const rows = useMemo(
     () => [
       { label: l10n.fileTypeLabel, value: stat.type },
-      { label: l10n.fileSizeLabel, value: formatSize(stat.size) },
+      { label: l10n.fileSizeLabel, value: formatSize(sizeOverride ?? stat.size) },
       { label: l10n.fileCreatedLabel, value: new Date(stat.creationDate).toLocaleString() },
       { label: l10n.fileModifiedLabel, value: new Date(stat.modificationDate).toLocaleString() },
       { label: l10n.fileLocationLabel, value: path }

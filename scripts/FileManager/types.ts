@@ -34,7 +34,6 @@ export type L10n = {
   pasteLabel: string
   addFolder: string
   addFile: string
-  summary: string
   settings: string
   exit: string
   copy: string

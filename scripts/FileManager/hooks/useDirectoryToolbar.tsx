@@ -1,5 +1,7 @@
-import { Button, ControlGroup, HStack, Image, Text, VStack, useMemo } from 'scripting'
+import { Button, ControlGroup, HStack, Image, Navigation, Text, VStack, useMemo } from 'scripting'
 import type { L10n, TransferState } from '../types'
+import { FileInfoView } from '../components/FileInfoView'
+import { computeDirectorySize } from '../utils/file_size'
 
 type ToolbarOptions = {
   currentDirName: string
@@ -13,6 +15,7 @@ type ToolbarOptions = {
   handlePaste: () => Promise<void>
   handlePreferences: () => void
   handleExit: () => void
+  currentDirStat?: FileStat
 }
 
 export const useDirectoryToolbar = ({
@@ -26,7 +29,8 @@ export const useDirectoryToolbar = ({
   handleCreateFile,
   handlePaste,
   handlePreferences,
-  handleExit
+  handleExit,
+  currentDirStat
 }: ToolbarOptions) => {
   const toolbarLeading = useMemo(
     () => (
@@ -46,14 +50,21 @@ export const useDirectoryToolbar = ({
           <Button title={l10n.addFile} systemImage="doc.badge.plus" action={handleCreateFile} />
           {transfer ? <Button title={l10n.pasteLabel} systemImage="doc.on.clipboard" action={handlePaste} /> : null}
           <Button
-            title={l10n.summary}
+            title={l10n.info}
             systemImage="info.circle"
-            action={() =>
-              Dialog.alert({
-                title: l10n.summary,
-                message: l10n.introMessage(currentPath, entriesCount)
+            action={async () => {
+              if (!currentDirStat) {
+                console.warn('[DirectoryToolbar] summary pressed without currentDirStat')
+                return
+              }
+              console.log('[DirectoryToolbar] summary start', { currentPath })
+              const size = await computeDirectorySize(currentPath)
+              console.log('[DirectoryToolbar] summary size computed', { currentPath, size })
+              await Navigation.present({
+                element: <FileInfoView name={currentDirName} path={currentPath} stat={currentDirStat} isDirectory sizeOverride={size} l10n={l10n} />
               })
-            }
+              console.log('[DirectoryToolbar] summary view presented')
+            }}
           />
         </ControlGroup>
         <Button action={handlePreferences}>
