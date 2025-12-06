@@ -1,12 +1,12 @@
 import { List, Navigation, NavigationLink, Script, VStack, useCallback, useEffect, useState } from 'scripting'
-import type { FileEntry, L10n, LanguageOption, Locale, TransferState } from '../types'
-import { FileRow } from './FileRow'
-import { PreferencesScreen } from '../screens/PreferencesScreen'
+import type { L10n, LanguageOption, Locale, TransferState } from '../types'
 import { DirectoryEmptyState } from './DirectoryEmptyState'
 import { useFileOperations } from '../hooks/useFileOperations'
 import { useDirectoryEntries } from '../hooks/useDirectoryEntries'
 import { useFilePreview } from '../hooks/useFilePreview'
 import { useDirectoryToolbar } from '../hooks/useDirectoryToolbar'
+import { usePreferencesSheet } from '../hooks/usePreferencesSheet'
+import { useFileRowRenderer } from '../hooks/useFileRowRenderer'
 
 export type DirectoryViewProps = {
   rootPath: string
@@ -86,25 +86,14 @@ export function DirectoryView({
     })
   const handleOpenFile = useFilePreview(currentPath, l10n)
 
-  const handlePreferences = useCallback(() => {
-    Navigation.present({
-      element: (
-        <PreferencesScreen
-          showHidden={showHidden}
-          onToggleHidden={setShowHidden}
-          title={l10n.preferences}
-          doneLabel={l10n.done}
-          sectionTitle={l10n.listDisplay}
-          toggleLabel={l10n.showHidden}
-          languageSectionTitle={l10n.languageSection}
-          languagePickerTitle={l10n.languagePickerTitle}
-          locale={locale}
-          onLocaleChange={(value: string) => onLocaleChange(value as Locale)}
-          languageOptions={languageOptions}
-        />
-      )
-    })
-  }, [showHidden, l10n, locale, languageOptions, onLocaleChange])
+  const handlePreferences = usePreferencesSheet({
+    showHidden,
+    setShowHidden,
+    l10n,
+    locale,
+    onLocaleChange,
+    languageOptions
+  })
 
   const handleExit = useCallback(() => {
     dismiss()
@@ -115,34 +104,16 @@ export function DirectoryView({
   const currentDirName = isRoot ? rootDisplayName : currentPath.split('/').pop() || rootDisplayName
   const relativePath = formatRelativePath(currentPath, rootPath)
 
-  const renderRow = (name: string, childPath: string, isDirectoryEntry: boolean, stat?: FileStat) => {
-    const labels = {
-      copy: l10n.copy,
-      move: l10n.move,
-      info: l10n.info,
-      rename: l10n.rename,
-      duplicate: l10n.duplicate,
-      delete: l10n.delete,
-      items: l10n.itemsLabel
-    }
-    return (
-      <FileRow
-        key={name}
-        name={name}
-        path={childPath}
-        isDirectory={isDirectoryEntry}
-        stat={stat}
-        onPress={!isDirectoryEntry ? () => handleOpenFile(name) : undefined}
-        labels={labels}
-        onCopy={() => handleCopy(name)}
-        onMove={() => handleMove(name)}
-        onInfo={() => handleInfo(name)}
-        onRename={() => handleRename(name)}
-        onDuplicate={() => handleDuplicate(name)}
-        onDelete={() => handleDelete(name)}
-      />
-    )
-  }
+  const renderFileRow = useFileRowRenderer({
+    l10n,
+    handleOpenFile,
+    handleCopy,
+    handleMove,
+    handleInfo,
+    handleRename,
+    handleDuplicate,
+    handleDelete
+  })
 
   const { toolbarLeading, toolbarTrailing } = useDirectoryToolbar({
     currentDirName,
@@ -185,7 +156,7 @@ export function DirectoryView({
           }}
         >
           {entries.map(entry => {
-            const { name, path: childPath, isDir, stat } = entry
+            const { name, path: childPath, isDir } = entry
             if (isDir) {
               return (
                 <NavigationLink
@@ -209,12 +180,12 @@ export function DirectoryView({
                     />
                   }
                 >
-                  {renderRow(name, childPath, true, stat)}
+                  {renderFileRow(entry)}
                 </NavigationLink>
               )
             }
 
-            return renderRow(name, childPath, false, stat)
+            return renderFileRow(entry)
           })}
         </List>
       )}
