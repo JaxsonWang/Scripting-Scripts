@@ -53,7 +53,14 @@ export function PreferencesScreen({
             </VStack>
           }
         >
-          <Picker title={languagePickerTitle} value={locale} onChanged={onLocaleChange}>
+          <Picker
+            title={languagePickerTitle}
+            value={locale}
+            onChanged={(value: string) => {
+              onLocaleChange(value)
+              dismiss()
+            }}
+          >
             {languageOptions.map(option => (
               <Text key={option.value} tag={option.value}>
                 {option.label}
