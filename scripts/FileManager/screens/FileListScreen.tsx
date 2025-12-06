@@ -49,7 +49,8 @@ const translations: Record<Locale, L10n> = {
     fileSizeLabel: 'Size',
     fileCreatedLabel: 'Created',
     fileModifiedLabel: 'Modified',
-    fileLocationLabel: 'Location'
+    fileLocationLabel: 'Location',
+    calculatingSize: 'Calculating…'
   },
   zh: {
     documents: 'Documents',
@@ -97,7 +98,8 @@ const translations: Record<Locale, L10n> = {
     fileSizeLabel: '大小',
     fileCreatedLabel: '创建时间',
     fileModifiedLabel: '修改时间',
-    fileLocationLabel: '位置'
+    fileLocationLabel: '位置',
+    calculatingSize: '正在计算…'
   }
 }
 

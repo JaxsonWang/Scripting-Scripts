@@ -1,6 +1,7 @@
-import { Button, Form, HStack, Navigation, NavigationStack, SVG, Script, Section, Spacer, Text, VStack, useMemo } from 'scripting'
+import { Button, Form, HStack, Navigation, NavigationStack, SVG, Script, Section, Spacer, Text, VStack, useEffect, useMemo, useState } from 'scripting'
 import type { L10n } from '../types'
 import { resolveIconName } from '../utils/file_icon'
+import { computeDirectorySize } from '../utils/file_size'
 
 type FileInfoViewProps = {
   name: string
@@ -8,6 +9,7 @@ type FileInfoViewProps = {
   stat: FileStat
   isDirectory: boolean
   sizeOverride?: number
+  autoComputeSize?: boolean
   l10n: L10n
 }
 
@@ -19,18 +21,42 @@ const formatSize = (size: number): string => {
   return `${value.toFixed(exponent === 0 ? 0 : 1)} ${units[exponent]}`
 }
 
-export function FileInfoView({ name, path, stat, isDirectory, sizeOverride, l10n }: FileInfoViewProps) {
+export function FileInfoView({ name, path, stat, isDirectory, sizeOverride, autoComputeSize, l10n }: FileInfoViewProps) {
   const dismiss = Navigation.useDismiss()
+  const [size, setSize] = useState(sizeOverride ?? stat.size)
+  const [sizeLoading, setSizeLoading] = useState<boolean>(Boolean(autoComputeSize && sizeOverride == null && isDirectory))
+
+  useEffect(() => {
+    let cancelled = false
+    if (sizeLoading) {
+      computeDirectorySize(path)
+        .then(total => {
+          if (!cancelled) {
+            setSize(total)
+            setSizeLoading(false)
+          }
+        })
+        .catch(error => {
+          console.error('[FileInfoView] computeDirectorySize failed', path, error)
+          if (!cancelled) {
+            setSizeLoading(false)
+          }
+        })
+    }
+    return () => {
+      cancelled = true
+    }
+  }, [sizeLoading, path])
 
   const rows = useMemo(
     () => [
       { label: l10n.fileTypeLabel, value: stat.type },
-      { label: l10n.fileSizeLabel, value: formatSize(sizeOverride ?? stat.size) },
+      { label: l10n.fileSizeLabel, value: sizeLoading ? l10n.calculatingSize : formatSize(size) },
       { label: l10n.fileCreatedLabel, value: new Date(stat.creationDate).toLocaleString() },
       { label: l10n.fileModifiedLabel, value: new Date(stat.modificationDate).toLocaleString() },
       { label: l10n.fileLocationLabel, value: path }
     ],
-    [stat, path, l10n]
+    [stat, path, l10n, sizeLoading, size]
   )
 
   const iconPath = useMemo(() => `${Script.directory}/assets/icon/${resolveIconName(name, isDirectory)}.svg`, [name, isDirectory])

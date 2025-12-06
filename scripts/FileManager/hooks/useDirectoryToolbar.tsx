@@ -57,13 +57,9 @@ export const useDirectoryToolbar = ({
                 console.warn('[DirectoryToolbar] summary pressed without currentDirStat')
                 return
               }
-              console.log('[DirectoryToolbar] summary start', { currentPath })
-              const size = await computeDirectorySize(currentPath)
-              console.log('[DirectoryToolbar] summary size computed', { currentPath, size })
               await Navigation.present({
-                element: <FileInfoView name={currentDirName} path={currentPath} stat={currentDirStat} isDirectory sizeOverride={size} l10n={l10n} />
+                element: <FileInfoView name={currentDirName} path={currentPath} stat={currentDirStat} isDirectory autoComputeSize l10n={l10n} />
               })
-              console.log('[DirectoryToolbar] summary view presented')
             }}
           />
         </ControlGroup>
@@ -75,7 +71,7 @@ export const useDirectoryToolbar = ({
         </Button>
       </HStack>
     ),
-    [l10n, handleCreateFolder, handleCreateFile, handlePaste, currentPath, entriesCount, handlePreferences, handleExit, transfer]
+    [l10n, handleCreateFolder, handleCreateFile, handlePaste, currentPath, currentDirName, currentDirStat, handlePreferences, handleExit, transfer]
   )
 
   return { toolbarLeading, toolbarTrailing }

@@ -57,6 +57,7 @@ export type L10n = {
   fileCreatedLabel: string
   fileModifiedLabel: string
   fileLocationLabel: string
+  calculatingSize: string
 }
 
 export type FileEntry = {

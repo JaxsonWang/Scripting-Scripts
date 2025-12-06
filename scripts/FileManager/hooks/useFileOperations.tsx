@@ -1,7 +1,6 @@
 import { Navigation, useCallback } from 'scripting'
 import type { L10n, TransferState } from '../types'
 import { FileInfoView } from '../components/FileInfoView'
-import { computeDirectorySize } from '../utils/file_size'
 
 type FileOperationsConfig = {
   currentPath: string
@@ -162,9 +161,8 @@ export const useFileOperations = ({
           console.error('[FileInfo] isDirectorySync failed', filePath, error)
         }
       }
-      const computedSize = isDirectory ? await computeDirectorySize(filePath) : undefined
       await Navigation.present({
-        element: <FileInfoView name={name} path={filePath} stat={stat} isDirectory={isDirectory} sizeOverride={computedSize} l10n={l10n} />
+        element: <FileInfoView name={name} path={filePath} stat={stat} isDirectory={isDirectory} autoComputeSize={isDirectory} l10n={l10n} />
       })
     },
     [currentPath, l10n]
