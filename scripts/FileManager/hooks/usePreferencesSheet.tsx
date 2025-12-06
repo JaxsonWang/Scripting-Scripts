@@ -23,6 +23,11 @@ export const usePreferencesSheet = ({
           toggleLabel={l10n.showHidden}
           languageSectionTitle={l10n.languageSection}
           languagePickerTitle={l10n.languagePickerTitle}
+          changelogSectionTitle={l10n.changelogSectionTitle}
+          changelogButtonLabel={l10n.changelogButtonLabel}
+          changelogTitle={l10n.changelogTitle}
+          changelogEmpty={l10n.changelogEmpty}
+          versionLabel={l10n.versionLabel}
           locale={locale}
           onLocaleChange={value => onLocaleChange(value as Locale)}
           languageOptions={languageOptions}

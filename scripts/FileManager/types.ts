@@ -59,6 +59,11 @@ export type L10n = {
   fileModifiedLabel: string
   fileLocationLabel: string
   calculatingSize: string
+  changelogSectionTitle: string
+  changelogButtonLabel: string
+  changelogTitle: string
+  changelogEmpty: string
+  versionLabel: string
 }
 
 export type FileEntry = {
@@ -114,10 +119,23 @@ export type PreferencesScreenProps = {
   toggleLabel: string
   languageSectionTitle: string
   languagePickerTitle: string
+  changelogSectionTitle: string
+  changelogButtonLabel: string
+  changelogTitle: string
+  changelogEmpty: string
+  versionLabel: string
   locale: Locale
   onLocaleChange: (value: Locale) => void
   languageOptions: LanguageOption[]
   onLanguageChanged?: () => void
+}
+
+export type ChangelogScreenProps = {
+  title: string
+  versionLabel: string
+  version: string
+  entries: string[]
+  emptyLabel: string
 }
 
 export type DirectoryEmptyStateProps = {

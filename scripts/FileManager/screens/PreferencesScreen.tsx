@@ -1,6 +1,7 @@
-import { Button, Form, Navigation, NavigationStack, Picker, Section, Text, Toggle, VStack } from 'scripting'
+import { Button, Form, HStack, Navigation, NavigationLink, NavigationStack, Picker, Section, Spacer, Text, Toggle, VStack } from 'scripting'
 import script from '../script.json'
 import type { Locale, PreferencesScreenProps } from '../types'
+import { ChangelogScreen } from './ChangelogScreen'
 
 export function PreferencesScreen({
   showHidden,
@@ -11,12 +12,19 @@ export function PreferencesScreen({
   toggleLabel,
   languageSectionTitle,
   languagePickerTitle,
+  changelogSectionTitle,
+  changelogButtonLabel,
+  changelogTitle,
+  changelogEmpty,
+  versionLabel,
   locale,
   onLocaleChange,
   languageOptions,
   onLanguageChanged
 }: PreferencesScreenProps) {
   const dismiss = Navigation.useDismiss()
+  const changelogEntries = Array.isArray(script.changelog) ? (script.changelog as string[]) : []
+  const version = script.version ?? '1.0.0'
 
   return (
     <NavigationStack>
@@ -29,18 +37,7 @@ export function PreferencesScreen({
         <Section header={<Text>{sectionTitle}</Text>}>
           <Toggle title={toggleLabel} value={showHidden} onChanged={onToggleHidden} />
         </Section>
-        <Section
-          header={<Text>{languageSectionTitle}</Text>}
-          footer={
-            <VStack spacing={10} alignment="leading">
-              <Text font="footnote" foregroundStyle="secondaryLabel">
-                File Manager {'v' + script.version}
-                {'\n'}
-                淮城一只猫© - Power by Scripting
-              </Text>
-            </VStack>
-          }
-        >
+        <Section header={<Text>{languageSectionTitle}</Text>}>
           <Picker
             title={languagePickerTitle}
             value={locale}
@@ -60,6 +57,30 @@ export function PreferencesScreen({
               </Text>
             ))}
           </Picker>
+        </Section>
+        <Section
+          header={<Text>{changelogSectionTitle}</Text>}
+          footer={
+            <VStack spacing={10} alignment="leading">
+              <Text font="footnote" foregroundStyle="secondaryLabel">
+                File Manager {'v' + script.version}
+                {'\n'}
+                淮城一只猫© - Power by Scripting
+              </Text>
+            </VStack>
+          }
+        >
+          <NavigationLink
+            destination={
+              <ChangelogScreen title={changelogTitle} versionLabel={versionLabel} version={version} entries={changelogEntries} emptyLabel={changelogEmpty} />
+            }
+          >
+            <HStack frame={{ maxWidth: 'infinity' }}>
+              <Text>{changelogButtonLabel}</Text>
+              <Spacer />
+              <Text foregroundStyle="secondaryLabel">v{version}</Text>
+            </HStack>
+          </NavigationLink>
         </Section>
       </Form>
     </NavigationStack>

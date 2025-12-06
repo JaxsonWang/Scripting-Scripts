@@ -48,5 +48,10 @@ export const l10nEN: L10n = {
   fileCreatedLabel: 'Created',
   fileModifiedLabel: 'Modified',
   fileLocationLabel: 'Location',
-  calculatingSize: 'Calculating…'
+  calculatingSize: 'Calculating…',
+  changelogSectionTitle: 'Changelog',
+  changelogButtonLabel: 'View Changes',
+  changelogTitle: 'Recent Updates',
+  changelogEmpty: 'No updates recorded.',
+  versionLabel: 'Current Version'
 }

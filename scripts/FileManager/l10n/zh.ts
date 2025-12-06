@@ -48,5 +48,10 @@ export const l10nZH: L10n = {
   fileCreatedLabel: '创建时间',
   fileModifiedLabel: '修改时间',
   fileLocationLabel: '位置',
-  calculatingSize: '正在计算…'
+  calculatingSize: '正在计算…',
+  changelogSectionTitle: '更新日志',
+  changelogButtonLabel: '查看更新内容',
+  changelogTitle: '最近更新',
+  changelogEmpty: '暂无更新记录。',
+  versionLabel: '当前版本'
 }
