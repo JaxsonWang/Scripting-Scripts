@@ -1,4 +1,4 @@
-import { Button, Form, Navigation, NavigationStack, Section, Text, Toggle, Picker } from 'scripting'
+import { Button, Form, Navigation, NavigationStack, Picker, Section, Text, Toggle } from 'scripting'
 
 type PreferencesScreenProps = {
   showHidden: boolean
