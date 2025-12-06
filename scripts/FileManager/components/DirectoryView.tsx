@@ -14,15 +14,7 @@ import {
   useRef,
   useState
 } from 'scripting'
-import type {
-  FileEntry,
-  DirectoryViewProps,
-  L10n,
-  LanguageOption,
-  Locale,
-  TransferState,
-  MarkdownPreviewProps
-} from '../types'
+import type { DirectoryViewProps, FileEntry, MarkdownPreviewProps } from '../types'
 import { DirectoryEmptyState } from './DirectoryEmptyState'
 import { useFileOperations } from '../hooks/useFileOperations'
 import { useDirectoryEntries } from '../hooks/useDirectoryEntries'
@@ -114,7 +106,8 @@ export function DirectoryView({
     })
 
   const preferencesOpenerRef = useRef<() => void>(() => {})
-  const baseOpenPreferences = usePreferencesSheet({
+
+  preferencesOpenerRef.current = usePreferencesSheet({
     showHidden,
     setShowHidden,
     l10n,
@@ -127,7 +120,6 @@ export function DirectoryView({
       }, 0)
     }
   })
-  preferencesOpenerRef.current = baseOpenPreferences
   const handlePreferences = useCallback(() => {
     preferencesOpenerRef.current()
   }, [])

@@ -1,6 +1,6 @@
 import { Button, Form, Navigation, NavigationStack, Picker, Section, Text, Toggle, VStack } from 'scripting'
 import script from '../script.json'
-import type { PreferencesScreenProps, Locale } from '../types'
+import type { Locale, PreferencesScreenProps } from '../types'
 
 export function PreferencesScreen({
   showHidden,
