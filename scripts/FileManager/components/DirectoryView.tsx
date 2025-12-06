@@ -5,12 +5,13 @@ import {
   Navigation,
   NavigationLink,
   NavigationStack,
-  ScrollView,
   Script,
+  ScrollView,
   Text,
   VStack,
   useCallback,
   useEffect,
+  useRef,
   useState
 } from 'scripting'
 import type { FileEntry, L10n, LanguageOption, Locale, TransferState } from '../types'
@@ -122,14 +123,24 @@ export function DirectoryView({
       triggerReload
     })
 
-  const handlePreferences = usePreferencesSheet({
+  const preferencesOpenerRef = useRef<() => void>(() => {})
+  const baseOpenPreferences = usePreferencesSheet({
     showHidden,
     setShowHidden,
     l10n,
     locale,
     onLocaleChange,
-    languageOptions
+    languageOptions,
+    onLanguageChanged: () => {
+      setTimeout(() => {
+        preferencesOpenerRef.current()
+      }, 0)
+    }
   })
+  preferencesOpenerRef.current = baseOpenPreferences
+  const handlePreferences = useCallback(() => {
+    preferencesOpenerRef.current()
+  }, [])
 
   const handleEdit = useCallback(
     async (entry: FileEntry) => {

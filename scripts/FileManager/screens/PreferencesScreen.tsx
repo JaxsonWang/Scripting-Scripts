@@ -13,6 +13,7 @@ type PreferencesScreenProps = {
   locale: string
   onLocaleChange: (value: string) => void
   languageOptions: { value: string; label: string }[]
+  onLanguageChanged?: () => void
 }
 
 export function PreferencesScreen({
@@ -26,7 +27,8 @@ export function PreferencesScreen({
   languagePickerTitle,
   locale,
   onLocaleChange,
-  languageOptions
+  languageOptions,
+  onLanguageChanged
 }: PreferencesScreenProps) {
   const dismiss = Navigation.useDismiss()
 
@@ -59,6 +61,11 @@ export function PreferencesScreen({
             onChanged={(value: string) => {
               onLocaleChange(value)
               dismiss()
+              if (onLanguageChanged) {
+                setTimeout(() => {
+                  onLanguageChanged()
+                }, 0)
+              }
             }}
           >
             {languageOptions.map(option => (

@@ -9,9 +9,10 @@ type Options = {
   locale: Locale
   onLocaleChange: (value: Locale) => void
   languageOptions: LanguageOption[]
+  onLanguageChanged?: () => void
 }
 
-export const usePreferencesSheet = ({ showHidden, setShowHidden, l10n, locale, onLocaleChange, languageOptions }: Options) => {
+export const usePreferencesSheet = ({ showHidden, setShowHidden, l10n, locale, onLocaleChange, languageOptions, onLanguageChanged }: Options) => {
   return useCallback(() => {
     Navigation.present({
       element: (
@@ -27,8 +28,9 @@ export const usePreferencesSheet = ({ showHidden, setShowHidden, l10n, locale, o
           locale={locale}
           onLocaleChange={value => onLocaleChange(value as Locale)}
           languageOptions={languageOptions}
+          onLanguageChanged={onLanguageChanged}
         />
       )
     })
-  }, [showHidden, setShowHidden, l10n, locale, onLocaleChange, languageOptions])
+  }, [showHidden, setShowHidden, l10n, locale, onLocaleChange, languageOptions, onLanguageChanged])
 }
