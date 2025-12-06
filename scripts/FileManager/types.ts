@@ -39,6 +39,7 @@ export type L10n = {
   copy: string
   move: string
   info: string
+  edit: string
   rename: string
   duplicate: string
   delete: string

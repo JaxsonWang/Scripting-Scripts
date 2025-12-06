@@ -1,12 +1,14 @@
 import { useCallback, useMemo } from 'scripting'
 import type { FileEntry, L10n } from '../types'
 import { FileRow } from '../components/FileRow'
+import { canEditWithEditor } from '../utils/text_file'
 
 type FileRowRendererConfig = {
   l10n: L10n
   handleOpenFile: (name: string) => void | Promise<void>
   handleCopy: (name: string) => void | Promise<void>
   handleMove: (name: string) => void | Promise<void>
+  handleEdit?: (entry: FileEntry) => void | Promise<void>
   handleInfo: (name: string) => void | Promise<void>
   handleRename: (name: string) => void | Promise<void>
   handleDuplicate: (name: string) => void | Promise<void>
@@ -18,6 +20,7 @@ export const useFileRowRenderer = ({
   handleOpenFile,
   handleCopy,
   handleMove,
+  handleEdit,
   handleInfo,
   handleRename,
   handleDuplicate,
@@ -28,6 +31,7 @@ export const useFileRowRenderer = ({
       copy: l10n.copy,
       move: l10n.move,
       info: l10n.info,
+      edit: l10n.edit,
       rename: l10n.rename,
       duplicate: l10n.duplicate,
       delete: l10n.delete,
@@ -39,6 +43,7 @@ export const useFileRowRenderer = ({
   const renderRow = useCallback(
     (entry: FileEntry) => {
       const { name, path, isDir, stat } = entry
+      const maybeEditHandler = !isDir && handleEdit && canEditWithEditor(name) ? () => handleEdit(entry) : undefined
       return (
         <FileRow
           key={name}
@@ -50,6 +55,7 @@ export const useFileRowRenderer = ({
           labels={labels}
           onCopy={() => handleCopy(name)}
           onMove={() => handleMove(name)}
+          onEdit={maybeEditHandler}
           onInfo={() => handleInfo(name)}
           onRename={() => handleRename(name)}
           onDuplicate={() => handleDuplicate(name)}
@@ -57,7 +63,7 @@ export const useFileRowRenderer = ({
         />
       )
     },
-    [labels, handleOpenFile, handleCopy, handleMove, handleInfo, handleRename, handleDuplicate, handleDelete]
+    [labels, handleOpenFile, handleCopy, handleMove, handleEdit, handleInfo, handleRename, handleDuplicate, handleDelete]
   )
 
   return renderRow

@@ -1,5 +1,5 @@
 import { List, Navigation, NavigationLink, Script, VStack, useCallback, useEffect, useState } from 'scripting'
-import type { L10n, LanguageOption, Locale, TransferState } from '../types'
+import type { FileEntry, L10n, LanguageOption, Locale, TransferState } from '../types'
 import { DirectoryEmptyState } from './DirectoryEmptyState'
 import { useFileOperations } from '../hooks/useFileOperations'
 import { useDirectoryEntries } from '../hooks/useDirectoryEntries'
@@ -7,6 +7,7 @@ import { useFilePreview } from '../hooks/useFilePreview'
 import { useDirectoryToolbar } from '../hooks/useDirectoryToolbar'
 import { usePreferencesSheet } from '../hooks/usePreferencesSheet'
 import { useFileRowRenderer } from '../hooks/useFileRowRenderer'
+import { getEditorExtension, canEditWithEditor } from '../utils/text_file'
 
 export type DirectoryViewProps = {
   rootPath: string
@@ -93,7 +94,7 @@ export function DirectoryView({
     requestExternalReload
   })
 
-  const handleOpenFile = useFilePreview(currentPath, l10n)
+  const quickLookFile = useFilePreview(currentPath, l10n)
 
   const { handleCopy, handleMove, handleDelete, handleCreateFolder, handleCreateFile, handleRename, handleDuplicate, handlePaste, handleInfo } =
     useFileOperations({
@@ -116,6 +117,70 @@ export function DirectoryView({
     languageOptions
   })
 
+  const handleEdit = useCallback(
+    async (entry: FileEntry) => {
+      if (!canEditWithEditor(entry.name)) {
+        return
+      }
+      const filePath = entry.path
+      let content: string
+      try {
+        content = await FileManager.readAsString(filePath)
+      } catch (error) {
+        console.error('[handleEdit] read failed', filePath, error)
+        await Dialog.alert({ title: l10n.previewFailed, message: String(error) })
+        return
+      }
+      const controller = new EditorController({ content, ext: getEditorExtension(entry.name) })
+      try {
+        await controller.present({ navigationTitle: entry.name })
+        await FileManager.writeAsString(filePath, controller.content)
+        triggerReload()
+      } catch (error) {
+        console.error('[handleEdit] editor failed', filePath, error)
+        await Dialog.alert({ title: l10n.previewFailed, message: String(error) })
+      } finally {
+        controller.dispose()
+      }
+    },
+    [triggerReload, l10n]
+  )
+
+  const previewTextFile = useCallback(
+    async (name: string) => {
+      const filePath = currentPath + '/' + name
+      let content: string
+      try {
+        content = await FileManager.readAsString(filePath)
+      } catch (error) {
+        console.error('[handleOpenFile] read text failed', filePath, error)
+        await Dialog.alert({ title: l10n.previewFailed, message: String(error) })
+        return
+      }
+      const controller = new EditorController({ content, ext: getEditorExtension(name), readOnly: true })
+      try {
+        await controller.present({ navigationTitle: name })
+      } catch (error) {
+        console.error('[handleOpenFile] editor preview failed', filePath, error)
+        await Dialog.alert({ title: l10n.previewFailed, message: String(error) })
+      } finally {
+        controller.dispose()
+      }
+    },
+    [currentPath, l10n]
+  )
+
+  const handleOpenFile = useCallback(
+    async (name: string) => {
+      if (canEditWithEditor(name)) {
+        await previewTextFile(name)
+        return
+      }
+      await quickLookFile(name)
+    },
+    [previewTextFile, quickLookFile]
+  )
+
   const handleExit = useCallback(() => {
     dismiss()
     Script.exit()
@@ -130,6 +195,7 @@ export function DirectoryView({
     handleOpenFile,
     handleCopy,
     handleMove,
+    handleEdit,
     handleInfo,
     handleRename,
     handleDuplicate,

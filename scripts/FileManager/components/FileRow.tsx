@@ -11,6 +11,7 @@ interface FileRowProps {
   onPress?: () => void
   onCopy: () => void
   onMove: () => void
+  onEdit?: () => void
   onInfo: () => void
   onRename: () => void
   onDuplicate: () => void
@@ -19,6 +20,7 @@ interface FileRowProps {
     copy: string
     move: string
     info: string
+    edit: string
     rename: string
     duplicate: string
     delete: string
@@ -26,7 +28,7 @@ interface FileRowProps {
   }
 }
 
-export function FileRow({ name, path, isDirectory, stat, onPress, onCopy, onMove, onInfo, onRename, onDuplicate, onDelete, labels }: FileRowProps) {
+export function FileRow({ name, path, isDirectory, stat, onPress, onCopy, onMove, onEdit, onInfo, onRename, onDuplicate, onDelete, labels }: FileRowProps) {
   const iconPath = useMemo(() => `${Script.directory}/assets/icon/${resolveIconName(name, isDirectory)}.svg`, [isDirectory, name])
   /**
    * 统计目录内的条目数量
@@ -65,6 +67,15 @@ export function FileRow({ name, path, isDirectory, stat, onPress, onCopy, onMove
                   <Image systemName="folder" frame={{ width: 16, height: 16 }} />
                 </HStack>
               </Button>
+              {onEdit ? (
+                <Button action={onEdit}>
+                  <HStack alignment="center" frame={{ maxWidth: 'infinity' }}>
+                    <Text>{labels.edit}</Text>
+                    <Spacer />
+                    <Image systemName="pencil" frame={{ width: 16, height: 16 }} />
+                  </HStack>
+                </Button>
+              ) : null}
               <Button action={onInfo}>
                 <HStack alignment="center" frame={{ maxWidth: 'infinity' }}>
                   <Text>{labels.info}</Text>

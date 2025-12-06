@@ -1,7 +1,6 @@
 import { Button, ControlGroup, HStack, Image, Navigation, Text, VStack, useMemo } from 'scripting'
 import type { L10n, TransferState } from '../types'
 import { FileInfoView } from '../components/FileInfoView'
-import { computeDirectorySize } from '../utils/file_size'
 
 type ToolbarOptions = {
   currentDirName: string
