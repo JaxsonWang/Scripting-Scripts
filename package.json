@@ -1,0 +1,37 @@
+{
+  "name": "scripting-scripts",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "serve": "npx scripting-cli start --no-auto-open --bonjour",
+    "watch": "tsx watch.ts",
+    "lint": "eslint . --ext .js,.jsx,.ts,.tsx --fix",
+    "lint:check": "eslint . --ext .js,.jsx,.ts,.tsx",
+    "format": "prettier --write \"scripts/**/*.{js,jsx,ts,tsx,json,css,md}\"",
+    "format:check": "prettier --check \"scripts/**/*.{js,jsx,ts,tsx,json,css,md}\"",
+    "type-check": "tsc --noEmit",
+    "code-quality": "npm run lint && npm run format && npm run type-check",
+    "ncu": "npx npm-check-updates --reject '' -u"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.33.0",
+    "@types/chokidar": "^2.1.7",
+    "@types/eslint-config-prettier": "^6.11.3",
+    "@types/fs-extra": "^11.0.4",
+    "chokidar": "^4.0.3",
+    "eslint": "^9.33.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-prettier": "^5.5.4",
+    "fs-extra": "^11.3.1",
+    "prettier": "^3.6.2",
+    "tsx": "^4.20.4",
+    "typescript": "^5.9.2",
+    "typescript-eslint": "^8.39.1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "packageManager": "pnpm@10.14.0"
+}

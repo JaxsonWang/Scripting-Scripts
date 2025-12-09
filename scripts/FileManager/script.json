@@ -1,0 +1,28 @@
+{
+  "localizedDescriptions": {
+    "en": "Manage files stored in Documents and App Group sandboxes.",
+    "zh": "管理 Documents 以及 App Group 目录中的文件。"
+  },
+  "runInApp": false,
+  "name": "FileManager",
+  "color": "rgba(190, 0, 159, 1.00)",
+  "intentInputTypes": [],
+  "author": {
+    "homepage": "https://github.com/JaxsonWang",
+    "email": "jaxson.j.wang@gmail.com",
+    "name": "淮城一只猫"
+  },
+  "description": "Manage files in Documents and AppGroup directories.",
+  "version": "1.0.3",
+  "localizedNames": {
+    "en": "File Manager",
+    "zh": "文件管理器"
+  },
+  "contributors": [],
+  "icon": "folder.fill",
+  "remoteResource": {
+    "autoUpdateInterval": 86400,
+    "url": "https://xget.xi-xu.me/gh/JaxsonWang/Scripting-Scripts/raw/refs/heads/main/releases/FileManager.scripting",
+    "hash": "00783b94652970dc0250169d974fa77b"
+  }
+}

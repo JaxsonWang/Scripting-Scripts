@@ -1,0 +1,35 @@
+{
+  "compilerOptions": {
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "target": "ESNext",
+    "lib": [
+      "esnext"
+    ],
+    "allowJs": true,
+    "noEmit": true,
+    "strict": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "forceConsistentCasingInFileNames": true,
+    "noFallthroughCasesInSwitch": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "jsx": "react",
+    "jsxFactory": "createElement",
+    "jsxFragmentFactory": "Fragment",
+    "paths": {
+      "scripting": [
+        "./dts/scripting.d.ts"
+      ]
+    }
+  },
+  "include": [
+    "./dts/global.d.ts",
+    "./dts/scripting.d.ts",
+    "scripts"
+  ],
+  "exclude": [
+    "scripts/挂历小组件/utils/lunar.js"
+  ]
+}

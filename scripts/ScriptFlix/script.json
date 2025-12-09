@@ -1,0 +1,28 @@
+{
+  "name": "ScriptFlix",
+  "intentInputTypes": [],
+  "version": "1.0.0",
+  "icon": "film",
+  "author": {
+    "homepage": "https://github.com/JaxsonWang",
+    "email": "jaxson.j.wang@gmail.com",
+    "name": "淮城一只猫"
+  },
+  "contributors": [],
+  "color": "#e50914",
+  "localizedNames": {
+    "en": "Script Flix",
+    "zh": "Script Flix"
+  },
+  "localizedDescriptions": {
+    "en": "Online video platform",
+    "zh": "在线影视平台"
+  },
+  "runInApp": false,
+  "description": "在线影视平台",
+  "remoteResource": {
+    "autoUpdateInterval": 86400,
+    "url": "https://xget.xi-xu.me/gh/JaxsonWang/Scripting-Scripts/raw/refs/heads/main/releases/ScriptFlix.scripting",
+    "hash": "00783b94652970dc0250169d974fa77b"
+  }
+}

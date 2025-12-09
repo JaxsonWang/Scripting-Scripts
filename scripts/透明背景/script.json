@@ -1,0 +1,23 @@
+{
+  "runInApp": false,
+  "color": "rgba(174, 109, 216,1)",
+  "name": "透明背景",
+  "icon": "photo.fill",
+  "intentInputTypes": [],
+  "version": "1.0.3",
+  "changelog": ["修复 iOS26 版本无法生成坐标的问题"],
+  "localizedDescriptions": {},
+  "description": "透明背景",
+  "localizedNames": {},
+  "contributors": [],
+  "author": {
+    "homepage": "https://github.com/JaxsonWang",
+    "email": "jaxson.j.wang@gmail.com",
+    "name": "淮城一只猫"
+  },
+  "remoteResource": {
+    "autoUpdateInterval": 86400,
+    "url": "https://joiner.i95.me/scripting/透明背景.scripting",
+    "hash": "00783b94652970dc0250169d974fa77b"
+  }
+}

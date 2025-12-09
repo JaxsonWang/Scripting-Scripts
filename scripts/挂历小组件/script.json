@@ -1,0 +1,15 @@
+{
+  "color": "systemGreen",
+  "icon": "calendar.badge.clock",
+  "runInApp": false,
+  "intentInputTypes": [],
+  "name": "挂历小组件",
+  "description": "在桌面显示日历和事件信息的挂历小组件",
+  "version": "1.0.5",
+  "changelog": ["添加字典替换支持", "添加班/休标识支持（右上角小点）"],
+  "remoteResource": {
+    "autoUpdateInterval": 86400,
+    "hash": "3041524d7c7e92fbf71baf9c93da312e",
+    "url": "https://joiner.i95.me/scripting/挂历小组件.scripting"
+  }
+}

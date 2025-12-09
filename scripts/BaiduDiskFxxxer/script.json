@@ -1,0 +1,14 @@
+{
+  "description": "百度网盘 PDF 高速预览，只限大小 150M 内文件。",
+  "runInApp": false,
+  "author": null,
+  "localizedNames": {},
+  "intentInputTypes": [],
+  "contributors": [],
+  "remoteResource": null,
+  "color": "rgba(0, 118, 114, 1.00)",
+  "localizedDescriptions": {},
+  "icon": "doc",
+  "name": "BaiduDiskFxxxer ",
+  "version": "1.0.0"
+}

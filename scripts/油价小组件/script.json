@@ -1,0 +1,15 @@
+{
+  "color": "systemOrange",
+  "icon": "fuelpump.fill",
+  "runInApp": false,
+  "intentInputTypes": [],
+  "name": "油价小组件",
+  "description": "在桌面随时了解油价信息",
+  "version": "1.0.3",
+  "changelog": ["添加对透明小组件支持"],
+  "remoteResource": {
+    "autoUpdateInterval": 86400,
+    "url": "https://joiner.i95.me/scripting/油价小组件.scripting",
+    "hash": "00783b94652970dc0250169d974fa77b"
+  }
+}

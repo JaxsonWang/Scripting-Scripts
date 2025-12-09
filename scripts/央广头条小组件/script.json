@@ -1,0 +1,20 @@
+{
+  "color": "systemRed",
+  "icon": "newspaper.fill",
+  "runInApp": false,
+  "intentInputTypes": [],
+  "name": "央广头条小组件",
+  "description": "在桌面随时了解央广网最新头条新闻",
+  "version": "1.0.2",
+  "changelog": ["新增排序", "小号规格组件显示俩条新闻", "优化小组件渲染，尽量换行而不省略"],
+  "author": {
+    "homepage": "https://github.com/JaxsonWang",
+    "email": "jaxson.j.wang@gmail.com",
+    "name": "淮城一只猫"
+  },
+  "remoteResource": {
+    "autoUpdateInterval": 86400,
+    "url": "https://joiner.i95.me/scripting/央广头条小组件.scripting",
+    "hash": "00783b94652970dc0250169d974fa77b"
+  }
+}
