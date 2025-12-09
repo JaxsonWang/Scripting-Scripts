@@ -1,9 +1,5 @@
-import { Image, Text, VStack, useEffect, useState } from 'scripting'
-
-type RemoteImageProps = {
-  url: string
-  frame?: { width?: number; height?: number }
-}
+import { Circle, Image, Text, VStack, useEffect, useState } from 'scripting'
+import type { RemoteImageProps } from '../types'
 
 /**
  * 加载远程图片并在加载完成后展示，常用于视频海报等体积较大的资源。
@@ -11,14 +7,7 @@ type RemoteImageProps = {
  * @param frame 容器尺寸，便于在加载前占位
  */
 export const RemoteImage = ({ url, frame }: RemoteImageProps) => {
-  const [image, setImage] = useState<UIImage | null>(null)
-
-  useEffect(() => {
-    if (!url) return
-    UIImage.fromURL(url).then(setImage)
-  }, [url])
-
-  if (!image) {
+  if (!url) {
     return (
       <VStack frame={frame} background="systemBackground" alignment="center">
         <Text font="caption" foregroundStyle="gray">
@@ -28,5 +17,5 @@ export const RemoteImage = ({ url, frame }: RemoteImageProps) => {
     )
   }
 
-  return <Image image={image} resizable scaleToFit />
+  return <Image imageUrl={url} resizable scaleToFit frame={frame} />
 }

@@ -17,15 +17,8 @@ import {
   useState
 } from 'scripting'
 import { SettingsService } from '../services/settings'
-import type { ApiSource } from '../types'
 import { ChangelogScreen } from './ChangelogScreen'
-
-type SourceEditorProps = {
-  title: string
-  initialName: string
-  initialUrl: string
-  onSave: (name: string, url: string) => void
-}
+import type { ApiSource, SourceEditorProps } from '../types'
 
 const SourceEditor = ({ title, initialName, initialUrl, onSave }: SourceEditorProps) => {
   const dismiss = Navigation.useDismiss()

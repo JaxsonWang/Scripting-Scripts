@@ -1,8 +1,5 @@
 import { Button, Spacer, Text, VStack } from 'scripting'
-
-type EmptySourcesStateProps = {
-  onOpenSettings: () => void
-}
+import type { EmptySourcesStateProps } from '../types'
 
 /**
  * 用于提示用户尚未配置任何视频源，并提供前往设置页面的入口。

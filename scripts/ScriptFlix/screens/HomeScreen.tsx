@@ -1,12 +1,12 @@
 import { Button, HStack, Image, LazyVGrid, Navigation, RoundedRectangle, ScrollView, Spacer, Text, VStack, useEffect, useMemo, useState } from 'scripting'
 import { SettingsService } from '../services/settings'
 import { fetchCategories, fetchVideoList } from '../services/api'
-import type { Category, VideoItem } from '../types'
 import { VideoCard } from '../components/VideoCard'
 import { EmptySourcesState } from '../components/EmptySourcesState'
 import { SettingsScreen } from './SettingsScreen'
 import { PlayerScreen } from './PlayerScreen'
 import { SearchScreen } from './SearchScreen'
+import type { Category, VideoItem } from '../types'
 
 /**
  * 首页

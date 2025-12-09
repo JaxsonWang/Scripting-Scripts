@@ -1,12 +1,6 @@
 import { Button, RoundedRectangle, Text, VStack, ZStack } from 'scripting'
-import type { VideoItem } from '../types'
 import { RemoteImage } from './RemoteImage'
-
-type VideoCardProps = {
-  video: VideoItem
-  onTap: (id: number) => void
-  width?: number
-}
+import type { VideoCardProps } from '../types'
 
 /**
  * 展示单个视频的海报与关键信息，并在点击后触发播放回调。

@@ -121,6 +121,28 @@ export type PlayerScreenProps = {
   sourceUrl: string
 }
 
+export type RemoteImageProps = {
+  url: string
+  frame?: { width?: number; height?: number }
+}
+
+export type EmptySourcesStateProps = {
+  onOpenSettings: () => void
+}
+
+export type VideoCardProps = {
+  video: VideoItem
+  onTap: (id: number) => void
+  width?: number
+}
+
+export type SourceEditorProps = {
+  title: string
+  initialName: string
+  initialUrl: string
+  onSave: (name: string, url: string) => void
+}
+
 export type ChangelogScreenProps = {
   title: string
   versionLabel: string
