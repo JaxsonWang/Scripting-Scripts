@@ -3,7 +3,7 @@ import { RemoteImage } from './RemoteImage'
 import type { VideoCardProps } from '../types'
 
 /**
- * 展示单个视频的海报与关键信息，并在点击后触发播放回调。
+ * 展示单个视频的海报与关键信息，并在点击后触发播放回调
  * @param video 即将展示的视频条目
  * @param onTap 点击后触发的回调，传入视频 ID
  * @param width 可选的固定宽度，用于横向滚动场景
@@ -12,7 +12,7 @@ export const VideoCard = ({ video, onTap, width }: VideoCardProps) => {
   const frameProps = width ? { width } : {}
 
   return (
-    <Button action={() => onTap(video.vod_id)}>
+    <Button action={() => onTap(video)}>
       <VStack spacing={6} frame={frameProps}>
         {/* Poster Image */}
         <ZStack alignment="topTrailing">

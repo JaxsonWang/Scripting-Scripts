@@ -40,7 +40,7 @@ type SourceSearchState = {
 type SourceStateMap = Record<string, SourceSearchState>
 
 /**
- * 全源搜索页，联动所有已配置的视频源，并提供分源过滤。
+ * 全源搜索页，联动所有已配置的视频源，并提供分源过滤
  */
 export const SearchScreen = () => {
   const dismiss = Navigation.useDismiss()
@@ -90,8 +90,8 @@ export const SearchScreen = () => {
     resetSourceStates()
   }
 
-  const handlePlay = (id: number, sourceUrl: string) => {
-    Navigation.present({ element: <PlayerScreen id={id} sourceUrl={sourceUrl} /> })
+  const handlePlay = (item: SearchResultItem) => {
+    Navigation.present({ element: <PlayerScreen id={item.vod_id} sourceUrl={item.sourceUrl} sourceName={item.sourceName} /> })
   }
 
   const performSearch = async (keyword?: string) => {
@@ -108,6 +108,8 @@ export const SearchScreen = () => {
       setError('请先在设置里添加数据源')
       return
     }
+
+    Keyboard.hide()
 
     setLoading(true)
     setError(null)
@@ -337,12 +339,12 @@ export const SearchScreen = () => {
                 spacing={16}
                 padding={{ horizontal: 4, bottom: 16 }}
               >
-                {filteredResults.map(item => (
-                  <VStack key={`${item.sourceName}-${item.vod_id}`} spacing={6}>
-                    <VideoCard video={item} onTap={id => handlePlay(id, item.sourceUrl)} />
-                    <Text font="caption2" foregroundStyle="secondaryLabel" lineLimit={1}>
-                      来自 · {item.sourceName}
-                    </Text>
+                    {filteredResults.map(item => (
+                      <VStack key={`${item.sourceName}-${item.vod_id}`} spacing={6}>
+                        <VideoCard video={item} onTap={() => handlePlay(item)} />
+                        <Text font="caption2" foregroundStyle="secondaryLabel" lineLimit={1}>
+                          来自 · {item.sourceName}
+                        </Text>
                   </VStack>
                 ))}
               </LazyVGrid>

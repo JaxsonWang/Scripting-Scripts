@@ -9,14 +9,14 @@ const STORAGE_KEY_INDEX = 'script_flix_currentSourceIndex'
 const defaultSources: ApiSource[] = []
 
 /**
- * 从本地存储读取所有视频源配置。
+ * 从本地存储读取所有视频源配置
  */
 const getSources = (): ApiSource[] => {
   return AppStorage.get(STORAGE_KEY_SOURCES) || defaultSources
 }
 
 /**
- * 持久化视频源数组。
+ * 持久化视频源数组
  * @param sources 新的视频源数组
  */
 const saveSources = (sources: ApiSource[]) => {
@@ -24,7 +24,7 @@ const saveSources = (sources: ApiSource[]) => {
 }
 
 /**
- * 获取当前选中的视频源下标。
+ * 获取当前选中的视频源下标
  */
 const getCurrentSourceIndex = (): number => {
   const index = AppStorage.get(STORAGE_KEY_INDEX)
@@ -32,7 +32,7 @@ const getCurrentSourceIndex = (): number => {
 }
 
 /**
- * 保存当前视频源下标。
+ * 保存当前视频源下标
  * @param index 需要保存的下标
  */
 const saveCurrentSourceIndex = (index: number) => {
@@ -40,7 +40,7 @@ const saveCurrentSourceIndex = (index: number) => {
 }
 
 /**
- * 读取当前启用的视频源，在缺省时退回到首个可用项。
+ * 读取当前启用的视频源，在缺省时退回到首个可用项
  */
 const getCurrentSource = (): ApiSource | null => {
   const sources = getSources()
@@ -49,7 +49,7 @@ const getCurrentSource = (): ApiSource | null => {
 }
 
 /**
- * 在现有集合后追加新的视频源。
+ * 在现有集合后追加新的视频源
  * @param source 需要添加的源
  */
 const addSource = (source: ApiSource) => {
@@ -58,7 +58,7 @@ const addSource = (source: ApiSource) => {
 }
 
 /**
- * 移除指定位置的视频源，并重新调整当前下标。
+ * 移除指定位置的视频源，并重新调整当前下标
  * @param index 待删除的下标
  */
 const removeSource = (index: number) => {
@@ -75,7 +75,7 @@ const removeSource = (index: number) => {
 }
 
 /**
- * 对外暴露的设置工具，负责管理所有视频源相关操作。
+ * 对外暴露的设置工具，负责管理所有视频源相关操作
  */
 export const SettingsService = {
   getSources,

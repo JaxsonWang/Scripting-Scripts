@@ -98,7 +98,7 @@ const SourceRow = ({
             {source.name || '未命名'}
           </Text>
           {active ? (
-            <Text font="caption" foregroundStyle="tintColor" padding={{ horizontal: 6 }}>
+            <Text font="caption" foregroundStyle="#e50914" padding={{ horizontal: 6 }}>
               当前
             </Text>
           ) : null}
@@ -113,7 +113,7 @@ const SourceRow = ({
 }
 
 /**
- * 视频源设置页，包含列表、快速设置和编辑操作。
+ * 视频源设置页，包含列表、快速设置和编辑操作
  */
 export const SettingsScreen = () => {
   const dismiss = Navigation.useDismiss()
@@ -200,10 +200,10 @@ export const SettingsScreen = () => {
         }
       >
         <NavigationLink
-          destination={<ChangelogScreen title="最近更新" versionLabel="当前版本" version={Script.metadata?.version || '1.0.0'} emptyLabel="暂无更新记录。" />}
+          destination={<ChangelogScreen title="最近更新" versionLabel="当前版本" version={Script.metadata?.version || '1.0.0'} emptyLabel="暂无更新记录" />}
         >
           <HStack frame={{ maxWidth: 'infinity' }}>
-            <Text>查看更新内容</Text>
+            <Text foregroundStyle="#e50914">查看更新内容</Text>
             <Spacer />
           </HStack>
         </NavigationLink>

@@ -1,13 +1,14 @@
 import { Button, HStack, LazyVGrid, Navigation, RoundedRectangle, ScrollView, Spacer, Text, VStack, WebView, useEffect, useState } from 'scripting'
 import { fetchVideoDetail } from '../services/api'
+import { HistoryService } from '../services/history'
 import type { PlayEpisode, PlayGroup, PlayerScreenProps, VideoItem } from '../types'
 
 /**
- * 播放页，按分组/剧集解析播放链接，并内嵌 WebView 播放。
+ * 播放页，按分组/剧集解析播放链接，并内嵌 WebView 播放
  * @param id 视频 ID
  * @param sourceUrl CMS 接口地址
  */
-export const PlayerScreen = ({ id, sourceUrl }: PlayerScreenProps) => {
+export const PlayerScreen = ({ id, sourceUrl, sourceName }: PlayerScreenProps) => {
   const dismiss = Navigation.useDismiss()
   const [video, setVideo] = useState<VideoItem | null>(null)
   const [playGroups, setPlayGroups] = useState<PlayGroup[]>([])
@@ -22,6 +23,7 @@ export const PlayerScreen = ({ id, sourceUrl }: PlayerScreenProps) => {
         if (res.list && res.list.length > 0) {
           const v = res.list[0]
           setVideo(v)
+          HistoryService.addHistory(v, sourceUrl, sourceName)
           const froms = v.vod_play_from.split('$$$')
           const urls = v.vod_play_url.split('$$$')
           const groups = froms
@@ -44,7 +46,7 @@ export const PlayerScreen = ({ id, sourceUrl }: PlayerScreenProps) => {
       })
       .catch(e => console.error(e))
       .finally(() => setLoading(false))
-  }, [id, sourceUrl])
+  }, [id, sourceUrl, sourceName])
 
   useEffect(() => {
     const currentEpisode = playGroups[currentGroupIndex]?.episodes[currentEpisodeIndex]

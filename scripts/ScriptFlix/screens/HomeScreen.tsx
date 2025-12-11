@@ -6,6 +6,7 @@ import { EmptySourcesState } from '../components/EmptySourcesState'
 import { SettingsScreen } from './SettingsScreen'
 import { PlayerScreen } from './PlayerScreen'
 import { SearchScreen } from './SearchScreen'
+import { HistoryScreen } from './HistoryScreen'
 import type { Category, VideoItem } from '../types'
 
 /**
@@ -126,7 +127,7 @@ export const HomeScreen = () => {
   }
 
   /**
-   * 打开设置页并在关闭后刷新列表。
+   * 打开设置页并在关闭后刷新列表
    */
   const openSettings = () => {
     Navigation.present({
@@ -135,10 +136,17 @@ export const HomeScreen = () => {
   }
 
   /**
-   * 进入搜索页。
+   * 进入搜索页
    */
   const openSearch = () => {
     Navigation.present({ element: <SearchScreen /> })
+  }
+
+  /**
+   * 查看历史观看记录
+   */
+  const openHistory = () => {
+    Navigation.present({ element: <HistoryScreen /> })
   }
 
   /**
@@ -149,17 +157,17 @@ export const HomeScreen = () => {
   }
 
   /**
-   * 打开播放器并传入视频 ID。
-   * @param id Vod 唯一 ID
+   * 打开播放器并传入视频 ID
+   * @param video
    */
-  const openPlayer = (id: number) => {
+  const openPlayer = (video: VideoItem) => {
     if (source) {
-      Navigation.present({ element: <PlayerScreen id={id} sourceUrl={source.url} /> })
+      Navigation.present({ element: <PlayerScreen id={video.vod_id} sourceUrl={source.url} sourceName={source.name} /> })
     }
   }
 
   /**
-   * 渲染头部区域，包含搜索与设置入口。
+   * 渲染头部区域，包含搜索与设置入口
    */
   const renderHeader = () => (
     <HStack padding={{ horizontal: 16, top: 8, bottom: 8 }} alignment="center">
@@ -167,9 +175,10 @@ export const HomeScreen = () => {
         ScriptFlix
       </Text>
       <Spacer />
-      <Button systemImage="magnifyingglass" action={openSearch} title="" />
-      <Button systemImage="gear" action={openSettings} title="" />
-      <Button systemImage="xmark.circle" action={handleExit} title="" />
+      <Button systemImage="clock" foregroundStyle="#e50914" action={openHistory} title="" />
+      <Button systemImage="magnifyingglass" foregroundStyle="#e50914" action={openSearch} title="" />
+      <Button systemImage="gear" foregroundStyle="#e50914" action={openSettings} title="" />
+      <Button systemImage="xmark.circle" foregroundStyle="#e50914" action={handleExit} title="" />
     </HStack>
   )
 

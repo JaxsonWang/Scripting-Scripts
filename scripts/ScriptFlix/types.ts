@@ -106,6 +106,13 @@ export interface ApiSource {
   url: string
 }
 
+export type HistoryEntry = {
+  video: VideoItem
+  sourceUrl: string
+  sourceName?: string
+  watchedAt: number
+}
+
 export type PlayEpisode = {
   name: string
   url: string
@@ -119,6 +126,7 @@ export type PlayGroup = {
 export type PlayerScreenProps = {
   id: number
   sourceUrl: string
+  sourceName?: string
 }
 
 export type RemoteImageProps = {
@@ -133,7 +141,7 @@ export type EmptySourcesStateProps = {
 
 export type VideoCardProps = {
   video: VideoItem
-  onTap: (id: number) => void
+  onTap: (video: VideoItem) => void
   width?: number
 }
 

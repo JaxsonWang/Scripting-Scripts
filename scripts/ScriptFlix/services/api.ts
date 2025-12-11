@@ -1,7 +1,7 @@
 import type { VideoListResponse } from '../types'
 
 /**
- * 构造请求地址，避免依赖 URL 构造函数（Scripting 运行时缺少 URL 全局）。
+ * 构造请求地址，避免依赖 URL 构造函数（Scripting 运行时缺少 URL 全局）
  * @param baseUrl Vod 接口基础地址
  * @param params 查询参数
  */
@@ -44,7 +44,7 @@ export const fetchCategories = async (baseUrl: string): Promise<VideoListRespons
 }
 
 /**
- * 拉取视频列表，支持分页、分类与关键字筛选。
+ * 拉取视频列表，支持分页、分类与关键字筛选
  * @param baseUrl CMS 接口地址
  * @param page 页码，默认 1
  * @param typeIds 需要过滤的分类 ID 列表
@@ -77,7 +77,7 @@ export const fetchVideoList = async (baseUrl: string, page: number = 1, typeIds?
 }
 
 /**
- * 根据视频 ID 拉取详情与播放源。
+ * 根据视频 ID 拉取详情与播放源
  * @param baseUrl CMS 接口地址
  * @param id 视频 ID
  */
