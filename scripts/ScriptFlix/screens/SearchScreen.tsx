@@ -12,32 +12,15 @@ import {
   Text,
   TextField,
   VStack,
-  ZStack,
-  gradient,
   useEffect,
   useMemo,
   useState
 } from 'scripting'
 import { VideoCard } from '../components/VideoCard'
-import { EmptySourcesState } from '../components/EmptySourcesState'
 import { SettingsService } from '../services/settings'
 import { fetchVideoList } from '../services/api'
-import type { ApiSource, VideoItem } from '../types'
 import { PlayerScreen } from './PlayerScreen'
-import { SettingsScreen } from './SettingsScreen'
-
-type SearchResultItem = VideoItem & {
-  sourceName: string
-  sourceUrl: string
-}
-
-type SourceSearchState = {
-  status: 'idle' | 'loading' | 'success' | 'empty' | 'error'
-  count: number
-  message?: string
-}
-
-type SourceStateMap = Record<string, SourceSearchState>
+import type { ApiSource, SearchResultItem, SourceStateMap } from '../types'
 
 /**
  * 全源搜索页，联动所有已配置的视频源，并提供分源过滤
@@ -339,12 +322,12 @@ export const SearchScreen = () => {
                 spacing={16}
                 padding={{ horizontal: 4, bottom: 16 }}
               >
-                    {filteredResults.map(item => (
-                      <VStack key={`${item.sourceName}-${item.vod_id}`} spacing={6}>
-                        <VideoCard video={item} onTap={() => handlePlay(item)} />
-                        <Text font="caption2" foregroundStyle="secondaryLabel" lineLimit={1}>
-                          来自 · {item.sourceName}
-                        </Text>
+                {filteredResults.map(item => (
+                  <VStack key={`${item.sourceName}-${item.vod_id}`} spacing={6}>
+                    <VideoCard video={item} onTap={() => handlePlay(item)} />
+                    <Text font="caption2" foregroundStyle="secondaryLabel" lineLimit={1}>
+                      来自 · {item.sourceName}
+                    </Text>
                   </VStack>
                 ))}
               </LazyVGrid>
