@@ -183,7 +183,7 @@ export const HomeScreen = () => {
           <Spacer />
           <Button systemImage="gear" title="" action={openSettings} />
         </HStack>
-        <EmptySourcesState onOpenSettings={openSettings} />
+        <EmptySourcesState onOpenSettings={openSettings} onExit={handleExit} />
       </VStack>
     )
   }

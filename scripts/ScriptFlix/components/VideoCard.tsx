@@ -42,7 +42,7 @@ export const VideoCard = ({ video, onTap, width }: VideoCardProps) => {
 
         {/* Info */}
         <VStack spacing={2} alignment="center">
-          <Text font="caption" lineLimit={1} bold>
+          <Text font="caption" lineLimit={1} bold foregroundStyle="#e50914">
             {video.vod_name}
           </Text>
           <Text font={10} foregroundStyle="gray" lineLimit={1}>

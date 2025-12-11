@@ -128,6 +128,7 @@ export type RemoteImageProps = {
 
 export type EmptySourcesStateProps = {
   onOpenSettings: () => void
+  onExit: () => void
 }
 
 export type VideoCardProps = {
@@ -149,3 +150,16 @@ export type ChangelogScreenProps = {
   version: string
   emptyLabel: string
 }
+
+export type SearchResultItem = VideoItem & {
+  sourceName: string
+  sourceUrl: string
+}
+
+export type SourceSearchState = {
+  status: 'idle' | 'loading' | 'success' | 'empty' | 'error'
+  count: number
+  message?: string
+}
+
+export type SourceStateMap = Record<string, SourceSearchState>

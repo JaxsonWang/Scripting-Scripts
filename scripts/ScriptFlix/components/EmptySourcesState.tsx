@@ -4,8 +4,9 @@ import type { EmptySourcesStateProps } from '../types'
 /**
  * 用于提示用户尚未配置任何视频源，并提供前往设置页面的入口。
  * @param onOpenSettings 打开设置界面的回调
+ * @param onExit
  */
-export const EmptySourcesState = ({ onOpenSettings }: EmptySourcesStateProps) => {
+export const EmptySourcesState = ({ onOpenSettings, onExit }: EmptySourcesStateProps) => {
   return (
     <VStack alignment="center" spacing={16}>
       <Spacer />
@@ -21,6 +22,7 @@ export const EmptySourcesState = ({ onOpenSettings }: EmptySourcesStateProps) =>
       <Spacer />
 
       <Button title="添加视频源" action={onOpenSettings} />
+      <Button title="退出" action={onExit} />
     </VStack>
   )
 }
