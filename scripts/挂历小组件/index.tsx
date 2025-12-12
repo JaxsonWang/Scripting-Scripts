@@ -1,5 +1,4 @@
-import { Button, HStack, Image, List, Navigation, NavigationStack, Script, Section, Spacer, Text, VStack, Widget } from 'scripting'
-import { useEffect, useState } from 'scripting'
+import { Button, HStack, Image, List, Navigation, NavigationStack, Script, Section, Spacer, Text, VStack, Widget, useEffect, useState } from 'scripting'
 import {
   type VersionInfo,
   fetchBannerImage,

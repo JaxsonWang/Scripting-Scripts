@@ -1,4 +1,4 @@
-import { Button, Form, HStack, Image, List, Navigation, NavigationStack, Section, Spacer, Text, TextField, VStack, useState } from 'scripting'
+import { Button, Form, HStack, Image, List, Navigation, NavigationStack, Script, Section, Spacer, Text, TextField, VStack, useState } from 'scripting'
 import type { BaiduFile } from './utils/baidu-client'
 import { BaiduDiskClient, getShareInfo } from './utils/baidu-client'
 import { processDownload } from './utils/processor'
@@ -291,4 +291,10 @@ export const PanPDFViewer = () => {
 
 // Present the main component
 console.log('[PanPDFViewer] script loaded, presenting UI')
-Navigation.present(<PanPDFViewer />)
+
+const run = async () => {
+  await Navigation.present(<PanPDFViewer />)
+  Script.exit()
+}
+
+run()

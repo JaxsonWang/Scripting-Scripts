@@ -1,4 +1,20 @@
-import { Button, HStack, Image, LazyVGrid, Navigation, RoundedRectangle, ScrollView, Spacer, Text, VStack, useEffect, useMemo, useState } from 'scripting'
+import {
+  Button,
+  HStack,
+  Image,
+  LazyVGrid,
+  Navigation,
+  RoundedRectangle,
+  ScrollView,
+  Spacer,
+  Text,
+  VStack,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState
+} from 'scripting'
 import { SettingsService } from '../services/settings'
 import { fetchCategories, fetchVideoList } from '../services/api'
 import { VideoCard } from '../components/VideoCard'
@@ -25,41 +41,65 @@ export const HomeScreen = () => {
 
   const dismiss = Navigation.useDismiss()
 
+  // 使用 ref 存储最新状态，避免 useCallback 依赖过多
+  const stateRef = useRef({ categories, selectedMainType, selectedSubType, page, hasMore, loadingMore })
+  stateRef.current = { categories, selectedMainType, selectedSubType, page, hasMore, loadingMore }
+
+  /**
+   * 获取当前筛选的类型 ID
+   */
+  const getFetchTypeIds = useCallback((): number[] | undefined => {
+    const { categories: cats, selectedMainType: mainType, selectedSubType: subType } = stateRef.current
+    if (mainType === null) {
+      return undefined
+    }
+
+    if (subType !== null) {
+      return [subType]
+    }
+
+    const subs = cats.filter(cat => cat.type_pid === mainType).map(cat => cat.type_id)
+    return subs.length > 0 ? subs : [mainType]
+  }, [])
+
   /**
    * 拉取首页视频与分类数据
    */
-  const loadData = async (targetPage: number = 1, append = false) => {
-    const currentSource = SettingsService.getCurrentSource()
-    setSource(currentSource)
+  const loadData = useCallback(
+    async (targetPage: number = 1, append = false) => {
+      const currentSource = SettingsService.getCurrentSource()
+      setSource(currentSource)
 
-    if (!currentSource) {
-      setVideos([])
-      setHasMore(false)
-      return
-    }
-
-    if (append) {
-      setLoadingMore(true)
-    } else {
-      setLoading(true)
-    }
-    try {
-      const typeIds = getFetchTypeIds()
-      const res = await fetchVideoList(currentSource.url, targetPage, typeIds)
-      setVideos(prev => (append ? [...prev, ...(res.list || [])] : res.list || []))
-      setPage(targetPage)
-      const totalPages = res.pagecount || targetPage
-      setHasMore(targetPage < totalPages)
-    } catch (e) {
-      console.error(e)
-    } finally {
-      if (append) {
-        setLoadingMore(false)
-      } else {
-        setLoading(false)
+      if (!currentSource) {
+        setVideos([])
+        setHasMore(false)
+        return
       }
-    }
-  }
+
+      if (append) {
+        setLoadingMore(true)
+      } else {
+        setLoading(true)
+      }
+      try {
+        const typeIds = getFetchTypeIds()
+        const res = await fetchVideoList(currentSource.url, targetPage, typeIds)
+        setVideos(prev => (append ? [...prev, ...(res.list || [])] : res.list || []))
+        setPage(targetPage)
+        const totalPages = res.pagecount || targetPage
+        setHasMore(targetPage < totalPages)
+      } catch (e) {
+        console.error(e)
+      } finally {
+        if (append) {
+          setLoadingMore(false)
+        } else {
+          setLoading(false)
+        }
+      }
+    },
+    [getFetchTypeIds]
+  )
 
   const mainCategories = useMemo(() => categories.filter(cat => cat.type_pid === 0), [categories])
 
@@ -68,26 +108,13 @@ export const HomeScreen = () => {
     return categories.filter(cat => cat.type_pid === selectedMainType)
   }, [categories, selectedMainType])
 
-  const getFetchTypeIds = (): number[] | undefined => {
-    if (selectedMainType === null) {
-      return undefined
-    }
-
-    if (selectedSubType !== null) {
-      return [selectedSubType]
-    }
-
-    const subs = categories.filter(cat => cat.type_pid === selectedMainType).map(cat => cat.type_id)
-    return subs.length > 0 ? subs : [selectedMainType]
-  }
-
   useEffect(() => {
     if (source?.url) {
       setHasMore(true)
       setPage(1)
       loadData(1, false)
     }
-  }, [source?.url, selectedMainType, selectedSubType])
+  }, [source?.url, selectedMainType, selectedSubType, loadData])
 
   useEffect(() => {
     setSelectedSubType(null)
@@ -111,60 +138,67 @@ export const HomeScreen = () => {
     fetchAndSetCategories()
   }, [source?.url])
 
-  const handleLoadMore = () => {
-    if (!loadingMore && hasMore) {
-      loadData(page + 1, true)
+  const handleLoadMore = useCallback(() => {
+    const { page: currentPage, hasMore: more, loadingMore: isLoading } = stateRef.current
+    if (!isLoading && more) {
+      loadData(currentPage + 1, true)
     }
-  }
+  }, [loadData])
 
-  const handleGridItemAppear = (index: number) => {
-    if (!hasMore || loadingMore) {
-      return
-    }
-    if (index >= videos.length - 1) {
-      handleLoadMore()
-    }
-  }
+  const handleGridItemAppear = useCallback(
+    (index: number) => {
+      const { hasMore: more, loadingMore: isLoading } = stateRef.current
+      if (!more || isLoading) {
+        return
+      }
+      if (index >= videos.length - 1) {
+        handleLoadMore()
+      }
+    },
+    [videos.length, handleLoadMore]
+  )
 
   /**
    * 打开设置页并在关闭后刷新列表
    */
-  const openSettings = () => {
+  const openSettings = useCallback(() => {
     Navigation.present({
       element: <SettingsScreen />
     }).then(() => loadData())
-  }
+  }, [loadData])
 
   /**
    * 进入搜索页
    */
-  const openSearch = () => {
+  const openSearch = useCallback(() => {
     Navigation.present({ element: <SearchScreen /> })
-  }
+  }, [])
 
   /**
    * 查看历史观看记录
    */
-  const openHistory = () => {
+  const openHistory = useCallback(() => {
     Navigation.present({ element: <HistoryScreen /> })
-  }
+  }, [])
 
   /**
    * 退出应用
    */
-  const handleExit = () => {
+  const handleExit = useCallback(() => {
     dismiss()
-  }
+  }, [dismiss])
 
   /**
    * 打开播放器并传入视频 ID
-   * @param video
    */
-  const openPlayer = (video: VideoItem) => {
-    if (source) {
-      Navigation.present({ element: <PlayerScreen id={video.vod_id} sourceUrl={source.url} sourceName={source.name} /> })
-    }
-  }
+  const openPlayer = useCallback(
+    (video: VideoItem) => {
+      if (source) {
+        Navigation.present({ element: <PlayerScreen id={video.vod_id} sourceUrl={source.url} sourceName={source.name} /> })
+      }
+    },
+    [source]
+  )
 
   /**
    * 渲染头部区域，包含搜索与设置入口
@@ -246,7 +280,7 @@ export const HomeScreen = () => {
               >
                 {videos.map((video, index) => (
                   <VStack key={video.vod_id} onAppear={() => handleGridItemAppear(index)}>
-                    <VideoCard video={video} onTap={openPlayer} />
+                    <VideoCard video={video} onTap={() => openPlayer(video)} />
                   </VStack>
                 ))}
               </LazyVGrid>

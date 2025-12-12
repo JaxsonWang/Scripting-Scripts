@@ -23,4 +23,5 @@ stats.html
 *.sw?
 AGENTS.md
 GEMINI.md
+CLAUDE.md
 /demo/

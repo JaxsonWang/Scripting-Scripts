@@ -1,4 +1,21 @@
-import { Button, HStack, List, Navigation, NavigationStack, Path, Picker, Section, Spacer, Text, TextField, VStack, useEffect, useState } from 'scripting'
+import {
+  Button,
+  HStack,
+  List,
+  Navigation,
+  NavigationStack,
+  Path,
+  Picker,
+  Script,
+  Section,
+  Spacer,
+  Text,
+  TextField,
+  VStack,
+  useCallback,
+  useEffect,
+  useState
+} from 'scripting'
 import { cropAllImages } from './cropImage'
 import type { Config } from './typeof'
 import { calculateCropCoordinates } from './utils/calculateCropCoordinates'
@@ -49,19 +66,19 @@ const App = () => {
   }
 
   // 更新图片数量
-  const updateImageCount = async () => {
+  const updateImageCount = useCallback(async () => {
     if (config.path) {
       const count = await countImagesInDirectory(config.path)
       setImageCount(count)
     } else {
       setImageCount(0)
     }
-  }
+  }, [config.path])
 
   // 初始化时和路径变化时更新图片数量
   useEffect(() => {
     updateImageCount()
-  }, [config.path])
+  }, [updateImageCount])
 
   // 根据当前路径判断选中的保存位置（iCloud / 本地）
   const selectedLocation = (() => {
@@ -71,26 +88,29 @@ const App = () => {
   })()
 
   // 从当前路径中提取子目录名称
-  const extractSubDirectory = () => {
-    if (!config.path) return subDirectory
-    if (config.path.startsWith(FileManager.iCloudDocumentsDirectory)) {
-      const relative = config.path.replace(FileManager.iCloudDocumentsDirectory, '').replace(/^\//, '')
-      return relative || subDirectory
-    }
-    if (config.path.startsWith(FileManager.appGroupDocumentsDirectory)) {
-      const relative = config.path.replace(FileManager.appGroupDocumentsDirectory, '').replace(/^\//, '')
-      return relative || subDirectory
-    }
-    return subDirectory
-  }
+  const extractSubDirectory = useCallback(
+    (defaultValue: string): string => {
+      if (!config.path) return defaultValue
+      if (config.path.startsWith(FileManager.iCloudDocumentsDirectory)) {
+        const relative = config.path.replace(FileManager.iCloudDocumentsDirectory, '').replace(/^\//, '')
+        return relative || defaultValue
+      }
+      if (config.path.startsWith(FileManager.appGroupDocumentsDirectory)) {
+        const relative = config.path.replace(FileManager.appGroupDocumentsDirectory, '').replace(/^\//, '')
+        return relative || defaultValue
+      }
+      return defaultValue
+    },
+    [config.path]
+  )
 
   // 初始化时从路径中提取子目录
   useEffect(() => {
-    const extracted = extractSubDirectory()
+    const extracted = extractSubDirectory(subDirectory)
     if (extracted !== subDirectory) {
       setSubDirectory(extracted)
     }
-  }, [config.path])
+  }, [config.path, extractSubDirectory])
 
   const ensureDir = async (dir: string) => {
     try {
@@ -310,4 +330,9 @@ const App = () => {
     </NavigationStack>
   )
 }
-Navigation.present(<App />)
+const run = async () => {
+  await Navigation.present(<App />)
+  Script.exit()
+}
+
+run()

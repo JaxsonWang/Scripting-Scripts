@@ -1,17 +1,15 @@
 import {
   Button,
-  Form,
   HStack,
   LazyVGrid,
   Navigation,
   NavigationStack,
   RoundedRectangle,
   ScrollView,
-  Section,
   Spacer,
   Text,
-  TextField,
   VStack,
+  useCallback,
   useEffect,
   useMemo,
   useState
@@ -72,10 +70,16 @@ export const SearchScreen = () => {
     setLastKeyword('')
     resetSourceStates()
   }
-
-  const handlePlay = (item: SearchResultItem) => {
-    Navigation.present({ element: <PlayerScreen id={item.vod_id} sourceUrl={item.sourceUrl} sourceName={item.sourceName} /> })
+  const handleQueryChange = (value: string) => {
+    setQuery(value)
+    if (value.trim().length === 0) {
+      clearSearch()
+    }
   }
+
+  const openPlayer = useCallback((item: SearchResultItem) => {
+    Navigation.present({ element: <PlayerScreen id={item.vod_id} sourceUrl={item.sourceUrl} sourceName={item.sourceName} /> })
+  }, [])
 
   const performSearch = async (keyword?: string) => {
     const trimmed = (keyword ?? query).trim()
@@ -257,66 +261,61 @@ export const SearchScreen = () => {
 
   return (
     <NavigationStack>
-      <Form
+      <VStack
+        spacing={16}
+        padding={{ horizontal: 16 }}
         navigationTitle="内容搜索"
         toolbar={{
           cancellationAction: <Button title="关闭" action={dismiss} />,
           primaryAction: <Button title="搜索" action={() => performSearch()} disabled={loading || query.trim().length === 0} />
         }}
+        searchable={{
+          value: query,
+          onChanged: handleQueryChange,
+          placement: 'navigationBarDrawer',
+          prompt: '输入关键词...'
+        }}
+        onSubmit={{ triggers: 'search', action: () => performSearch() }}
       >
-        <Section
-          footer={
-            <Text font="footnote" foregroundStyle="secondaryLabel">
-              {statusLabel}
-            </Text>
-          }
-        >
-          <TextField title="关键词" value={query} prompt="输入关键词..." onChanged={setQuery} onSubmit={{ triggers: 'text', action: () => performSearch() }} />
+        <VStack spacing={8}>
+          <ScrollView axes="horizontal" scrollIndicator="hidden">
+            <HStack spacing={12}>{filterItems.map(item => renderFilterChip(item.key, item.label, item.count))}</HStack>
+          </ScrollView>
 
-          <HStack spacing={12}>
-            <Button title="清空" action={clearSearch} foregroundStyle="systemRed" disabled={!query && results.length === 0} />
+          <HStack>
+            <Text font="caption2" foregroundStyle="secondaryLabel">
+              共 {results.length} 条结果 · 异常源 {errorSourceCount}
+            </Text>
+            <Spacer />
           </HStack>
-        </Section>
+        </VStack>
 
         <VStack spacing={8}>
-          <VStack spacing={8}>
-            <ScrollView axes="horizontal" scrollIndicator="hidden">
-              <HStack spacing={12}>{filterItems.map(item => renderFilterChip(item.key, item.label, item.count))}</HStack>
-            </ScrollView>
+          <HStack>
+            <Text font="headline" bold>
+              {selectedSource === 'all' ? '全部结果' : `${selectedSource} 的结果`}
+            </Text>
+            <Spacer />
+          </HStack>
 
-            <HStack>
-              <Text font="caption2" foregroundStyle="secondaryLabel">
-                共 {results.length} 条结果 · 异常源 {errorSourceCount}
+          {loading && (
+            <VStack alignment="center">
+              <Text font="subheadline" foregroundStyle="secondaryLabel">
+                正在联动所有源，请稍候...
               </Text>
-              <Spacer />
-            </HStack>
-          </VStack>
+            </VStack>
+          )}
 
-          <VStack spacing={8}>
-            <HStack>
-              <Text font="headline" bold>
-                {selectedSource === 'all' ? '全部结果' : `${selectedSource} 的结果`}
+          {!loading && filteredResults.length === 0 && (
+            <VStack alignment="leading">
+              <Text font="subheadline" foregroundStyle="secondaryLabel">
+                {statusLabel}
               </Text>
-              <Spacer />
-            </HStack>
+            </VStack>
+          )}
 
-            {loading && (
-              <VStack alignment="center">
-                <Text font="subheadline" foregroundStyle="secondaryLabel">
-                  正在联动所有源，请稍候...
-                </Text>
-              </VStack>
-            )}
-
-            {!loading && filteredResults.length === 0 && (
-              <VStack alignment="leading">
-                <Text font="subheadline" foregroundStyle="secondaryLabel">
-                  {statusLabel}
-                </Text>
-              </VStack>
-            )}
-
-            {filteredResults.length > 0 && (
+          {filteredResults.length > 0 && (
+            <ScrollView scrollIndicator="hidden">
               <LazyVGrid
                 columns={[{ size: { type: 'flexible' }, spacing: 12 }, { size: { type: 'flexible' }, spacing: 12 }, { size: { type: 'flexible' } }]}
                 spacing={16}
@@ -324,17 +323,18 @@ export const SearchScreen = () => {
               >
                 {filteredResults.map(item => (
                   <VStack key={`${item.sourceName}-${item.vod_id}`} spacing={6}>
-                    <VideoCard video={item} onTap={() => handlePlay(item)} />
+                    <VideoCard video={item} onTap={() => openPlayer(item)} />
                     <Text font="caption2" foregroundStyle="secondaryLabel" lineLimit={1}>
                       来自 · {item.sourceName}
                     </Text>
                   </VStack>
                 ))}
               </LazyVGrid>
-            )}
-          </VStack>
+            </ScrollView>
+          )}
         </VStack>
-      </Form>
+        <Spacer />
+      </VStack>
     </NavigationStack>
   )
 }

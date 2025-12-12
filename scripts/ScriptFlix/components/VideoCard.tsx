@@ -12,7 +12,7 @@ export const VideoCard = ({ video, onTap, width }: VideoCardProps) => {
   const frameProps = width ? { width } : {}
 
   return (
-    <Button action={() => onTap(video)}>
+    <Button action={onTap}>
       <VStack spacing={6} frame={frameProps}>
         {/* Poster Image */}
         <ZStack alignment="topTrailing">

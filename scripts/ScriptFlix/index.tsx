@@ -1,4 +1,9 @@
-import { Navigation } from 'scripting'
+import { Navigation, Script } from 'scripting'
 import { HomeScreen } from './screens/HomeScreen'
 
-Navigation.present({ element: <HomeScreen />, modalPresentationStyle: 'fullScreen' })
+const run = async () => {
+  await Navigation.present({ element: <HomeScreen />, modalPresentationStyle: 'fullScreen' })
+  Script.exit()
+}
+
+run()

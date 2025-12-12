@@ -1,0 +1,15 @@
+{
+  "name": "Live Activity 工具",
+  "version": "1.0.0",
+  "icon": "folder.fill",
+  "color": "rgba(190, 0, 159, 1.00)",
+  "runInApp": false,
+  "intentInputTypes": [],
+  "description": "在灵动岛显示实时网速、系统状态或精确时间",
+  "author": {
+    "homepage": "https://github.com/JaxsonWang",
+    "email": "jaxson.j.wang@gmail.com",
+    "name": "淮城一只猫"
+  },
+  "contributors": []
+}

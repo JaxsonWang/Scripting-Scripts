@@ -1,263 +1,457 @@
-import { HStack, Image, Spacer, Text, VStack, Widget } from 'scripting'
+import { Gauge, HStack, Image, Spacer, Text, VStack, Widget, ZStack, Color, Circle } from 'scripting'
 import {
-  type DSMInfo,
-  type StorageInfo,
-  type SystemUtilization,
+  type DashboardData,
   getCurrentSynologyConfig,
-  getDSMInfo,
-  getStorageInfo,
-  getSystemUtilization,
+  getDashboardData,
+  formatNetworkSpeed,
   isSessionValid,
   loginToSynology
 } from './utils/synology-service'
 
 /**
- * 格式化百分比
- */
-function formatPercentage(value: number): string {
-  return value.toFixed(1) + '%'
-}
-
-/**
  * 获取状态颜色
  */
-function getStatusColor(percentage: number): 'systemRed' | 'systemOrange' | 'systemGreen' {
+function getStatusColor(percentage: number): 'systemRed' | 'systemOrange' | 'systemGreen' | 'systemBlue' {
   if (percentage > 80) return 'systemRed'
   if (percentage > 60) return 'systemOrange'
+  if (percentage > 40) return 'systemBlue'
   return 'systemGreen'
 }
 
 /**
- * 小号组件视图
+ * 圆环仪表盘组件
  */
-function SmallWidgetView({
-  dsmInfo,
-  systemData,
-  storageData
+function GaugeIndicator({
+  value,
+  label,
+  icon,
+  color
 }: {
-  dsmInfo: DSMInfo | null
-  systemData: SystemUtilization | null
-  storageData: StorageInfo | null
+  value: number
+  label: string
+  icon: string
+  color: 'systemRed' | 'systemOrange' | 'systemGreen' | 'systemBlue'
 }) {
+  const normalizedValue = Math.min(Math.max(value / 100, 0), 1)
+
   return (
-    <VStack
-      spacing={4}
-      padding={16}
-      frame={{
-        maxWidth: 'infinity',
-        maxHeight: 'infinity'
-      }}
-    >
-      {/* 标题 */}
-      <HStack alignment="center">
-        <Image systemName="externaldrive.connected.to.line.below" foregroundStyle="systemBlue" frame={{ width: 16, height: 16 }} />
-        <Text font="caption" fontWeight="semibold" foregroundStyle="systemBlue">
-          群晖 NAS
-        </Text>
-        <Spacer />
-      </HStack>
-
-      <Spacer />
-
-      {/* 系统信息 */}
-      {systemData ? (
-        <VStack spacing={6}>
-          {/* CPU */}
-          <HStack alignment="center">
-            <Text font="caption2" foregroundStyle="secondaryLabel">
-              CPU
-            </Text>
-            <Spacer />
-            <Text font="caption" fontWeight="semibold" foregroundStyle={getStatusColor(systemData.cpu['1min_load'])}>
-              {formatPercentage(systemData.cpu['1min_load'])}
-            </Text>
-          </HStack>
-
-          {/* 内存 */}
-          <HStack alignment="center">
-            <Text font="caption2" foregroundStyle="secondaryLabel">
-              内存
-            </Text>
-            <Spacer />
-            <Text font="caption" fontWeight="semibold" foregroundStyle={getStatusColor(systemData.memory.real_usage)}>
-              {formatPercentage(systemData.memory.real_usage)}
-            </Text>
-          </HStack>
-
-          {/* 存储 */}
-          {storageData?.volumes?.[0]
-            ? (() => {
-                const volume = storageData.volumes[0]
-                const totalGB = parseInt(volume.size.total) / 1024 ** 3
-                const usedGB = parseInt(volume.size.used) / 1024 ** 3
-                const usagePercent = (usedGB / totalGB) * 100
-
-                return (
-                  <HStack alignment="center">
-                    <Text font="caption2" foregroundStyle="secondaryLabel">
-                      存储
-                    </Text>
-                    <Spacer />
-                    <Text font="caption" fontWeight="semibold" foregroundStyle={getStatusColor(usagePercent)}>
-                      {usagePercent.toFixed(1)}%
-                    </Text>
-                  </HStack>
-                )
-              })()
-            : null}
-        </VStack>
-      ) : (
-        <VStack alignment="center" spacing={4}>
-          <Image systemName="exclamationmark.triangle" foregroundStyle="systemOrange" frame={{ width: 20, height: 20 }} />
-          <Text font="caption2" foregroundStyle="secondaryLabel" multilineTextAlignment="center">
-            未连接
-            {'\n'}
-            请配置连接信息
+    <VStack spacing={2} alignment="center">
+      <Gauge
+        value={normalizedValue}
+        label={<Image systemName={icon} font="caption2" />}
+        min={0}
+        max={1}
+        currentValueLabel={
+          <Text font="caption2" fontWeight="bold" foregroundStyle={color}>
+            {Math.round(value)}%
           </Text>
-        </VStack>
-      )}
-
-      <Spacer />
-
-      {/* 更新时间 */}
-      <Text font="caption2" foregroundStyle="tertiaryLabel" multilineTextAlignment="center">
-        {new Date().toLocaleTimeString('zh-CN', {
-          hour: '2-digit',
-          minute: '2-digit'
-        })}
+        }
+        gaugeStyle="accessoryCircular"
+        tint={color}
+      />
+      <Text font="caption2" foregroundStyle="secondaryLabel">
+        {label}
       </Text>
     </VStack>
   )
 }
 
 /**
- * 中号组件视图
+ * 网络速率显示组件
  */
-function MediumWidgetView({
-  dsmInfo,
-  systemData,
-  storageData
-}: {
-  dsmInfo: DSMInfo | null
-  systemData: SystemUtilization | null
-  storageData: StorageInfo | null
-}) {
+function NetworkSpeedView({ uploadSpeed, downloadSpeed }: { uploadSpeed: number; downloadSpeed: number }) {
+  return (
+    <HStack spacing={12} alignment="center">
+      <HStack spacing={4} alignment="center">
+        <Image systemName="arrow.up" font="caption2" foregroundStyle="systemGreen" />
+        <Text font="caption2" fontWeight="medium" foregroundStyle="label">
+          {formatNetworkSpeed(uploadSpeed)}
+        </Text>
+      </HStack>
+      <HStack spacing={4} alignment="center">
+        <Image systemName="arrow.down" font="caption2" foregroundStyle="systemBlue" />
+        <Text font="caption2" fontWeight="medium" foregroundStyle="label">
+          {formatNetworkSpeed(downloadSpeed)}
+        </Text>
+      </HStack>
+    </HStack>
+  )
+}
+
+/**
+ * 连接状态指示器
+ */
+function ConnectionIndicator({ isOnline, latency }: { isOnline: boolean; latency: number }) {
+  return (
+    <HStack spacing={4} alignment="center">
+      <Circle
+        fill={isOnline ? 'systemGreen' : 'systemRed'}
+        frame={{ width: 6, height: 6 }}
+      />
+      <Text font="caption2" foregroundStyle={isOnline ? 'systemGreen' : 'systemRed'}>
+        {isOnline ? 'Online' : 'Offline'}
+      </Text>
+      {isOnline && latency > 0 && (
+        <Text font="caption2" foregroundStyle="tertiaryLabel">
+          {latency}ms
+        </Text>
+      )}
+    </HStack>
+  )
+}
+
+/**
+ * 小号组件视图 - 简洁显示核心指标
+ */
+function SmallWidgetView({ data }: { data: DashboardData | null }) {
+  if (!data) {
+    return (
+      <VStack
+        spacing={8}
+        padding={12}
+        frame={{ maxWidth: 'infinity', maxHeight: 'infinity' }}
+        background="black"
+      >
+        <HStack alignment="center">
+          <Image systemName="externaldrive.badge.xmark" foregroundStyle="systemOrange" frame={{ width: 20, height: 20 }} />
+          <Text font="caption" fontWeight="semibold" foregroundStyle="systemOrange">
+            NAS 未连接
+          </Text>
+        </HStack>
+        <Spacer />
+        <Text font="caption2" foregroundStyle="secondaryLabel" multilineTextAlignment="center">
+          请在 App 中配置连接
+        </Text>
+        <Spacer />
+      </VStack>
+    )
+  }
+
+  const cpuColor = getStatusColor(data.cpuUsage)
+  const memColor = getStatusColor(data.memoryUsage)
+  const diskColor = getStatusColor(data.diskUsage)
+
   return (
     <VStack
-      spacing={8}
-      padding={16}
-      frame={{
-        maxWidth: 'infinity',
-        maxHeight: 'infinity'
-      }}
+      spacing={6}
+      padding={12}
+      frame={{ maxWidth: 'infinity', maxHeight: 'infinity' }}
+      background="black"
     >
       {/* 标题栏 */}
       <HStack alignment="center">
-        <Image systemName="externaldrive.connected.to.line.below" foregroundStyle="systemBlue" frame={{ width: 20, height: 20 }} />
-        <Text font="subheadline" fontWeight="semibold" foregroundStyle="systemBlue">
-          群晖 NAS 状态
+        <Text font="caption" fontWeight="bold" foregroundStyle="white">
+          {data.dsmInfo?.model || 'Synology'}
         </Text>
         <Spacer />
-        <Text font="caption2" foregroundStyle="tertiaryLabel">
-          {new Date().toLocaleTimeString('zh-CN', {
-            hour: '2-digit',
-            minute: '2-digit'
-          })}
-        </Text>
+        <ConnectionIndicator isOnline={data.connectionStatus.isOnline} latency={data.connectionStatus.latency} />
       </HStack>
 
-      {systemData ? (
-        <VStack spacing={8}>
-          {/* 系统资源 */}
-          <VStack spacing={6}>
-            <HStack alignment="center">
-              <VStack alignment="leading" spacing={1}>
-                <Text font="caption" foregroundStyle="secondaryLabel">
-                  CPU 负载
-                </Text>
-                <Text font="title3" fontWeight="semibold" foregroundStyle={getStatusColor(systemData.cpu['1min_load'])}>
-                  {formatPercentage(systemData.cpu['1min_load'])}
-                </Text>
-              </VStack>
-              <Spacer />
-              <VStack alignment="trailing" spacing={1}>
-                <Text font="caption" foregroundStyle="secondaryLabel">
-                  内存使用
-                </Text>
-                <Text font="title3" fontWeight="semibold" foregroundStyle={getStatusColor(systemData.memory.real_usage)}>
-                  {formatPercentage(systemData.memory.real_usage)}
-                </Text>
-              </VStack>
-            </HStack>
-          </VStack>
+      <Spacer />
 
-          {/* 存储信息 */}
-          {storageData?.volumes && storageData.volumes.length > 0 ? (
-            <VStack spacing={4}>
-              <Text font="caption" foregroundStyle="secondaryLabel">
-                存储空间
-              </Text>
-              {storageData.volumes.slice(0, 2).map((volume, index) => {
-                const totalGB = parseInt(volume.size.total) / 1024 ** 3
-                const usedGB = parseInt(volume.size.used) / 1024 ** 3
-                const usagePercent = (usedGB / totalGB) * 100
+      {/* 三个圆环仪表盘 */}
+      <HStack spacing={8} alignment="center">
+        <GaugeIndicator value={data.cpuUsage} label="CPU" icon="cpu" color={cpuColor} />
+        <GaugeIndicator value={data.memoryUsage} label="MEM" icon="memorychip" color={memColor} />
+        <GaugeIndicator value={data.diskUsage} label="DISK" icon="externaldrive" color={diskColor} />
+      </HStack>
 
-                return (
-                  <HStack key={index} alignment="center">
-                    <Text font="caption2" foregroundStyle="secondaryLabel">
-                      卷 {volume.id}
-                    </Text>
-                    <Spacer />
-                    <Text font="caption" fontWeight="medium" foregroundStyle={getStatusColor(usagePercent)}>
-                      {usagePercent.toFixed(1)}% ({usedGB.toFixed(1)}GB)
-                    </Text>
-                  </HStack>
-                )
-              })}
-            </VStack>
-          ) : null}
-        </VStack>
-      ) : (
-        <VStack alignment="center" spacing={8}>
-          <Image systemName="exclamationmark.triangle" foregroundStyle="systemOrange" frame={{ width: 32, height: 32 }} />
-          <VStack alignment="center" spacing={4}>
-            <Text font="body" fontWeight="medium" foregroundStyle="label">
-              未连接到 NAS
-            </Text>
-            <Text font="caption" foregroundStyle="secondaryLabel" multilineTextAlignment="center">
-              请在应用中配置连接信息
-            </Text>
-          </VStack>
-        </VStack>
-      )}
+      <Spacer />
+
+      {/* 时间 */}
+      <Text font="caption2" foregroundStyle="tertiaryLabel">
+        {data.lastUpdateTime.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}
+      </Text>
     </VStack>
   )
 }
 
 /**
- * 主组件视图
+ * 中号组件视图 - 完整显示所有指标
  */
-const WidgetView = ({
-  dsmInfo,
-  systemData,
-  storageData
-}: {
-  dsmInfo: DSMInfo | null
-  systemData: SystemUtilization | null
-  storageData: StorageInfo | null
-}) => {
-  // 根据组件大小返回不同的视图
+function MediumWidgetView({ data }: { data: DashboardData | null }) {
+  if (!data) {
+    return (
+      <VStack
+        spacing={12}
+        padding={16}
+        frame={{ maxWidth: 'infinity', maxHeight: 'infinity' }}
+        background="black"
+      >
+        <HStack alignment="center">
+          <Image systemName="externaldrive.badge.xmark" foregroundStyle="systemOrange" frame={{ width: 28, height: 28 }} />
+          <VStack alignment="leading" spacing={2}>
+            <Text font="headline" fontWeight="bold" foregroundStyle="white">
+              NAS 未连接
+            </Text>
+            <Text font="caption" foregroundStyle="secondaryLabel">
+              请在 Scripting App 中配置连接信息
+            </Text>
+          </VStack>
+          <Spacer />
+        </HStack>
+        <Spacer />
+      </VStack>
+    )
+  }
+
+  const cpuColor = getStatusColor(data.cpuUsage)
+  const memColor = getStatusColor(data.memoryUsage)
+  const diskColor = getStatusColor(data.diskUsage)
+
+  return (
+    <VStack
+      spacing={10}
+      padding={16}
+      frame={{ maxWidth: 'infinity', maxHeight: 'infinity' }}
+      background="black"
+    >
+      {/* 顶部信息栏 */}
+      <HStack alignment="center">
+        <VStack alignment="leading" spacing={2}>
+          <Text font="headline" fontWeight="bold" foregroundStyle="white">
+            {data.dsmInfo?.model || 'Synology NAS'}
+          </Text>
+          <ConnectionIndicator isOnline={data.connectionStatus.isOnline} latency={data.connectionStatus.latency} />
+        </VStack>
+        <Spacer />
+        <VStack alignment="trailing" spacing={2}>
+          <Text font="title2" fontWeight="bold" foregroundStyle="white">
+            {data.lastUpdateTime.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}
+          </Text>
+          <Text font="caption2" foregroundStyle="tertiaryLabel">
+            {data.dsmInfo?.version_string || 'DSM'}
+          </Text>
+        </VStack>
+      </HStack>
+
+      {/* 中间仪表盘区域 */}
+      <HStack spacing={16} alignment="center">
+        <GaugeIndicator value={data.cpuUsage} label="CPU" icon="cpu" color={cpuColor} />
+        <GaugeIndicator value={data.memoryUsage} label="MEM" icon="memorychip" color={memColor} />
+        <GaugeIndicator value={data.diskUsage} label="DISK" icon="externaldrive" color={diskColor} />
+
+        <Spacer />
+
+        {/* 网络速率 */}
+        <VStack spacing={6} alignment="trailing">
+          <HStack spacing={4} alignment="center">
+            <Image systemName="arrow.up.circle.fill" foregroundStyle="systemGreen" frame={{ width: 14, height: 14 }} />
+            <Text font="caption" fontWeight="semibold" foregroundStyle="white">
+              {formatNetworkSpeed(data.networkSpeed.uploadSpeed)}
+            </Text>
+          </HStack>
+          <HStack spacing={4} alignment="center">
+            <Image systemName="arrow.down.circle.fill" foregroundStyle="systemBlue" frame={{ width: 14, height: 14 }} />
+            <Text font="caption" fontWeight="semibold" foregroundStyle="white">
+              {formatNetworkSpeed(data.networkSpeed.downloadSpeed)}
+            </Text>
+          </HStack>
+        </VStack>
+      </HStack>
+
+      {/* 底部存储信息 */}
+      <HStack alignment="center">
+        <Image systemName="internaldrive" foregroundStyle="secondaryLabel" frame={{ width: 12, height: 12 }} />
+        <Text font="caption2" foregroundStyle="secondaryLabel">
+          {data.diskUsedGB.toFixed(1)} GB / {data.diskTotalGB.toFixed(1)} GB
+        </Text>
+        <Spacer />
+      </HStack>
+    </VStack>
+  )
+}
+
+/**
+ * 大号组件视图
+ */
+function LargeWidgetView({ data }: { data: DashboardData | null }) {
+  if (!data) {
+    return (
+      <VStack
+        spacing={16}
+        padding={20}
+        frame={{ maxWidth: 'infinity', maxHeight: 'infinity' }}
+        background="black"
+      >
+        <HStack alignment="center">
+          <Image systemName="externaldrive.badge.xmark" foregroundStyle="systemOrange" frame={{ width: 36, height: 36 }} />
+          <VStack alignment="leading" spacing={4}>
+            <Text font="title3" fontWeight="bold" foregroundStyle="white">
+              Synology NAS 未连接
+            </Text>
+            <Text font="subheadline" foregroundStyle="secondaryLabel">
+              请在 Scripting App 中配置 NAS 连接信息
+            </Text>
+          </VStack>
+          <Spacer />
+        </HStack>
+        <Spacer />
+      </VStack>
+    )
+  }
+
+  const cpuColor = getStatusColor(data.cpuUsage)
+  const memColor = getStatusColor(data.memoryUsage)
+  const diskColor = getStatusColor(data.diskUsage)
+
+  return (
+    <VStack
+      spacing={16}
+      padding={20}
+      frame={{ maxWidth: 'infinity', maxHeight: 'infinity' }}
+      background="black"
+    >
+      {/* 顶部信息栏 */}
+      <HStack alignment="center">
+        <VStack alignment="leading" spacing={4}>
+          <Text font="title2" fontWeight="bold" foregroundStyle="white">
+            {data.dsmInfo?.model || 'Synology NAS'}
+          </Text>
+          <HStack spacing={8}>
+            <ConnectionIndicator isOnline={data.connectionStatus.isOnline} latency={data.connectionStatus.latency} />
+            <Text font="caption" foregroundStyle="tertiaryLabel">
+              {data.dsmInfo?.version_string || 'DSM'}
+            </Text>
+          </HStack>
+        </VStack>
+        <Spacer />
+        <VStack alignment="trailing" spacing={4}>
+          <Text font="largeTitle" fontWeight="bold" foregroundStyle="white">
+            {data.lastUpdateTime.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}
+          </Text>
+          <Text font="caption" foregroundStyle="tertiaryLabel">
+            {data.lastUpdateTime.toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' })}
+          </Text>
+        </VStack>
+      </HStack>
+
+      {/* 核心指标仪表盘 */}
+      <HStack spacing={24} alignment="center" frame={{ maxWidth: 'infinity' }}>
+        <VStack spacing={4} alignment="center">
+          <Gauge
+            value={data.cpuUsage / 100}
+            label={<Image systemName="cpu" />}
+            min={0}
+            max={1}
+            currentValueLabel={
+              <Text font="title3" fontWeight="bold" foregroundStyle={cpuColor}>
+                {Math.round(data.cpuUsage)}%
+              </Text>
+            }
+            gaugeStyle="accessoryCircular"
+            tint={cpuColor}
+          />
+          <Text font="subheadline" foregroundStyle="secondaryLabel">
+            CPU
+          </Text>
+        </VStack>
+
+        <VStack spacing={4} alignment="center">
+          <Gauge
+            value={data.memoryUsage / 100}
+            label={<Image systemName="memorychip" />}
+            min={0}
+            max={1}
+            currentValueLabel={
+              <Text font="title3" fontWeight="bold" foregroundStyle={memColor}>
+                {Math.round(data.memoryUsage)}%
+              </Text>
+            }
+            gaugeStyle="accessoryCircular"
+            tint={memColor}
+          />
+          <Text font="subheadline" foregroundStyle="secondaryLabel">
+            内存
+          </Text>
+        </VStack>
+
+        <VStack spacing={4} alignment="center">
+          <Gauge
+            value={data.diskUsage / 100}
+            label={<Image systemName="externaldrive" />}
+            min={0}
+            max={1}
+            currentValueLabel={
+              <Text font="title3" fontWeight="bold" foregroundStyle={diskColor}>
+                {Math.round(data.diskUsage)}%
+              </Text>
+            }
+            gaugeStyle="accessoryCircular"
+            tint={diskColor}
+          />
+          <Text font="subheadline" foregroundStyle="secondaryLabel">
+            存储
+          </Text>
+        </VStack>
+      </HStack>
+
+      {/* 网络流量 */}
+      <VStack spacing={8} alignment="leading">
+        <Text font="subheadline" fontWeight="semibold" foregroundStyle="secondaryLabel">
+          网络流量
+        </Text>
+        <HStack spacing={24}>
+          <HStack spacing={8} alignment="center">
+            <Image systemName="arrow.up.circle.fill" foregroundStyle="systemGreen" frame={{ width: 20, height: 20 }} />
+            <VStack alignment="leading" spacing={2}>
+              <Text font="caption2" foregroundStyle="tertiaryLabel">上传</Text>
+              <Text font="headline" fontWeight="semibold" foregroundStyle="white">
+                {formatNetworkSpeed(data.networkSpeed.uploadSpeed)}
+              </Text>
+            </VStack>
+          </HStack>
+          <HStack spacing={8} alignment="center">
+            <Image systemName="arrow.down.circle.fill" foregroundStyle="systemBlue" frame={{ width: 20, height: 20 }} />
+            <VStack alignment="leading" spacing={2}>
+              <Text font="caption2" foregroundStyle="tertiaryLabel">下载</Text>
+              <Text font="headline" fontWeight="semibold" foregroundStyle="white">
+                {formatNetworkSpeed(data.networkSpeed.downloadSpeed)}
+              </Text>
+            </VStack>
+          </HStack>
+          <Spacer />
+        </HStack>
+      </VStack>
+
+      {/* 存储详情 */}
+      <VStack spacing={8} alignment="leading">
+        <Text font="subheadline" fontWeight="semibold" foregroundStyle="secondaryLabel">
+          存储空间
+        </Text>
+        <HStack alignment="center">
+          <Image systemName="internaldrive.fill" foregroundStyle="systemBlue" frame={{ width: 16, height: 16 }} />
+          <Text font="body" foregroundStyle="white">
+            {data.diskUsedGB.toFixed(1)} GB
+          </Text>
+          <Text font="body" foregroundStyle="tertiaryLabel">
+            / {data.diskTotalGB.toFixed(1)} GB
+          </Text>
+          <Spacer />
+          <Text font="body" fontWeight="semibold" foregroundStyle={diskColor}>
+            {(100 - data.diskUsage).toFixed(1)}% 可用
+          </Text>
+        </HStack>
+      </VStack>
+    </VStack>
+  )
+}
+
+/**
+ * 主组件视图分发
+ */
+const WidgetView = ({ data }: { data: DashboardData | null }) => {
   const family = Widget.family
 
   switch (family) {
     case 'systemSmall':
-      return <SmallWidgetView dsmInfo={dsmInfo} systemData={systemData} storageData={storageData} />
+      return <SmallWidgetView data={data} />
     case 'systemMedium':
-      return <MediumWidgetView dsmInfo={dsmInfo} systemData={systemData} storageData={storageData} />
+      return <MediumWidgetView data={data} />
     case 'systemLarge':
-      return <MediumWidgetView dsmInfo={dsmInfo} systemData={systemData} storageData={storageData} />
+      return <LargeWidgetView data={data} />
     default:
-      return <SmallWidgetView dsmInfo={dsmInfo} systemData={systemData} storageData={storageData} />
+      return <SmallWidgetView data={data} />
   }
 }
 
@@ -265,9 +459,7 @@ const WidgetView = ({
  * 主函数
  */
 const main = async () => {
-  let dsmInfo: DSMInfo | null = null
-  let systemData: SystemUtilization | null = null
-  let storageData: StorageInfo | null = null
+  let dashboardData: DashboardData | null = null
 
   try {
     const config = getCurrentSynologyConfig()
@@ -282,13 +474,9 @@ const main = async () => {
         }
       }
 
-      // 如果会话有效，获取数据
+      // 如果会话有效，获取仪表盘数据
       if (isSessionValid()) {
-        const [dsmResult, systemResult, storageResult] = await Promise.all([getDSMInfo(config), getSystemUtilization(config), getStorageInfo(config)])
-
-        dsmInfo = dsmResult
-        systemData = systemResult
-        storageData = storageResult
+        dashboardData = await getDashboardData(config)
       }
     }
   } catch (error) {
@@ -296,7 +484,7 @@ const main = async () => {
   }
 
   // 渲染组件
-  Widget.present(<WidgetView dsmInfo={dsmInfo} systemData={systemData} storageData={storageData} />)
+  Widget.present(<WidgetView data={dashboardData} />)
 }
 
 // 执行主函数

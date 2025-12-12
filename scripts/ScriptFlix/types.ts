@@ -141,7 +141,7 @@ export type EmptySourcesStateProps = {
 
 export type VideoCardProps = {
   video: VideoItem
-  onTap: (video: VideoItem) => void
+  onTap: () => void
   width?: number
 }
 

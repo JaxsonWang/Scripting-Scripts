@@ -13,8 +13,13 @@ export const STORAGE_KEYS = {
   USERNAME: 'username',
   PASSWORD: 'password',
   SESSION_ID: 'sessionId',
-  LAST_LOGIN_TIME: 'lastLoginTime'
+  LAST_LOGIN_TIME: 'lastLoginTime',
+  LAST_NETWORK_DATA: 'lastNetworkData',
+  LAST_NETWORK_TIME: 'lastNetworkTime'
 }
+
+// 网络速率缓存（用于计算速率差值）
+let lastNetworkBytes: { tx: number; rx: number; timestamp: number } | null = null
 
 // 群晖连接配置接口
 export interface SynologyConfig {
@@ -83,6 +88,33 @@ export interface StorageInfo {
       used: string
     }
   }>
+}
+
+// 网络速率数据接口
+export interface NetworkSpeed {
+  uploadSpeed: number // 上传速率 bytes/s
+  downloadSpeed: number // 下载速率 bytes/s
+  totalTx: number // 总发送字节
+  totalRx: number // 总接收字节
+}
+
+// 连接状态数据接口
+export interface ConnectionStatus {
+  isOnline: boolean
+  latency: number // 延迟 ms
+}
+
+// 仪表盘汇总数据接口
+export interface DashboardData {
+  dsmInfo: DSMInfo | null
+  cpuUsage: number // CPU 使用率 0-100
+  memoryUsage: number // 内存使用率 0-100
+  diskUsage: number // 磁盘使用率 0-100
+  diskUsedGB: number // 已用空间 GB
+  diskTotalGB: number // 总空间 GB
+  networkSpeed: NetworkSpeed // 网络速率
+  connectionStatus: ConnectionStatus // 连接状态
+  lastUpdateTime: Date // 最后更新时间
 }
 
 /**
@@ -481,4 +513,175 @@ export function isSessionValid(): boolean {
   // 检查会话是否过期（24小时）
   const sessionTimeout = 24 * 60 * 60 * 1000 // 24小时
   return Date.now() - lastLoginTime < sessionTimeout
+}
+
+/**
+ * 测量网络延迟（Ping）
+ */
+export async function measureLatency(config: SynologyConfig): Promise<number> {
+  try {
+    const startTime = Date.now()
+    const protocol = config.useHttps ? 'https' : 'http'
+    const url = `${protocol}://${config.nasIp}:${config.nasPort}/webapi/query.cgi?api=SYNO.API.Info&version=1&method=query`
+
+    const timeoutPromise = new Promise<Response>((_, reject) => {
+      setTimeout(() => reject(new Error('timeout')), 5000)
+    })
+
+    const fetchPromise = fetch(url, {
+      method: 'GET',
+      allowInsecureRequest: true
+    })
+
+    await Promise.race([fetchPromise, timeoutPromise])
+    const latency = Date.now() - startTime
+
+    return latency
+  } catch (error) {
+    console.error('测量延迟失败:', error)
+    return -1 // 返回 -1 表示无法连接
+  }
+}
+
+/**
+ * 计算网络速率
+ */
+export function calculateNetworkSpeed(systemData: SystemUtilization | null): NetworkSpeed {
+  const defaultSpeed: NetworkSpeed = {
+    uploadSpeed: 0,
+    downloadSpeed: 0,
+    totalTx: 0,
+    totalRx: 0
+  }
+
+  if (!systemData?.network || systemData.network.length === 0) {
+    return defaultSpeed
+  }
+
+  // 汇总所有网卡的流量
+  let totalTx = 0
+  let totalRx = 0
+  for (const net of systemData.network) {
+    totalTx += net.tx_bytes || 0
+    totalRx += net.rx_bytes || 0
+  }
+
+  const currentTime = Date.now()
+
+  // 计算速率（与上次数据的差值）
+  let uploadSpeed = 0
+  let downloadSpeed = 0
+
+  if (lastNetworkBytes) {
+    const timeDelta = (currentTime - lastNetworkBytes.timestamp) / 1000 // 秒
+    if (timeDelta > 0 && timeDelta < 60) {
+      // 防止时间间隔过大导致速率异常
+      const txDelta = totalTx - lastNetworkBytes.tx
+      const rxDelta = totalRx - lastNetworkBytes.rx
+
+      // 防止溢出回绕（计数器重置）
+      if (txDelta >= 0) uploadSpeed = txDelta / timeDelta
+      if (rxDelta >= 0) downloadSpeed = rxDelta / timeDelta
+    }
+  }
+
+  // 更新缓存
+  lastNetworkBytes = {
+    tx: totalTx,
+    rx: totalRx,
+    timestamp: currentTime
+  }
+
+  return {
+    uploadSpeed,
+    downloadSpeed,
+    totalTx,
+    totalRx
+  }
+}
+
+/**
+ * 格式化网络速率为可读字符串
+ */
+export function formatNetworkSpeed(bytesPerSecond: number): string {
+  if (bytesPerSecond < 1024) {
+    return `${bytesPerSecond.toFixed(1)} B/s`
+  } else if (bytesPerSecond < 1024 * 1024) {
+    return `${(bytesPerSecond / 1024).toFixed(1)} KB/s`
+  } else if (bytesPerSecond < 1024 * 1024 * 1024) {
+    return `${(bytesPerSecond / 1024 / 1024).toFixed(1)} MB/s`
+  } else {
+    return `${(bytesPerSecond / 1024 / 1024 / 1024).toFixed(1)} GB/s`
+  }
+}
+
+/**
+ * 格式化字节大小
+ */
+export function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 ** 2) return `${(bytes / 1024).toFixed(1)} KB`
+  if (bytes < 1024 ** 3) return `${(bytes / 1024 ** 2).toFixed(1)} MB`
+  if (bytes < 1024 ** 4) return `${(bytes / 1024 ** 3).toFixed(1)} GB`
+  return `${(bytes / 1024 ** 4).toFixed(1)} TB`
+}
+
+/**
+ * 获取仪表盘汇总数据（一次性获取所有需要的数据）
+ */
+export async function getDashboardData(config: SynologyConfig): Promise<DashboardData | null> {
+  try {
+    // 并行获取所有数据
+    const [dsmInfo, systemData, storageData, latency] = await Promise.all([
+      getDSMInfo(config),
+      getSystemUtilization(config),
+      getStorageInfo(config),
+      measureLatency(config)
+    ])
+
+    // CPU 使用率
+    const cpuUsage = systemData?.cpu?.['1min_load'] ?? 0
+
+    // 内存使用率
+    const memoryUsage = systemData?.memory?.real_usage ?? 0
+
+    // 磁盘使用率（取第一个卷）
+    let diskUsage = 0
+    let diskUsedGB = 0
+    let diskTotalGB = 0
+
+    if (storageData?.volumes && storageData.volumes.length > 0) {
+      const volume = storageData.volumes[0]
+      const totalBytes = parseInt(volume.size.total) || 0
+      const usedBytes = parseInt(volume.size.used) || 0
+
+      diskTotalGB = totalBytes / 1024 ** 3
+      diskUsedGB = usedBytes / 1024 ** 3
+      diskUsage = diskTotalGB > 0 ? (diskUsedGB / diskTotalGB) * 100 : 0
+    }
+
+    // 网络速率
+    const networkSpeed = calculateNetworkSpeed(systemData)
+
+    // 连接状态
+    const connectionStatus: ConnectionStatus = {
+      isOnline: latency > 0,
+      latency: latency > 0 ? latency : 0
+    }
+
+    return {
+      dsmInfo,
+      cpuUsage,
+      memoryUsage,
+      diskUsage,
+      diskUsedGB,
+      diskTotalGB,
+      networkSpeed,
+      connectionStatus,
+      lastUpdateTime: new Date()
+    }
+  } catch (error) {
+    console.error('获取仪表盘数据失败:', error)
+    return null
+  }
 }
