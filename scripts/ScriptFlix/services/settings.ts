@@ -1,7 +1,7 @@
 import type { ApiSource } from '../types'
 
 // Cast to any to avoid conflict with DOM Storage interface
-const AppStorage = Storage as any
+const AppStorage = Storage
 
 const STORAGE_KEY_SOURCES = 'script_flix_sources'
 const STORAGE_KEY_INDEX = 'script_flix_currentSourceIndex'
@@ -28,7 +28,7 @@ const saveSources = (sources: ApiSource[]) => {
  */
 const getCurrentSourceIndex = (): number => {
   const index = AppStorage.get(STORAGE_KEY_INDEX)
-  return index !== undefined ? index : 0
+  return index !== undefined ? (index as number) : 0
 }
 
 /**

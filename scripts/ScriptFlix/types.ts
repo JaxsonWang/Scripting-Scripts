@@ -171,3 +171,23 @@ export type SourceSearchState = {
 }
 
 export type SourceStateMap = Record<string, SourceSearchState>
+
+export type CloudSnapshot = {
+  sources?: ApiSource[]
+  currentSourceIndex?: number
+  history?: unknown
+}
+
+export type SourceRowProps = {
+  source: ApiSource
+  active: boolean
+  onSelect: () => void
+  onEdit: () => void
+  onDelete: () => void
+}
+
+export type SourceManagementScreenProps = {
+  icloudSyncEnabled: boolean
+  onRequestSync: () => Promise<void> | void
+  onSourcesChange?: (count: number) => void
+}

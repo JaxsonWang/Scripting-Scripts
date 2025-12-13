@@ -1,6 +1,6 @@
 import type { HistoryEntry, VideoItem } from '../types'
 
-const AppStorage = Storage as any
+const AppStorage = Storage
 const STORAGE_KEY = 'script_flix_history'
 const MAX_HISTORY = 80
 
@@ -31,8 +31,13 @@ const clearHistory = () => {
   saveHistory([])
 }
 
+const setHistory = (entries: HistoryEntry[]) => {
+  saveHistory(entries.slice(0, MAX_HISTORY))
+}
+
 export const HistoryService = {
   getHistory,
   addHistory,
-  clearHistory
+  clearHistory,
+  setHistory
 }
