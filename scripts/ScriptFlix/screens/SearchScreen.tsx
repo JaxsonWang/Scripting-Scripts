@@ -12,13 +12,33 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState
 } from 'scripting'
 import { VideoCard } from '../components/VideoCard'
 import { SettingsService } from '../services/settings'
 import { fetchVideoList } from '../services/api'
 import { PlayerScreen } from './PlayerScreen'
-import type { ApiSource, SearchResultItem, SourceStateMap } from '../types'
+import type { ApiSource, SearchResultItem, SourceSearchState, SourceStateMap } from '../types'
+
+const SEARCH_TIMEOUT_MS = 30_000
+
+const withTimeout = <T,>(promise: Promise<T>, timeoutMs: number) =>
+  new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => {
+      reject(new Error('timeout'))
+    }, timeoutMs)
+
+    promise
+      .then(value => {
+        clearTimeout(timer)
+        resolve(value)
+      })
+      .catch(error => {
+        clearTimeout(timer)
+        reject(error)
+      })
+  })
 
 /**
  * 全源搜索页，联动所有已配置的视频源，并提供分源过滤
@@ -33,6 +53,7 @@ export const SearchScreen = () => {
   const [sourceStates, setSourceStates] = useState<SourceStateMap>({})
   const [selectedSource, setSelectedSource] = useState<string>('all')
   const [lastKeyword, setLastKeyword] = useState('')
+  const activeRequestRef = useRef(0)
 
   useEffect(() => {
     setSources(SettingsService.getSources())
@@ -63,6 +84,7 @@ export const SearchScreen = () => {
   }
 
   const clearSearch = () => {
+    setLoading(false)
     setQuery('')
     setResults([])
     setError(null)
@@ -98,6 +120,9 @@ export const SearchScreen = () => {
 
     Keyboard.hide()
 
+    const requestId = activeRequestRef.current + 1
+    activeRequestRef.current = requestId
+
     setLoading(true)
     setError(null)
     setResults([])
@@ -114,50 +139,68 @@ export const SearchScreen = () => {
       let hasError = false
       let hasResult = false
 
-      const allResults = await Promise.all(
+      await Promise.allSettled(
         activeSources.map(async source => {
-          try {
-            const response = await fetchVideoList(source.url, 1, undefined, trimmed)
-            const list = response.list || []
-
-            if (list.length > 0) {
-              hasResult = true
-            }
-
-            setSourceStates(prev => ({
-              ...prev,
-              [source.name]: {
-                status: list.length === 0 ? 'empty' : 'success',
-                count: list.length,
-                message: list.length === 0 ? '暂无结果' : undefined
+          const updateSourceState = (nextState: SourceSearchState) => {
+            setSourceStates(prev => {
+              if (activeRequestRef.current !== requestId) {
+                return prev
               }
-            }))
+              return {
+                ...prev,
+                [source.name]: nextState
+              }
+            })
+          }
 
-            return list.map(item => ({
+          const appendResults = (items: SearchResultItem[]) => {
+            if (items.length === 0) {
+              return
+            }
+            setResults(prev => {
+              if (activeRequestRef.current !== requestId) {
+                return prev
+              }
+              return [...prev, ...items]
+            })
+          }
+
+          try {
+            const response = await withTimeout(fetchVideoList(source.url, 1, undefined, trimmed), SEARCH_TIMEOUT_MS)
+            const list = response.list || []
+            const mapped = list.map(item => ({
               ...item,
               sourceName: source.name,
               sourceUrl: source.url
             }))
+
+            if (list.length > 0) {
+              hasResult = true
+              appendResults(mapped)
+            }
+
+            updateSourceState({
+              status: list.length === 0 ? 'empty' : 'success',
+              count: list.length,
+              message: list.length === 0 ? '暂无结果' : undefined
+            })
           } catch (err) {
-            console.error(`搜索源 ${source.name} 失败`, err)
             hasError = true
+            console.error(`搜索源 ${source.name} 失败`, err)
 
-            setSourceStates(prev => ({
-              ...prev,
-              [source.name]: {
-                status: 'error',
-                count: 0,
-                message: '请求失败'
-              }
-            }))
-
-            return []
+            const isTimeout = err instanceof Error && err.message === 'timeout'
+            updateSourceState({
+              status: 'error',
+              count: 0,
+              message: isTimeout ? '请求超时' : '请求失败'
+            })
           }
         })
       )
 
-      const flattened = allResults.flat()
-      setResults(flattened)
+      if (activeRequestRef.current !== requestId) {
+        return
+      }
 
       if (!hasResult) {
         setError(`未找到 “${trimmed}” 相关内容`)
@@ -168,9 +211,13 @@ export const SearchScreen = () => {
       }
     } catch (err) {
       console.error('performSearch error', err)
-      setError('搜索失败，请稍后再试')
+      if (activeRequestRef.current === requestId) {
+        setError('搜索失败，请稍后再试')
+      }
     } finally {
-      setLoading(false)
+      if (activeRequestRef.current === requestId) {
+        setLoading(false)
+      }
     }
   }
 
@@ -230,11 +277,13 @@ export const SearchScreen = () => {
   const filterItems = useMemo(
     () => [
       { key: 'all', label: '全部', count: results.length },
-      ...sourceStateEntries.map(entry => ({
-        key: entry.source.name,
-        label: entry.source.name,
-        count: entry.state.count
-      }))
+      ...sourceStateEntries
+        .filter(entry => entry.state.count > 0)
+        .map(entry => ({
+          key: entry.source.name,
+          label: entry.source.name,
+          count: entry.state.count
+        }))
     ],
     [results.length, sourceStateEntries]
   )

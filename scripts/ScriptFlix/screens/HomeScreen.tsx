@@ -23,13 +23,14 @@ import { SettingsScreen } from './SettingsScreen'
 import { PlayerScreen } from './PlayerScreen'
 import { SearchScreen } from './SearchScreen'
 import { HistoryScreen } from './HistoryScreen'
-import type { Category, VideoItem } from '../types'
+import type { ApiSource, Category, VideoItem } from '../types'
 
 /**
  * 首页
  */
 export const HomeScreen = () => {
   const [source, setSource] = useState(SettingsService.getCurrentSource())
+  const [sources, setSources] = useState<ApiSource[]>(() => SettingsService.getSources())
   const [videos, setVideos] = useState<VideoItem[]>([])
   const [categories, setCategories] = useState<Category[]>([])
   const [loading, setLoading] = useState(false)
@@ -69,6 +70,7 @@ export const HomeScreen = () => {
     async (targetPage: number = 1, append = false) => {
       const currentSource = SettingsService.getCurrentSource()
       setSource(currentSource)
+      setSources(SettingsService.getSources())
 
       if (!currentSource) {
         setVideos([])
@@ -182,6 +184,27 @@ export const HomeScreen = () => {
   }, [])
 
   /**
+   * 切换当前视频源
+   */
+  const handleSelectSource = useCallback(
+    (index: number) => {
+      const next = sources[index]
+      if (!next || next.url === source?.url) {
+        return
+      }
+      SettingsService.saveCurrentSourceIndex(index)
+      setSource(next)
+      setCategories([])
+      setSelectedMainType(null)
+      setSelectedSubType(null)
+      setVideos([])
+      setPage(1)
+      setHasMore(true)
+    },
+    [sources, source?.url]
+  )
+
+  /**
    * 退出应用
    */
   const handleExit = useCallback(() => {
@@ -247,6 +270,15 @@ export const HomeScreen = () => {
   return (
     <VStack spacing={16}>
       {renderHeader()}
+
+      {/* Source Tabs */}
+      {sources.length > 0 && (
+        <ScrollView axes="horizontal" scrollIndicator="hidden">
+          <HStack spacing={8} padding={{ horizontal: 16 }}>
+            {sources.map((item, index) => renderFilterButton(item.name, source?.url === item.url, () => handleSelectSource(index), `${item.url}-${index}`))}
+          </HStack>
+        </ScrollView>
+      )}
 
       {/* Main Category Tabs */}
       <ScrollView axes="horizontal" scrollIndicator="hidden">

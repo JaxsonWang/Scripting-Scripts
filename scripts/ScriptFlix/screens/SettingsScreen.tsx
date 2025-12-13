@@ -13,12 +13,18 @@ import {
   Spacer,
   Text,
   TextField,
+  Toggle,
   VStack,
+  useEffect,
   useState
 } from 'scripting'
 import { SettingsService } from '../services/settings'
+import { HistoryService } from '../services/history'
 import { ChangelogScreen } from './ChangelogScreen'
 import type { ApiSource, SourceEditorProps } from '../types'
+
+const AppStorage = Storage as any
+const ICLOUD_SYNC_KEY = 'script_flix_icloud_sync_enabled'
 
 const SourceEditor = ({ title, initialName, initialUrl, onSave }: SourceEditorProps) => {
   const dismiss = Navigation.useDismiss()
@@ -112,22 +118,43 @@ const SourceRow = ({
   )
 }
 
-/**
- * 视频源设置页，包含列表、快速设置和编辑操作
- */
-export const SettingsScreen = () => {
-  const dismiss = Navigation.useDismiss()
+const SourceManagementScreen = ({
+  icloudSyncEnabled,
+  onRequestSync,
+  onSourcesChange
+}: {
+  icloudSyncEnabled: boolean
+  onRequestSync: () => Promise<void> | void
+  onSourcesChange?: (count: number) => void
+}) => {
   const [sources, setSources] = useState<ApiSource[]>(SettingsService.getSources())
   const [currentIndex, setCurrentIndex] = useState(SettingsService.getCurrentSourceIndex())
 
+  useEffect(() => {
+    emitCount(sources)
+  }, [sources])
+
+  const triggerSync = () => {
+    if (icloudSyncEnabled) {
+      void onRequestSync()
+    }
+  }
+
+  const emitCount = (nextSources: ApiSource[]) => {
+    onSourcesChange?.(nextSources.length)
+  }
+
   const refreshSources = () => {
-    setSources(SettingsService.getSources())
+    const nextSources = SettingsService.getSources()
+    setSources(nextSources)
     setCurrentIndex(SettingsService.getCurrentSourceIndex())
+    triggerSync()
   }
 
   const handleSelect = (index: number) => {
     SettingsService.saveCurrentSourceIndex(index)
     setCurrentIndex(index)
+    triggerSync()
   }
 
   const presentEditor = (title: string, defaults: ApiSource, onSave: (name: string, url: string) => void) => {
@@ -150,6 +177,7 @@ export const SettingsScreen = () => {
       next[index] = { name, url }
       SettingsService.saveSources(next)
       setSources(next)
+      triggerSync()
     })
   }
 
@@ -161,11 +189,8 @@ export const SettingsScreen = () => {
   return (
     <NavigationStack>
       <List
-        navigationTitle="数据源"
-        navigationBarTitleDisplayMode="inline"
-        listStyle="inset"
+        navigationTitle="视频源"
         toolbar={{
-          cancellationAction: <Button title="完成" action={dismiss} />,
           primaryAction: <Button title="添加" action={handleCreate} />
         }}
       >
@@ -184,30 +209,119 @@ export const SettingsScreen = () => {
           <Text foregroundStyle="secondaryLabel">暂无配置</Text>
         )}
       </List>
-      <Section
-        padding={{ horizontal: 32 }}
-        frame={{ maxWidth: 'infinity', alignment: 'leading' }}
-        footer={
-          <VStack spacing={10} alignment="leading">
-            <Text font="footnote" foregroundStyle="secondaryLabel">
-              ScriptFlix {'v' + Script.metadata?.version || '1.0.0'}
-              {'\n'}
-              淮城一只猫© - Power by Scripting
-              {'\n'}
-              更多脚本/小组件请关注微信公众号「组件派」
-            </Text>
-          </VStack>
-        }
+    </NavigationStack>
+  )
+}
+
+/**
+ * 视频源设置页，包含列表、快速设置和编辑操作
+ */
+export const SettingsScreen = () => {
+  const dismiss = Navigation.useDismiss()
+  const [icloudSyncEnabled, setIcloudSyncEnabled] = useState<boolean>(() => AppStorage.get(ICLOUD_SYNC_KEY) ?? false)
+  const [syncing, setSyncing] = useState(false)
+  const [lastSyncedAt, setLastSyncedAt] = useState<number | null>(null)
+  const [sourceCount, setSourceCount] = useState(() => SettingsService.getSources().length)
+
+  const syncSettingsToICloud = async () => {
+    try {
+      setSyncing(true)
+      const snapshot = {
+        sources: SettingsService.getSources(),
+        currentSourceIndex: SettingsService.getCurrentSourceIndex(),
+        history: HistoryService.getHistory()
+      }
+      const icloudRoot = FileManager.iCloudDocumentsDirectory
+      if (!icloudRoot) {
+        throw new Error('未检测到 iCloud 云盘目录，请先在系统中启用 iCloud Drive')
+      }
+      const targetDir = `${icloudRoot}/scripts/ScriptFlix`
+      await FileManager.createDirectory(targetDir, true)
+      const targetPath = `${targetDir}/settings.json`
+      await FileManager.writeAsString(targetPath, JSON.stringify(snapshot, null, 2))
+      setLastSyncedAt(Date.now())
+    } catch (error) {
+      console.error('[SettingsScreen] iCloud sync failed', error)
+      const message = error instanceof Error ? error.message : '未知错误'
+      await Dialog.alert({ title: 'iCloud 同步失败', message })
+    } finally {
+      setSyncing(false)
+    }
+  }
+
+  const handleIcloudToggle = (value: boolean) => {
+    setIcloudSyncEnabled(value)
+    AppStorage.set(ICLOUD_SYNC_KEY, value)
+    if (value) {
+      syncSettingsToICloud()
+    }
+  }
+
+  const syncStatusLabel = syncing
+    ? '正在写入 iCloud...'
+    : icloudSyncEnabled && lastSyncedAt
+      ? `最近同步：${new Date(lastSyncedAt).toLocaleString()}`
+      : '开启后将在 iCloud Drive/scripts/ScriptFlix/settings.json 生成设置备份'
+
+  return (
+    <NavigationStack>
+      <List
+        navigationTitle="设置"
+        toolbar={{
+          cancellationAction: <Button title="完成" action={dismiss} />
+        }}
       >
-        <NavigationLink
-          destination={<ChangelogScreen title="最近更新" versionLabel="当前版本" version={Script.metadata?.version || '1.0.0'} emptyLabel="暂无更新记录" />}
+        <Section header={<Text>视频源</Text>}>
+          <NavigationLink
+            destination={
+              <SourceManagementScreen
+                icloudSyncEnabled={icloudSyncEnabled}
+                onRequestSync={syncSettingsToICloud}
+                onSourcesChange={count => setSourceCount(count)}
+              />
+            }
+          >
+            <VStack alignment="leading" spacing={2}>
+              <Text foregroundStyle="#e50914">视频源管理</Text>
+              <Text font="caption2" foregroundStyle="secondaryLabel">
+                共 {sourceCount} 个源
+              </Text>
+            </VStack>
+          </NavigationLink>
+        </Section>
+        <Section
+          header={<Text>云端同步</Text>}
+          footer={
+            <Text font="footnote" foregroundStyle="secondaryLabel">
+              {syncStatusLabel}
+            </Text>
+          }
         >
-          <HStack frame={{ maxWidth: 'infinity' }}>
-            <Text foregroundStyle="#e50914">查看更新内容</Text>
-            <Spacer />
-          </HStack>
-        </NavigationLink>
-      </Section>
+          <Toggle title="iCloud 同步" foregroundStyle="#e50914" value={icloudSyncEnabled} onChanged={handleIcloudToggle} />
+        </Section>
+        <Section
+          footer={
+            <VStack spacing={10} alignment="leading">
+              <Text font="footnote" foregroundStyle="secondaryLabel">
+                ScriptFlix {'v' + Script.metadata?.version || '1.0.0'}
+                {'\n'}
+                淮城一只猫© - Power by Scripting
+                {'\n'}
+                更多脚本/小组件请关注微信公众号「组件派」
+              </Text>
+            </VStack>
+          }
+        >
+          <NavigationLink
+            destination={<ChangelogScreen title="最近更新" versionLabel="当前版本" version={Script.metadata?.version || '1.0.0'} emptyLabel="暂无更新记录" />}
+          >
+            <HStack>
+              <Text foregroundStyle="#e50914">查看更新内容</Text>
+              <Spacer />
+            </HStack>
+          </NavigationLink>
+        </Section>
+      </List>
     </NavigationStack>
   )
 }
