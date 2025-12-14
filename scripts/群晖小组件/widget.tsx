@@ -1,12 +1,5 @@
-import { Gauge, HStack, Image, Spacer, Text, VStack, Widget, ZStack, Color, Circle } from 'scripting'
-import {
-  type DashboardData,
-  getCurrentSynologyConfig,
-  getDashboardData,
-  formatNetworkSpeed,
-  isSessionValid,
-  loginToSynology
-} from './utils/synology-service'
+import { Circle, Color, Gauge, HStack, Image, Spacer, Text, VStack, Widget, ZStack } from 'scripting'
+import { type DashboardData, formatNetworkSpeed, getCurrentSynologyConfig, getDashboardData, isSessionValid, loginToSynology } from './utils/synology-service'
 
 /**
  * 获取状态颜色
@@ -84,10 +77,7 @@ function NetworkSpeedView({ uploadSpeed, downloadSpeed }: { uploadSpeed: number;
 function ConnectionIndicator({ isOnline, latency }: { isOnline: boolean; latency: number }) {
   return (
     <HStack spacing={4} alignment="center">
-      <Circle
-        fill={isOnline ? 'systemGreen' : 'systemRed'}
-        frame={{ width: 6, height: 6 }}
-      />
+      <Circle fill={isOnline ? 'systemGreen' : 'systemRed'} frame={{ width: 6, height: 6 }} />
       <Text font="caption2" foregroundStyle={isOnline ? 'systemGreen' : 'systemRed'}>
         {isOnline ? 'Online' : 'Offline'}
       </Text>
@@ -106,12 +96,7 @@ function ConnectionIndicator({ isOnline, latency }: { isOnline: boolean; latency
 function SmallWidgetView({ data }: { data: DashboardData | null }) {
   if (!data) {
     return (
-      <VStack
-        spacing={8}
-        padding={12}
-        frame={{ maxWidth: 'infinity', maxHeight: 'infinity' }}
-        background="black"
-      >
+      <VStack spacing={8} padding={12} frame={{ maxWidth: 'infinity', maxHeight: 'infinity' }} background="black">
         <HStack alignment="center">
           <Image systemName="externaldrive.badge.xmark" foregroundStyle="systemOrange" frame={{ width: 20, height: 20 }} />
           <Text font="caption" fontWeight="semibold" foregroundStyle="systemOrange">
@@ -132,12 +117,7 @@ function SmallWidgetView({ data }: { data: DashboardData | null }) {
   const diskColor = getStatusColor(data.diskUsage)
 
   return (
-    <VStack
-      spacing={6}
-      padding={12}
-      frame={{ maxWidth: 'infinity', maxHeight: 'infinity' }}
-      background="black"
-    >
+    <VStack spacing={6} padding={12} frame={{ maxWidth: 'infinity', maxHeight: 'infinity' }} background="black">
       {/* 标题栏 */}
       <HStack alignment="center">
         <Text font="caption" fontWeight="bold" foregroundStyle="white">
@@ -172,12 +152,7 @@ function SmallWidgetView({ data }: { data: DashboardData | null }) {
 function MediumWidgetView({ data }: { data: DashboardData | null }) {
   if (!data) {
     return (
-      <VStack
-        spacing={12}
-        padding={16}
-        frame={{ maxWidth: 'infinity', maxHeight: 'infinity' }}
-        background="black"
-      >
+      <VStack spacing={12} padding={16} frame={{ maxWidth: 'infinity', maxHeight: 'infinity' }} background="black">
         <HStack alignment="center">
           <Image systemName="externaldrive.badge.xmark" foregroundStyle="systemOrange" frame={{ width: 28, height: 28 }} />
           <VStack alignment="leading" spacing={2}>
@@ -200,12 +175,7 @@ function MediumWidgetView({ data }: { data: DashboardData | null }) {
   const diskColor = getStatusColor(data.diskUsage)
 
   return (
-    <VStack
-      spacing={10}
-      padding={16}
-      frame={{ maxWidth: 'infinity', maxHeight: 'infinity' }}
-      background="black"
-    >
+    <VStack spacing={10} padding={16} frame={{ maxWidth: 'infinity', maxHeight: 'infinity' }} background="black">
       {/* 顶部信息栏 */}
       <HStack alignment="center">
         <VStack alignment="leading" spacing={2}>
@@ -268,12 +238,7 @@ function MediumWidgetView({ data }: { data: DashboardData | null }) {
 function LargeWidgetView({ data }: { data: DashboardData | null }) {
   if (!data) {
     return (
-      <VStack
-        spacing={16}
-        padding={20}
-        frame={{ maxWidth: 'infinity', maxHeight: 'infinity' }}
-        background="black"
-      >
+      <VStack spacing={16} padding={20} frame={{ maxWidth: 'infinity', maxHeight: 'infinity' }} background="black">
         <HStack alignment="center">
           <Image systemName="externaldrive.badge.xmark" foregroundStyle="systemOrange" frame={{ width: 36, height: 36 }} />
           <VStack alignment="leading" spacing={4}>
@@ -296,12 +261,7 @@ function LargeWidgetView({ data }: { data: DashboardData | null }) {
   const diskColor = getStatusColor(data.diskUsage)
 
   return (
-    <VStack
-      spacing={16}
-      padding={20}
-      frame={{ maxWidth: 'infinity', maxHeight: 'infinity' }}
-      background="black"
-    >
+    <VStack spacing={16} padding={20} frame={{ maxWidth: 'infinity', maxHeight: 'infinity' }} background="black">
       {/* 顶部信息栏 */}
       <HStack alignment="center">
         <VStack alignment="leading" spacing={4}>
@@ -395,7 +355,9 @@ function LargeWidgetView({ data }: { data: DashboardData | null }) {
           <HStack spacing={8} alignment="center">
             <Image systemName="arrow.up.circle.fill" foregroundStyle="systemGreen" frame={{ width: 20, height: 20 }} />
             <VStack alignment="leading" spacing={2}>
-              <Text font="caption2" foregroundStyle="tertiaryLabel">上传</Text>
+              <Text font="caption2" foregroundStyle="tertiaryLabel">
+                上传
+              </Text>
               <Text font="headline" fontWeight="semibold" foregroundStyle="white">
                 {formatNetworkSpeed(data.networkSpeed.uploadSpeed)}
               </Text>
@@ -404,7 +366,9 @@ function LargeWidgetView({ data }: { data: DashboardData | null }) {
           <HStack spacing={8} alignment="center">
             <Image systemName="arrow.down.circle.fill" foregroundStyle="systemBlue" frame={{ width: 20, height: 20 }} />
             <VStack alignment="leading" spacing={2}>
-              <Text font="caption2" foregroundStyle="tertiaryLabel">下载</Text>
+              <Text font="caption2" foregroundStyle="tertiaryLabel">
+                下载
+              </Text>
               <Text font="headline" fontWeight="semibold" foregroundStyle="white">
                 {formatNetworkSpeed(data.networkSpeed.downloadSpeed)}
               </Text>

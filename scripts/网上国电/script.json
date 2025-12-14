@@ -1,0 +1,37 @@
+{
+  "description": "",
+  "author": {
+    "email": null,
+    "homepage": null,
+    "name": "ByteValley"
+  },
+  "localizedNames": {
+    "pt": "",
+    "ja": "",
+    "fr": "",
+    "ru": "",
+    "es": "",
+    "en": "State Grid",
+    "zh": "",
+    "de": "",
+    "it": ""
+  },
+  "intentInputTypes": [],
+  "localizedDescriptions": {
+    "fr": "",
+    "ja": "",
+    "en": "",
+    "it": "",
+    "ru": "",
+    "pt": "",
+    "zh": "",
+    "es": "",
+    "de": ""
+  },
+  "runInApp": false,
+  "version": "1.0.0",
+  "contributors": [],
+  "name": "网上国电",
+  "icon": "bolt.shield",
+  "color": "rgba(102, 196, 235,1)"
+}
