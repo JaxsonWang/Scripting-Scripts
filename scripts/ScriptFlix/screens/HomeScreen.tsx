@@ -1,10 +1,8 @@
 import {
   Button,
   HStack,
-  Image,
   LazyVGrid,
   Navigation,
-  RoundedRectangle,
   ScrollView,
   Spacer,
   Text,
@@ -18,12 +16,20 @@ import {
 import { SettingsService } from '../services/settings'
 import { fetchCategories, fetchVideoList } from '../services/api'
 import { VideoCard } from '../components/VideoCard'
+import { FilterChip } from '../components/FilterChip'
 import { EmptySourcesState } from '../components/EmptySourcesState'
 import { SettingsScreen } from './SettingsScreen'
 import { PlayerScreen } from './PlayerScreen'
 import { SearchScreen } from './SearchScreen'
 import { HistoryScreen } from './HistoryScreen'
 import type { ApiSource, Category, VideoItem } from '../types'
+
+// Move columns definition outside to avoid recreation on every render
+const GRID_COLUMNS = [
+  { size: { type: 'flexible' as const }, spacing: 12 },
+  { size: { type: 'flexible' as const }, spacing: 12 },
+  { size: { type: 'flexible' as const } }
+]
 
 /**
  * 首页
@@ -254,19 +260,6 @@ export const HomeScreen = () => {
     )
   }
 
-  const renderFilterButton = (label: string, active: boolean, action: () => void, key?: string | number) => (
-    <Button key={key} action={action}>
-      <Text
-        font="subheadline"
-        foregroundStyle="white"
-        padding={{ horizontal: 16, vertical: 8 }}
-        background={<RoundedRectangle cornerRadius={16} style="continuous" fill={active ? '#e50914' : '#1c1c1e'} />}
-      >
-        {label}
-      </Text>
-    </Button>
-  )
-
   return (
     <VStack spacing={16}>
       {renderHeader()}
@@ -275,7 +268,14 @@ export const HomeScreen = () => {
       {sources.length > 0 && (
         <ScrollView axes="horizontal" scrollIndicator="hidden">
           <HStack spacing={8} padding={{ horizontal: 16 }}>
-            {sources.map((item, index) => renderFilterButton(item.name, source?.url === item.url, () => handleSelectSource(index), `${item.url}-${index}`))}
+            {sources.map((item, index) => (
+              <FilterChip
+                key={`${item.url}-${index}`}
+                label={item.name}
+                active={source?.url === item.url}
+                onTap={() => handleSelectSource(index)}
+              />
+            ))}
           </HStack>
         </ScrollView>
       )}
@@ -283,8 +283,20 @@ export const HomeScreen = () => {
       {/* Main Category Tabs */}
       <ScrollView axes="horizontal" scrollIndicator="hidden">
         <HStack spacing={8} padding={{ horizontal: 16 }}>
-          {renderFilterButton('首页', selectedMainType === null, () => setSelectedMainType(null), 'main-all')}
-          {mainCategories.map(cat => renderFilterButton(cat.type_name, selectedMainType === cat.type_id, () => setSelectedMainType(cat.type_id), cat.type_id))}
+          <FilterChip
+            key="main-all"
+            label="首页"
+            active={selectedMainType === null}
+            onTap={() => setSelectedMainType(null)}
+          />
+          {mainCategories.map(cat => (
+            <FilterChip
+              key={cat.type_id}
+              label={cat.type_name}
+              active={selectedMainType === cat.type_id}
+              onTap={() => setSelectedMainType(cat.type_id)}
+            />
+          ))}
         </HStack>
       </ScrollView>
 
@@ -292,8 +304,20 @@ export const HomeScreen = () => {
       {selectedMainType !== null && subCategories.length > 0 && (
         <ScrollView axes="horizontal" scrollIndicator="hidden">
           <HStack spacing={8} padding={{ horizontal: 16 }}>
-            {renderFilterButton('全部', selectedSubType === null, () => setSelectedSubType(null), 'sub-all')}
-            {subCategories.map(cat => renderFilterButton(cat.type_name, selectedSubType === cat.type_id, () => setSelectedSubType(cat.type_id), cat.type_id))}
+            <FilterChip
+              key="sub-all"
+              label="全部"
+              active={selectedSubType === null}
+              onTap={() => setSelectedSubType(null)}
+            />
+            {subCategories.map(cat => (
+              <FilterChip
+                key={cat.type_id}
+                label={cat.type_name}
+                active={selectedSubType === cat.type_id}
+                onTap={() => setSelectedSubType(cat.type_id)}
+              />
+            ))}
           </HStack>
         </ScrollView>
       )}
@@ -307,12 +331,12 @@ export const HomeScreen = () => {
           <VStack spacing={12}>
             <VStack padding={{ horizontal: 16 }}>
               <LazyVGrid
-                columns={[{ size: { type: 'flexible' }, spacing: 12 }, { size: { type: 'flexible' }, spacing: 12 }, { size: { type: 'flexible' } }]}
+                columns={GRID_COLUMNS}
                 spacing={16}
               >
                 {videos.map((video, index) => (
                   <VStack key={video.vod_id} onAppear={() => handleGridItemAppear(index)}>
-                    <VideoCard video={video} onTap={() => openPlayer(video)} />
+                    <VideoCard video={video} onTap={openPlayer} />
                   </VStack>
                 ))}
               </LazyVGrid>

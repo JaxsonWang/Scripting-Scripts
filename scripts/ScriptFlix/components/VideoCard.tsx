@@ -1,6 +1,6 @@
 import { Button, RoundedRectangle, Text, VStack, ZStack } from 'scripting'
 import { RemoteImage } from './RemoteImage'
-import type { VideoCardProps } from '../types'
+import type { VideoCardProps, VideoItem } from '../types'
 
 /**
  * 展示单个视频的海报与关键信息，并在点击后触发播放回调
@@ -8,11 +8,11 @@ import type { VideoCardProps } from '../types'
  * @param onTap 点击后触发的回调，传入视频 ID
  * @param width 可选的固定宽度，用于横向滚动场景
  */
-export const VideoCard = ({ video, onTap, width }: VideoCardProps) => {
+export const VideoCard = <T extends VideoItem>({ video, onTap, width }: VideoCardProps<T>) => {
   const frameProps = width ? { width } : {}
 
   return (
-    <Button action={onTap}>
+    <Button action={() => onTap(video)}>
       <VStack spacing={6} frame={frameProps}>
         {/* Poster Image */}
         <ZStack alignment="topTrailing">

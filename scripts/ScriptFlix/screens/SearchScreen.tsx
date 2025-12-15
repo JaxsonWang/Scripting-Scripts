@@ -4,7 +4,6 @@ import {
   LazyVGrid,
   Navigation,
   NavigationStack,
-  RoundedRectangle,
   ScrollView,
   Spacer,
   Text,
@@ -16,12 +15,20 @@ import {
   useState
 } from 'scripting'
 import { VideoCard } from '../components/VideoCard'
+import { FilterChip } from '../components/FilterChip'
 import { SettingsService } from '../services/settings'
 import { fetchVideoList } from '../services/api'
 import { PlayerScreen } from './PlayerScreen'
 import type { ApiSource, SearchResultItem, SourceSearchState, SourceStateMap } from '../types'
 
 const SEARCH_TIMEOUT_MS = 30_000
+
+// Define columns outside
+const GRID_COLUMNS = [
+  { size: { type: 'flexible' as const }, spacing: 12 },
+  { size: { type: 'flexible' as const }, spacing: 12 },
+  { size: { type: 'flexible' as const } }
+]
 
 const withTimeout = <T,>(promise: Promise<T>, timeoutMs: number) =>
   new Promise<T>((resolve, reject) => {
@@ -288,26 +295,6 @@ export const SearchScreen = () => {
     [results.length, sourceStateEntries]
   )
 
-  const renderFilterChip = (itemKey: string, label: string, count: number) => {
-    const active = selectedSource === itemKey
-    return (
-      <Button key={itemKey} action={() => setSelectedSource(itemKey)}>
-        <HStack
-          spacing={6}
-          padding={{ horizontal: 14, vertical: 8 }}
-          background={<RoundedRectangle cornerRadius={16} style="continuous" fill={active ? '#e50914' : '#1c1c1e'} />}
-        >
-          <Text font="subheadline" foregroundStyle="white">
-            {label}
-          </Text>
-          <Text font="caption2" foregroundStyle={active ? 'white' : '#a0a0a0'}>
-            {count}
-          </Text>
-        </HStack>
-      </Button>
-    )
-  }
-
   return (
     <NavigationStack>
       <VStack
@@ -328,7 +315,17 @@ export const SearchScreen = () => {
       >
         <VStack spacing={8}>
           <ScrollView axes="horizontal" scrollIndicator="hidden">
-            <HStack spacing={12}>{filterItems.map(item => renderFilterChip(item.key, item.label, item.count))}</HStack>
+            <HStack spacing={12}>
+              {filterItems.map(item => (
+                <FilterChip
+                  key={item.key}
+                  label={item.label}
+                  active={selectedSource === item.key}
+                  count={item.count}
+                  onTap={() => setSelectedSource(item.key)}
+                />
+              ))}
+            </HStack>
           </ScrollView>
 
           <HStack>
@@ -366,13 +363,13 @@ export const SearchScreen = () => {
           {filteredResults.length > 0 && (
             <ScrollView scrollIndicator="hidden">
               <LazyVGrid
-                columns={[{ size: { type: 'flexible' }, spacing: 12 }, { size: { type: 'flexible' }, spacing: 12 }, { size: { type: 'flexible' } }]}
+                columns={GRID_COLUMNS}
                 spacing={16}
                 padding={{ horizontal: 4, bottom: 16 }}
               >
                 {filteredResults.map(item => (
                   <VStack key={`${item.sourceName}-${item.vod_id}`} spacing={6}>
-                    <VideoCard video={item} onTap={() => openPlayer(item)} />
+                    <VideoCard video={item} onTap={openPlayer} />
                     <Text font="caption2" foregroundStyle="secondaryLabel" lineLimit={1}>
                       来自 · {item.sourceName}
                     </Text>

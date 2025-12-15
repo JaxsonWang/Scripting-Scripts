@@ -139,9 +139,9 @@ export type EmptySourcesStateProps = {
   onExit: () => void
 }
 
-export type VideoCardProps = {
-  video: VideoItem
-  onTap: () => void
+export type VideoCardProps<T extends VideoItem = VideoItem> = {
+  video: T
+  onTap: (video: T) => void
   width?: number
 }
 
@@ -190,4 +190,11 @@ export type SourceManagementScreenProps = {
   icloudSyncEnabled: boolean
   onRequestSync: () => Promise<void> | void
   onSourcesChange?: (count: number) => void
+}
+
+export interface FilterChipProps {
+  label: string
+  active: boolean
+  onTap: () => void
+  count?: number
 }

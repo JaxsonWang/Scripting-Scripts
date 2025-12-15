@@ -3,6 +3,40 @@ import { fetchVideoDetail } from '../services/api'
 import { HistoryService } from '../services/history'
 import type { PlayEpisode, PlayGroup, PlayerScreenProps, VideoItem } from '../types'
 
+// Move columns definition outside
+const EPISODE_GRID_COLUMNS = [
+  { size: { type: 'flexible' as const }, spacing: 8 },
+  { size: { type: 'flexible' as const }, spacing: 8 },
+  { size: { type: 'flexible' as const }, spacing: 8 },
+  { size: { type: 'flexible' as const }, spacing: 8 }
+]
+
+const SourceButton = ({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) => (
+  <Button action={onPress}>
+    <Text
+      font="subheadline"
+      foregroundStyle={active ? 'white' : 'label'}
+      padding={{ horizontal: 12, vertical: 6 }}
+      background={<RoundedRectangle cornerRadius={8} style="continuous" fill={active ? '#e50914' : 'secondarySystemBackground'} />}
+    >
+      {label}
+    </Text>
+  </Button>
+)
+
+const EpisodeButton = ({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) => (
+  <Button action={onPress}>
+    <Text
+      font="caption"
+      foregroundStyle={active ? 'white' : 'label'}
+      padding={8}
+      background={<RoundedRectangle cornerRadius={6} style="continuous" fill={active ? '#e50914' : 'secondarySystemBackground'} />}
+    >
+      {label}
+    </Text>
+  </Button>
+)
+
 /**
  * 播放页，按分组/剧集解析播放链接，并内嵌 WebView 播放
  * @param id 视频 ID
@@ -65,32 +99,6 @@ export const PlayerScreen = ({ id, sourceUrl, sourceName }: PlayerScreenProps) =
 
   const currentEpisode = playGroups[currentGroupIndex]?.episodes[currentEpisodeIndex]
 
-  const renderSourceButton = (key: string | number, label: string, active: boolean, onPress: () => void) => (
-    <Button key={key} action={onPress}>
-      <Text
-        font="subheadline"
-        foregroundStyle={active ? 'white' : 'label'}
-        padding={{ horizontal: 12, vertical: 6 }}
-        background={<RoundedRectangle cornerRadius={8} style="continuous" fill={active ? '#e50914' : 'secondarySystemBackground'} />}
-      >
-        {label}
-      </Text>
-    </Button>
-  )
-
-  const renderEpisodeButton = (key: string | number, label: string, active: boolean, onPress: () => void) => (
-    <Button key={key} action={onPress}>
-      <Text
-        font="caption"
-        foregroundStyle={active ? 'white' : 'label'}
-        padding={8}
-        background={<RoundedRectangle cornerRadius={6} style="continuous" fill={active ? '#e50914' : 'secondarySystemBackground'} />}
-      >
-        {label}
-      </Text>
-    </Button>
-  )
-
   return (
     <ScrollView navigationTitle={video.vod_name}>
       <VStack spacing={0}>
@@ -143,12 +151,17 @@ export const PlayerScreen = ({ id, sourceUrl, sourceName }: PlayerScreenProps) =
             <Text font="headline">播放源</Text>
             <ScrollView axes="horizontal" scrollIndicator="hidden">
               <HStack spacing={8}>
-                {playGroups.map((g: PlayGroup, i: number) =>
-                  renderSourceButton(i, g.name, i === currentGroupIndex, () => {
-                    setCurrentGroupIndex(i)
-                    setCurrentEpisodeIndex(0)
-                  })
-                )}
+                {playGroups.map((g: PlayGroup, i: number) => (
+                  <SourceButton
+                    key={i}
+                    label={g.name}
+                    active={i === currentGroupIndex}
+                    onPress={() => {
+                      setCurrentGroupIndex(i)
+                      setCurrentEpisodeIndex(0)
+                    }}
+                  />
+                ))}
               </HStack>
             </ScrollView>
           </VStack>
@@ -163,19 +176,18 @@ export const PlayerScreen = ({ id, sourceUrl, sourceName }: PlayerScreenProps) =
               </Text>
             </HStack>
 
-            {/* Using Grid for episodes for better touch targets */}
             <LazyVGrid
-              columns={[
-                { size: { type: 'flexible' }, spacing: 8 },
-                { size: { type: 'flexible' }, spacing: 8 },
-                { size: { type: 'flexible' }, spacing: 8 },
-                { size: { type: 'flexible' }, spacing: 8 }
-              ]}
+              columns={EPISODE_GRID_COLUMNS}
               spacing={8}
             >
-              {playGroups[currentGroupIndex]?.episodes.map((ep: PlayEpisode, i: number) =>
-                renderEpisodeButton(`${ep.name}-${i}`, ep.name, i === currentEpisodeIndex, () => setCurrentEpisodeIndex(i))
-              )}
+              {playGroups[currentGroupIndex]?.episodes.map((ep: PlayEpisode, i: number) => (
+                <EpisodeButton
+                  key={`${ep.name}-${i}`}
+                  label={ep.name}
+                  active={i === currentEpisodeIndex}
+                  onPress={() => setCurrentEpisodeIndex(i)}
+                />
+              ))}
             </LazyVGrid>
           </VStack>
 

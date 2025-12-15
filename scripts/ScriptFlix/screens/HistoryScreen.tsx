@@ -4,6 +4,12 @@ import { HistoryService } from '../services/history'
 import { PlayerScreen } from './PlayerScreen'
 import type { HistoryEntry } from '../types'
 
+const GRID_COLUMNS = [
+  { size: { type: 'flexible' as const }, spacing: 12 },
+  { size: { type: 'flexible' as const }, spacing: 12 },
+  { size: { type: 'flexible' as const } }
+]
+
 const formatTime = (timestamp: number) => {
   const date = new Date(timestamp)
   try {
@@ -62,7 +68,7 @@ export const HistoryScreen = () => {
               </VStack>
             ) : (
               <LazyVGrid
-                columns={[{ size: { type: 'flexible' }, spacing: 12 }, { size: { type: 'flexible' }, spacing: 12 }, { size: { type: 'flexible' } }]}
+                columns={GRID_COLUMNS}
                 spacing={18}
               >
                 {sortedHistory.map(entry => (
