@@ -24,4 +24,7 @@ stats.html
 AGENTS.md
 GEMINI.md
 CLAUDE.md
-/demo/
+demo
+.codex
+.claude
+.gemini
