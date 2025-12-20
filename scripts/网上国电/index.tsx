@@ -19,6 +19,8 @@ import type { SGCCWidgetStyleKey } from './styles/registry'
 
 import { useFullscreenPref } from './shared/ui-kit/useFullscreenPref'
 
+import { fetchWsgwAccounts } from './services/wsgw_client'
+
 // ✅ 新增：通用缓存 Section
 import { type CacheConfig, CacheSection } from './shared/ui-kit/cacheSection'
 import { formatDuration } from './shared/utils/time'
@@ -36,10 +38,12 @@ function SettingsView() {
 
   const initial = loadSGCCSettings()
 
+  const [serverHost, setServerHost] = useState(String((initial as any).serverHost ?? defaultSGCCSettings.serverHost ?? ''))
   const [username, setUsername] = useState(initial.username ?? '')
   const [password, setPassword] = useState(initial.password ?? '')
   const [logDebug, setLogDebug] = useState<boolean>(initial.logDebug ?? false)
   const [accountIndex, setAccountIndex] = useState(String(initial.accountIndex ?? 0))
+  const [cacheScopeKey, setCacheScopeKey] = useState(String(initial.cacheScopeKey ?? ''))
 
   const [widgetStyle, setWidgetStyle] = useState<SGCCWidgetStyleKey>(
     ((initial as any).widgetStyle ?? defaultSGCCSettings.widgetStyle ?? 'classic') as SGCCWidgetStyleKey
@@ -55,6 +59,10 @@ function SettingsView() {
 
   // ✅ 缓存：直接用 CacheSection 即时落盘
   const [cacheDraft, setCacheDraft] = useState<CacheConfig>(initial.cache ?? defaultSGCCSettings.cache)
+
+  // 登录 + 授权测试状态
+  const [testingLogin, setTestingLogin] = useState(false)
+  const [testMessage, setTestMessage] = useState<string>('')
 
   const cacheStore = {
     title: '启用缓存',
@@ -74,10 +82,12 @@ function SettingsView() {
 
   const handleSave = () => {
     const next: SGCCSettings = {
+      serverHost: serverHost.trim(),
       username: username.trim(),
       password,
       logDebug,
       accountIndex: parseInt(accountIndex, 10) || 0,
+      cacheScopeKey: cacheScopeKey.trim(),
       dimension,
       barCount: Number(barCount) || defaultSGCCSettings.barCount,
       oneLevelPq: Number(oneLevelPq) || defaultSGCCSettings.oneLevelPq,
@@ -111,6 +121,8 @@ function SettingsView() {
     setPassword(defaultSGCCSettings.password)
     setLogDebug(defaultSGCCSettings.logDebug)
     setAccountIndex(String(defaultSGCCSettings.accountIndex))
+    setCacheScopeKey(defaultSGCCSettings.cacheScopeKey ?? '')
+    setServerHost(String((defaultSGCCSettings as any).serverHost ?? ''))
     setWidgetStyle((defaultSGCCSettings.widgetStyle ?? 'classic') as SGCCWidgetStyleKey)
     setDimension(defaultSGCCSettings.dimension)
     setBarCount(defaultSGCCSettings.barCount)
@@ -118,6 +130,49 @@ function SettingsView() {
     setTwoLevelPq(String(defaultSGCCSettings.twoLevelPq))
     setRefreshInterval(defaultSGCCSettings.refreshInterval)
     setCacheDraft(defaultSGCCSettings.cache)
+  }
+
+  const handleTestLogin = async () => {
+    // 防止重复点击
+    if (testingLogin) return
+
+    const trimmedUsername = username.trim()
+    const trimmedServerHost = serverHost.trim()
+
+    if (!trimmedUsername || !password) {
+      await Dialog?.alert?.({
+        title: '请输入账号与密码',
+        message: '请先填写“手机号 / 账号”和“密码”。',
+        buttonLabel: '好的'
+      })
+      return
+    }
+
+    try {
+      setTestingLogin(true)
+      setTestMessage('')
+
+      const effectiveServerHost = trimmedServerHost || defaultSGCCSettings.serverHost
+
+      const accounts = await fetchWsgwAccounts({
+        username: trimmedUsername,
+        password,
+        logDebug,
+        serverHost: effectiveServerHost
+      })
+
+      const count = Array.isArray(accounts) ? accounts.length : 0
+      if (count > 0) {
+        setTestMessage(`登录 + 授权成功，返回 ${count} 个户号。`)
+      } else {
+        setTestMessage('登录 + 授权成功，但未返回任何户号。')
+      }
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error)
+      setTestMessage(`登录 / 授权失败：${msg}`)
+    } finally {
+      setTestingLogin(false)
+    }
   }
 
   return (
@@ -151,13 +206,26 @@ function SettingsView() {
           }
           footer={
             <Text font="caption2" foregroundStyle="secondaryLabel">
-              账号与密码仅存储在本机 Storage，用于直接调用网上国网接口。
+              账号与密码仅存储在本机 Storage，用于直连网上国网接口获取数据。
             </Text>
           }
         >
+          <TextField title="中转服务（serverHost）" value={serverHost} onChanged={setServerHost} prompt="https://api.120399.xyz" />
           <TextField title="手机号 / 账号" value={username} onChanged={setUsername} prompt="必填" />
           <SecureField title="密码" value={password} onChanged={setPassword} prompt="必填" />
           <Toggle title="调试日志" value={logDebug} onChanged={setLogDebug} />
+          <HStack alignment="center">
+            <Button
+              title={testingLogin ? '测试中…' : '测试登录与授权'}
+              action={handleTestLogin}
+            />
+            <Spacer />
+            {testMessage ? (
+              <Text font="caption2" foregroundStyle="secondaryLabel">
+                {testMessage}
+              </Text>
+            ) : null}
+          </HStack>
         </Section>
 
         <Section
@@ -178,6 +246,26 @@ function SettingsView() {
             <Button title="重置" action={() => setAccountIndex(String(defaultSGCCSettings.accountIndex))} />
           </HStack>
           <TextField title="" value={accountIndex} prompt="0" keyboardType="numberPad" onChanged={setAccountIndex} />
+        </Section>
+
+        <Section
+          header={
+            <Text font="body" fontWeight="semibold">
+              缓存指纹
+            </Text>
+          }
+          footer={
+            <Text font="caption2" foregroundStyle="secondaryLabel">
+              用于隔离缓存命中。例如切换不同户号/家庭时，可输入“家庭A-主户号”等稳定标识，避免串读。
+            </Text>
+          }
+        >
+          <HStack alignment="center">
+            <Text>指纹标识</Text>
+            <Spacer />
+            <Button title="清空" action={() => setCacheScopeKey('')} />
+          </HStack>
+          <TextField title="" value={cacheScopeKey} prompt="示例：家A-户号1" onChanged={setCacheScopeKey} />
         </Section>
 
         <Section

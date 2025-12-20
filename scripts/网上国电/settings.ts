@@ -8,6 +8,7 @@ declare const Storage: any
 // Storage Keys
 export const SETTINGS_KEY = 'sgccSettings'
 export const FULLSCREEN_KEY = 'sgccSettingsFullscreen'
+export const SGCC_DATA_CACHE_KEY = `${SETTINGS_KEY}:cache:data`
 
 // 刷新间隔选项（分钟）
 export const SGCC_REFRESH_OPTIONS = [
@@ -27,10 +28,14 @@ export const SGCC_BARCOUNT_OPTIONS = [
 export type SGCCDimension = 'daily' | 'monthly'
 
 export type SGCCSettings = {
+  // 直连链路的“加解密中转服务”地址（你可自建同接口服务以避免依赖不稳定的公共服务）
+  // 为空则使用默认值
+  serverHost?: string
   username: string
   password: string
   logDebug: boolean
   accountIndex: number
+  cacheScopeKey?: string
   dimension: SGCCDimension
   barCount: number
   oneLevelPq: number
@@ -43,10 +48,12 @@ export type SGCCSettings = {
 }
 
 export const defaultSGCCSettings: SGCCSettings = {
+  serverHost: 'https://api.120399.xyz',
   username: '',
   password: '',
   logDebug: false,
   accountIndex: 0,
+  cacheScopeKey: '',
   dimension: 'daily',
   barCount: 7,
   oneLevelPq: 2160,
@@ -65,7 +72,10 @@ export const defaultSGCCSettings: SGCCSettings = {
 
     // 接口失败允许兜底旧缓存
     allowStaleOnError: true,
-    maxStaleMinutes: 1440 // 24h
+    maxStaleMinutes: 1440, // 24h
+
+    // ✅ 切账号/换数据源时是否尝试复用旧缓存
+    allowStaleOnKeyMismatch: true
   }
 }
 
@@ -109,6 +119,7 @@ function normalizeCache(raw: any): CacheConfig {
   merged.ttlMinutesFixed = clampNumber((merged as any).ttlMinutesFixed, defaultSGCCSettings.cache.ttlMinutesFixed, 0)
   merged.allowStaleOnError = merged.allowStaleOnError !== false
   merged.maxStaleMinutes = clampNumber((merged as any).maxStaleMinutes, defaultSGCCSettings.cache.maxStaleMinutes, 0)
+  ;(merged as any).allowStaleOnKeyMismatch = (merged as any).allowStaleOnKeyMismatch !== false
 
   return merged
 }
@@ -147,9 +158,11 @@ export function loadSGCCSettings(): SGCCSettings {
   merged.oneLevelPq = clampNumber(merged.oneLevelPq, defaultSGCCSettings.oneLevelPq, 0)
   merged.twoLevelPq = clampNumber(merged.twoLevelPq, defaultSGCCSettings.twoLevelPq, 0)
   merged.refreshInterval = clampNumber(merged.refreshInterval, defaultSGCCSettings.refreshInterval, 0)
+  merged.serverHost = typeof (merged as any).serverHost === 'string' ? (merged as any).serverHost.trim() : defaultSGCCSettings.serverHost
   merged.username = typeof merged.username === 'string' ? merged.username.trim() : ''
   merged.password = typeof merged.password === 'string' ? merged.password : ''
   merged.logDebug = merged.logDebug === true
+  merged.cacheScopeKey = typeof (merged as any).cacheScopeKey === 'string' ? (merged as any).cacheScopeKey.trim() : ''
 
   merged.dimension = merged.dimension === 'monthly' ? 'monthly' : 'daily'
   merged.widgetStyle = (merged.widgetStyle || defaultSGCCSettings.widgetStyle) as SGCCWidgetStyleKey
