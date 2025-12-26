@@ -67,10 +67,7 @@ export const HistoryScreen = () => {
                 </Text>
               </VStack>
             ) : (
-              <LazyVGrid
-                columns={GRID_COLUMNS}
-                spacing={18}
-              >
+              <LazyVGrid columns={GRID_COLUMNS} spacing={18}>
                 {sortedHistory.map(entry => (
                   <VStack key={`${entry.sourceUrl}-${entry.video.vod_id}`} spacing={6}>
                     <VideoCard video={entry.video} onTap={() => handlePlay(entry)} />

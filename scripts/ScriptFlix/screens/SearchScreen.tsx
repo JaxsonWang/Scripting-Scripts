@@ -362,11 +362,7 @@ export const SearchScreen = () => {
 
           {filteredResults.length > 0 && (
             <ScrollView scrollIndicator="hidden">
-              <LazyVGrid
-                columns={GRID_COLUMNS}
-                spacing={16}
-                padding={{ horizontal: 4, bottom: 16 }}
-              >
+              <LazyVGrid columns={GRID_COLUMNS} spacing={16} padding={{ horizontal: 4, bottom: 16 }}>
                 {filteredResults.map(item => (
                   <VStack key={`${item.sourceName}-${item.vod_id}`} spacing={6}>
                     <VideoCard video={item} onTap={openPlayer} />

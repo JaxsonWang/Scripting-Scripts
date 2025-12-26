@@ -5,7 +5,9 @@ declare const Storage: any
 export function safeSet(key: string, value: unknown) {
   try {
     Storage?.set?.(key, value)
-  } catch {}
+  } catch (error) {
+    console.error('safeSet error', key, value, error)
+  }
 }
 
 export function safeGetBoolean(key: string, fallback: boolean) {
@@ -28,8 +30,12 @@ export function safeGetObject<T>(key: string, fallback: T): T {
       try {
         const obj = JSON.parse(raw)
         if (obj && typeof obj === 'object') return obj as T
-      } catch {}
+      } catch {
+        console.error('safeGetObject error', key, raw)
+      }
     }
-  } catch {}
+  } catch (error) {
+    console.error('safeGetObject error', key, error)
+  }
   return fallback
 }

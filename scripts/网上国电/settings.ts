@@ -140,7 +140,9 @@ export function loadSGCCSettings(): SGCCSettings {
     try {
       const parsed = JSON.parse(raw)
       if (parsed && typeof parsed === 'object') obj = parsed
-    } catch {}
+    } catch (error) {
+      console.error('loadSGCCSettings error', error)
+    }
   }
 
   if (!obj || typeof obj !== 'object') return { ...defaultSGCCSettings }
@@ -182,12 +184,16 @@ export function readFullscreenPrefForRun(): boolean {
   try {
     const v = Storage.get(FULLSCREEN_KEY)
     if (typeof v === 'boolean') return v
-  } catch {}
+  } catch (error) {
+    console.error('readFullscreenPrefForRun error', error)
+  }
   return true
 }
 
 export function writeSGCCFullscreenPref(v: boolean) {
   try {
     Storage.set(FULLSCREEN_KEY, v)
-  } catch {}
+  } catch (error) {
+    console.error('writeSGCCFullscreenPref error', error)
+  }
 }

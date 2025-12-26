@@ -176,17 +176,9 @@ export const PlayerScreen = ({ id, sourceUrl, sourceName }: PlayerScreenProps) =
               </Text>
             </HStack>
 
-            <LazyVGrid
-              columns={EPISODE_GRID_COLUMNS}
-              spacing={8}
-            >
+            <LazyVGrid columns={EPISODE_GRID_COLUMNS} spacing={8}>
               {playGroups[currentGroupIndex]?.episodes.map((ep: PlayEpisode, i: number) => (
-                <EpisodeButton
-                  key={`${ep.name}-${i}`}
-                  label={ep.name}
-                  active={i === currentEpisodeIndex}
-                  onPress={() => setCurrentEpisodeIndex(i)}
-                />
+                <EpisodeButton key={`${ep.name}-${i}`} label={ep.name} active={i === currentEpisodeIndex} onPress={() => setCurrentEpisodeIndex(i)} />
               ))}
             </LazyVGrid>
           </VStack>

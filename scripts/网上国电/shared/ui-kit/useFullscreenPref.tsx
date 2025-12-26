@@ -21,7 +21,9 @@ export function useFullscreenPref(storageKey: string) {
     try {
       const v = Storage.get(storageKey)
       if (typeof v === 'boolean') return v
-    } catch {}
+    } catch (error) {
+      console.error('useFullscreenPref error', error)
+    }
     return true
   })
 
@@ -30,7 +32,9 @@ export function useFullscreenPref(storageKey: string) {
     setFullscreenPref(next)
     try {
       Storage.set(storageKey, next)
-    } catch {}
+    } catch (error) {
+      console.error('useFullscreenPref error', error)
+    }
 
     try {
       await Dialog.alert({

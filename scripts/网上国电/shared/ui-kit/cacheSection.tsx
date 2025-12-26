@@ -1,15 +1,15 @@
 // shared/ui-kit/cacheSection.tsx（通用缓存 Section，适配 scripting，实时生效）
 
-import { Section, Toggle, Picker, Text, VStack, useState } from "scripting"
+import { Picker, Section, Text, Toggle, VStack, useState } from 'scripting'
 
-import { formatDuration } from "../utils/time"
+import { formatDuration } from '../utils/time'
 
-export type CacheMode = "auto" | "network_only" | "cache_only"
+export type CacheMode = 'auto' | 'network_only' | 'cache_only'
 
 export type CacheConfig = {
   enabled: boolean
   mode: CacheMode
-  ttlPolicy: "auto" | "fixed"
+  ttlPolicy: 'auto' | 'fixed'
   ttlMinutesFixed: number
   allowStaleOnError: boolean
   maxStaleMinutes: number
@@ -29,24 +29,26 @@ export type CacheStore<TSettings> = {
 const MIN_TTL_MINUTES = 240 // 4h
 
 const TTL_FIXED_OPTIONS: Array<{ label: string; value: number }> = [
-  { label: "4 小时", value: 240 },
-  { label: "6 小时", value: 360 },
-  { label: "12 小时", value: 720 },
-  { label: "1 天", value: 1440 },
+  { label: '4 小时', value: 240 },
+  { label: '6 小时', value: 360 },
+  { label: '12 小时', value: 720 },
+  { label: '1 天', value: 1440 }
 ]
 
 const STALE_OPTIONS: Array<{ label: string; value: number }> = [
-  { label: "4 小时", value: 240 },
-  { label: "6 小时", value: 360 },
-  { label: "12 小时", value: 720 },
-  { label: "1 天", value: 1440 },
-  { label: "2 天", value: 2880 },
-  { label: "3 天", value: 4320 },
-  { label: "5 天", value: 7200 },
-  { label: "7 天", value: 10080 },
+  { label: '4 小时', value: 240 },
+  { label: '6 小时', value: 360 },
+  { label: '12 小时', value: 720 },
+  { label: '1 天', value: 1440 },
+  { label: '2 天', value: 2880 },
+  { label: '3 天', value: 4320 },
+  { label: '5 天', value: 7200 },
+  { label: '7 天', value: 10080 }
 ]
 
-const STALE_MINUTES_SORTED = STALE_OPTIONS.map((x) => x.value).slice().sort((a, b) => a - b)
+const STALE_MINUTES_SORTED = STALE_OPTIONS.map(x => x.value)
+  .slice()
+  .sort((a, b) => a - b)
 
 function pickStaleMinutesAtLeast(minMinutes: number) {
   for (const v of STALE_MINUTES_SORTED) {
@@ -56,30 +58,30 @@ function pickStaleMinutesAtLeast(minMinutes: number) {
 }
 
 const MODE_OPTIONS: Array<{ label: string; value: CacheMode }> = [
-  { label: "自动", value: "auto" },
-  { label: "只走网络", value: "network_only" },
-  { label: "只用缓存", value: "cache_only" },
+  { label: '自动', value: 'auto' },
+  { label: '只走网络', value: 'network_only' },
+  { label: '只用缓存', value: 'cache_only' }
 ]
 
-const TTL_POLICY_OPTIONS: Array<{ label: string; value: "auto" | "fixed" }> = [
-  { label: "自动", value: "auto" },
-  { label: "手动选择", value: "fixed" },
+const TTL_POLICY_OPTIONS: Array<{ label: string; value: 'auto' | 'fixed' }> = [
+  { label: '自动', value: 'auto' },
+  { label: '手动选择', value: 'fixed' }
 ]
 
 function normalizeMode(v: unknown, fallback: CacheMode): CacheMode {
   const s = String(v)
-  if (s === "auto" || s === "network_only" || s === "cache_only") return s
+  if (s === 'auto' || s === 'network_only' || s === 'cache_only') return s
   return fallback
 }
 
-function normalizeTtlPolicy(v: unknown, fallback: "auto" | "fixed"): "auto" | "fixed" {
+function normalizeTtlPolicy(v: unknown, fallback: 'auto' | 'fixed'): 'auto' | 'fixed' {
   const s = String(v)
-  if (s === "auto" || s === "fixed") return s
+  if (s === 'auto' || s === 'fixed') return s
   return fallback
 }
 
 function clampNumber(v: any, fallback: number, min = 0) {
-  const n = typeof v === "number" && Number.isFinite(v) ? v : fallback
+  const n = typeof v === 'number' && Number.isFinite(v) ? v : fallback
   return Math.max(min, n)
 }
 
@@ -99,7 +101,7 @@ function computeTtlActualMinutes(cache: CacheConfig, refreshMinutesMaybe?: any) 
   const refreshMinutes = clampNumber(Number(refreshMinutesMaybe), 0, 0)
   const fixed = clampNumber(cache.ttlMinutesFixed, MIN_TTL_MINUTES, MIN_TTL_MINUTES)
 
-  if (cache.ttlPolicy === "fixed") {
+  if (cache.ttlPolicy === 'fixed') {
     return Math.max(MIN_TTL_MINUTES, fixed)
   }
   // auto：max(4h, refreshInterval)
@@ -122,7 +124,7 @@ function normalizeCacheConfig(next: CacheConfig, ttlActualMinutes: number): Cach
     ...next,
     ttlMinutesFixed,
     maxStaleMinutes,
-    allowStaleOnKeyMismatch: next.allowStaleOnKeyMismatch !== false,
+    allowStaleOnKeyMismatch: next.allowStaleOnKeyMismatch !== false
   }
 }
 
@@ -133,7 +135,7 @@ export function CacheSection<TSettings>({
   deferPersist,
   // ✅ 外部草稿（用于“只点完成才保存”）
   draft,
-  onDraftChange,
+  onDraftChange
 }: {
   store: CacheStore<TSettings>
   refreshKey?: any
@@ -182,37 +184,29 @@ export function CacheSection<TSettings>({
   }
 
   const cacheEnabled = cache.enabled
-  const isNetworkOnly = cache.mode === "network_only"
-  const isCacheOnly = cache.mode === "cache_only"
+  const isNetworkOnly = cache.mode === 'network_only'
+  const isCacheOnly = cache.mode === 'cache_only'
 
   // 当前生效 TTL / 兜底窗口（用于说明，不改变业务）
   const ttlActualMinutes = computeTtlActualMinutes(cache, refreshKey)
   const ttlActualText = formatDuration(ttlActualMinutes, { includeSeconds: false })
-  const staleText = cache.allowStaleOnError
-    ? formatDuration(cache.maxStaleMinutes, { includeSeconds: false })
-    : "未启用"
+  const staleText = cache.allowStaleOnError ? formatDuration(cache.maxStaleMinutes, { includeSeconds: false }) : '未启用'
 
   return (
     <Section
       header={
         <Text font="body" fontWeight="semibold">
-          {store.title ?? "缓存策略"}
+          {store.title ?? '缓存策略'}
         </Text>
       }
       footer={
         <Text font="caption2" foregroundStyle="secondaryLabel">
           • 当前生效：缓存有效期（TTL）={ttlActualText}；旧缓存兜底={staleText}。
-          {cache.allowStaleOnError
-            ? "\n• 已自动纠偏：兜底时长不会小于 TTL（避免网络失败时反而不能用缓存兜底）。"
-            : ""}
+          {cache.allowStaleOnError ? '\n• 已自动纠偏：兜底时长不会小于 TTL（避免网络失败时反而不能用缓存兜底）。' : ''}
         </Text>
       }
     >
-      <Toggle
-        title="启用缓存"
-        value={cacheEnabled}
-        onChanged={(v: boolean) => patchCache({ enabled: v })}
-      />
+      <Toggle title="启用缓存" value={cacheEnabled} onChanged={(v: boolean) => patchCache({ enabled: v })} />
 
       {!cacheEnabled ? (
         <Text font="caption2" foregroundStyle="secondaryLabel">
@@ -222,20 +216,15 @@ export function CacheSection<TSettings>({
 
       {cacheEnabled ? (
         <VStack>
-          <Picker
-            title="缓存模式"
-            value={cache.mode}
-            onChanged={(v: unknown) => patchCache({ mode: normalizeMode(v, cache.mode) })}
-            pickerStyle="menu"
-          >
-            {MODE_OPTIONS.map((opt) => (
+          <Picker title="缓存模式" value={cache.mode} onChanged={(v: unknown) => patchCache({ mode: normalizeMode(v, cache.mode) })} pickerStyle="menu">
+            {MODE_OPTIONS.map(opt => (
               <Text key={opt.value} tag={opt.value as any}>
                 {opt.label}
               </Text>
             ))}
           </Picker>
 
-          {cache.mode === "auto" ? (
+          {cache.mode === 'auto' ? (
             <Text font="caption2" foregroundStyle="secondaryLabel">
               自动模式：优先使用“新鲜缓存”，缓存过期再请求接口；接口失败时可按兜底策略回退旧缓存。
             </Text>
@@ -244,7 +233,7 @@ export function CacheSection<TSettings>({
           {isNetworkOnly ? (
             <Text font="caption2" foregroundStyle="secondaryLabel">
               • 只走网络：不读取缓存；是否写入缓存由模块实现决定。
-              {"\n"}• 提示：TTL/兜底仅用于下次切回「自动/只用缓存」时生效。
+              {'\n'}• 提示：TTL/兜底仅用于下次切回「自动/只用缓存」时生效。
             </Text>
           ) : null}
 
@@ -257,28 +246,19 @@ export function CacheSection<TSettings>({
           <Picker
             title="缓存有效期（TTL）"
             value={cache.ttlPolicy}
-            onChanged={(v: unknown) =>
-              patchCache({ ttlPolicy: normalizeTtlPolicy(v, cache.ttlPolicy) })
-            }
+            onChanged={(v: unknown) => patchCache({ ttlPolicy: normalizeTtlPolicy(v, cache.ttlPolicy) })}
             pickerStyle="menu"
           >
-            {TTL_POLICY_OPTIONS.map((opt) => (
+            {TTL_POLICY_OPTIONS.map(opt => (
               <Text key={opt.value} tag={opt.value as any}>
                 {opt.label}
               </Text>
             ))}
           </Picker>
 
-          {cache.ttlPolicy === "fixed" ? (
-            <Picker
-              title="固定 TTL"
-              value={cache.ttlMinutesFixed}
-              onChanged={(v: number) =>
-                patchCache({ ttlMinutesFixed: Number(v) })
-              }
-              pickerStyle="menu"
-            >
-              {TTL_FIXED_OPTIONS.map((opt) => (
+          {cache.ttlPolicy === 'fixed' ? (
+            <Picker title="固定 TTL" value={cache.ttlMinutesFixed} onChanged={(v: number) => patchCache({ ttlMinutesFixed: Number(v) })} pickerStyle="menu">
+              {TTL_FIXED_OPTIONS.map(opt => (
                 <Text key={opt.value} tag={opt.value as any}>
                   {opt.label}
                 </Text>
@@ -290,23 +270,17 @@ export function CacheSection<TSettings>({
             </Text>
           )}
 
-          <Toggle
-            title="接口失败允许兜底旧缓存"
-            value={cache.allowStaleOnError}
-            onChanged={(v: boolean) => patchCache({ allowStaleOnError: v })}
-          />
+          <Toggle title="接口失败允许兜底旧缓存" value={cache.allowStaleOnError} onChanged={(v: boolean) => patchCache({ allowStaleOnError: v })} />
 
           {cache.allowStaleOnError ? (
             <>
               <Picker
                 title="兜底旧缓存最长允许"
                 value={cache.maxStaleMinutes}
-                onChanged={(v: number) =>
-                  patchCache({ maxStaleMinutes: Number(v) })
-                }
+                onChanged={(v: number) => patchCache({ maxStaleMinutes: Number(v) })}
                 pickerStyle="menu"
               >
-                {STALE_OPTIONS.map((opt) => (
+                {STALE_OPTIONS.map(opt => (
                   <Text key={opt.value} tag={opt.value as any}>
                     {opt.label}
                   </Text>
@@ -326,8 +300,7 @@ export function CacheSection<TSettings>({
           />
 
           <Text font="caption2" foregroundStyle="secondaryLabel">
-            用途：重新获取 Token 后，若缓存仍在 TTL 内，可继续使用旧缓存避免频繁走网络。
-            如担心切账号/切车串数据，可关闭。
+            用途：重新获取 Token 后，若缓存仍在 TTL 内，可继续使用旧缓存避免频繁走网络。 如担心切账号/切车串数据，可关闭。
           </Text>
         </VStack>
       ) : null}

@@ -67,7 +67,9 @@ async function getLogoPath(imageUrl: string = LOGO_URL): Promise<string | null> 
     if (cache?.path && FileManager?.existsSync?.(cache.path)) {
       try {
         FileManager.removeSync(cache.path)
-      } catch {}
+      } catch {
+        console.error('⚠️ WSGW Logo：删除缓存文件失败')
+      }
     }
 
     console.log('🖼️ WSGW Logo：下载更新…')
@@ -95,7 +97,7 @@ async function getLogoPath(imageUrl: string = LOGO_URL): Promise<string | null> 
     console.log('✅ WSGW Logo：已写入缓存')
     return filePath
   } catch (e) {
-    console.warn('⚠️ WSGW Logo：缓存异常:', e)
+    console.error('⚠️ WSGW Logo：缓存异常:', e)
     return null
   }
 }
@@ -140,7 +142,9 @@ async function render() {
     // 直接覆盖 lastUpdateTime 为 now（这不影响业务数据，只影响展示）
     try {
       rawData.lastUpdateTime = now.getTime()
-    } catch {}
+    } catch (e) {
+      console.error('⚠️ WSGW Logo：删除缓存文件失败', e)
+    }
 
     const displayData = extractDisplayData(rawData)
     const barData = processBarChartData(rawData, settings)
@@ -155,7 +159,7 @@ async function render() {
       logoPath = await Promise.race([getLogoPath(), new Promise<string | null>(r => setTimeout(() => r(null), 800))])
       if (!logoPath) console.log('🖼️ WSGW Logo：首帧跳过下载（避免阻塞渲染）')
     } catch (e) {
-      console.log('🖼️ WSGW Logo：首帧跳过（异常）', String(e))
+      console.error('🖼️ WSGW Logo：首帧跳过（异常）', String(e))
       logoPath = null
     }
 

@@ -4,25 +4,15 @@
 // - 支持 cacheScopeKey 指纹隔离
 // - 更新时间（lastUpdateTime）永远使用“当前时间”，而非缓存时间
 
-import { safeGetObject } from "./shared/utils/storage"
-import { fetchWsgwAccounts } from "./services/wsgw_client"
+import { safeGetObject } from './shared/utils/storage'
+import { fetchWsgwAccounts } from './services/wsgw_client'
 
-import {
-  type SGCCSettings,
-  defaultSGCCSettings,
-  loadSGCCSettings,
-  saveSGCCSettings,
-  SETTINGS_KEY,
-  SGCC_DATA_CACHE_KEY,
-} from "./settings"
+import { SETTINGS_KEY, type SGCCSettings, SGCC_DATA_CACHE_KEY, defaultSGCCSettings, loadSGCCSettings, saveSGCCSettings } from './settings'
 
-import type { CacheConfig, CacheMode } from "./shared/ui-kit/cacheSection"
+import type { CacheConfig, CacheMode } from './shared/ui-kit/cacheSection'
 
 // ✅ 统一文件缓存工具（数据落盘 + meta）
-import {
-  readJsonFromCachedFile,
-  writeJsonToCachedFileWithMeta, cleanupCachedFiles,
-} from "./shared/utils/fileCache"
+import { cleanupCachedFiles, readJsonFromCachedFile, writeJsonToCachedFileWithMeta } from './shared/utils/fileCache'
 
 // --- 类型导出 ---
 export { type SGCCSettings }
@@ -57,7 +47,7 @@ const MIN_CACHE_MS = 4 * 60 * 60 * 1000
 const DEFAULT_MAX_STALE_MS = 24 * 60 * 60 * 1000
 
 function fingerprint(raw: string): string {
-  const s = String(raw ?? "")
+  const s = String(raw ?? '')
   let hash = 5381
   for (let i = 0; i < s.length; i++) hash = ((hash << 5) + hash) ^ s.charCodeAt(i)
   return `djb2:${(hash >>> 0).toString(36)}`
@@ -88,14 +78,14 @@ function pickKeyMatched(hit: SGCCCacheHit | null | undefined): boolean | undefin
 
 function readCache(boundKey: string, allowKeyMismatch: boolean): SGCCCacheHit | null {
   const meta = safeGetObject<any | null>(SGCC_DATA_CACHE_KEY, null)
-  if (!meta || typeof meta !== "object") return null
-  if (typeof meta.updatedAt !== "number") return null
+  if (!meta || typeof meta !== 'object') return null
+  if (typeof meta.updatedAt !== 'number') return null
 
-  const path = String(meta.path ?? "")
+  const path = String(meta.path ?? '')
   if (!path) return null
 
   const wantKey = fingerprint(boundKey)
-  const storedKey = typeof meta.key === "string" ? meta.key : ""
+  const storedKey = typeof meta.key === 'string' ? meta.key : ''
   const keyMatched = !!storedKey && storedKey === wantKey
 
   // key 不匹配且不允许复用：直接 miss
@@ -112,13 +102,13 @@ function writeCache(data: any, boundKey: string) {
   const out = writeJsonToCachedFileWithMeta({
     metaKey: SGCC_DATA_CACHE_KEY,
     data,
-    filePrefix: "sgcc_data",
-    fileExt: "json",
-    baseDir: "documents",
-    key: fingerprint(boundKey),
+    filePrefix: 'sgcc_data',
+    fileExt: 'json',
+    baseDir: 'documents',
+    key: fingerprint(boundKey)
   })
 
-  cleanupCachedFiles({ filePrefix: "sgcc_data", baseDir: "documents", keepLatest: 2 })
+  cleanupCachedFiles({ filePrefix: 'sgcc_data', baseDir: 'documents', keepLatest: 2 })
   return out.updatedAt
 }
 
@@ -129,14 +119,14 @@ function withTimeout<T>(p: Promise<T>, ms: number, tag: string): Promise<T> {
   return new Promise<T>((resolve, reject) => {
     const timer = setTimeout(() => reject(new Error(`${tag} timeout after ${ms}ms`)), ms)
     p.then(
-      (v) => {
+      v => {
         clearTimeout(timer)
         resolve(v)
       },
-      (e) => {
+      e => {
         clearTimeout(timer)
         reject(e)
-      },
+      }
     )
   })
 }
@@ -145,27 +135,23 @@ function withTimeout<T>(p: Promise<T>, ms: number, tag: string): Promise<T> {
 // 网络请求（直连）
 // =======================
 async function fetchSGCCAllFromNetwork(settings: SGCCSettings): Promise<any[] | null> {
-  const username = (settings.username || "").trim()
-  const password = settings.password || ""
-  const serverHost = typeof (settings as any).serverHost === "string" ? (settings as any).serverHost.trim() : ""
+  const username = (settings.username || '').trim()
+  const password = settings.password || ''
+  const serverHost = typeof (settings as any).serverHost === 'string' ? (settings as any).serverHost.trim() : ''
 
   if (!username || !password) {
-    console.warn("⚠️ WSGW：缺少账号或密码，跳过网络请求")
+    console.warn('⚠️ WSGW：缺少账号或密码，跳过网络请求')
     return null
   }
 
   const TIMEOUT_MS = 25000
   try {
-    const data = await withTimeout(
-      fetchWsgwAccounts({ username, password, logDebug: settings.logDebug, serverHost }),
-      TIMEOUT_MS,
-      "WSGW(native)",
-    )
+    const data = await withTimeout(fetchWsgwAccounts({ username, password, logDebug: settings.logDebug, serverHost }), TIMEOUT_MS, 'WSGW(native)')
     if (Array.isArray(data)) return data
-    console.warn("⚠️ WSGW：接口返回空或异常结构")
+    console.warn('⚠️ WSGW：接口返回空或异常结构')
     return null
   } catch (e) {
-    console.warn("⚠️ WSGW 原始请求失败：", String(e))
+    console.warn('⚠️ WSGW 原始请求失败：', String(e))
     return null
   }
 }
@@ -174,17 +160,11 @@ async function fetchSGCCAllFromNetwork(settings: SGCCSettings): Promise<any[] | 
 // TTL 计算
 // =======================
 function ttlFromCacheSettings(cache: CacheConfig, refreshIntervalMinutes?: number): number {
-  const refreshMs =
-    typeof refreshIntervalMinutes === "number" && Number.isFinite(refreshIntervalMinutes)
-      ? Math.max(0, refreshIntervalMinutes) * 60 * 1000
-      : 0
+  const refreshMs = typeof refreshIntervalMinutes === 'number' && Number.isFinite(refreshIntervalMinutes) ? Math.max(0, refreshIntervalMinutes) * 60 * 1000 : 0
 
-  const fixedMs =
-    typeof cache.ttlMinutesFixed === "number" && Number.isFinite(cache.ttlMinutesFixed)
-      ? Math.max(0, cache.ttlMinutesFixed) * 60 * 1000
-      : 0
+  const fixedMs = typeof cache.ttlMinutesFixed === 'number' && Number.isFinite(cache.ttlMinutesFixed) ? Math.max(0, cache.ttlMinutesFixed) * 60 * 1000 : 0
 
-  const base = cache.ttlPolicy === "fixed" ? fixedMs : refreshMs
+  const base = cache.ttlPolicy === 'fixed' ? fixedMs : refreshMs
   return Math.max(MIN_CACHE_MS, base)
 }
 
@@ -202,15 +182,7 @@ export type FetchSGCCCachedResult = {
   data: any
   fromCache: boolean
   ttlMs: number
-  mode:
-  | "cache_fresh"
-  | "network_fresh"
-  | "cache_stale_fallback"
-  | "none"
-  | "cache_only_hit"
-  | "cache_only_miss"
-  | "network_only"
-  | "cache_disabled"
+  mode: 'cache_fresh' | 'network_fresh' | 'cache_stale_fallback' | 'none' | 'cache_only_hit' | 'cache_only_miss' | 'network_only' | 'cache_disabled'
 
   // ✅ UI 展示用：永远是当前时间
   fetchedAt: number
@@ -221,7 +193,7 @@ export type FetchSGCCCachedResult = {
   meta?: {
     cacheEnabled: boolean
     cacheMode: CacheMode
-    ttlPolicy: "auto" | "fixed"
+    ttlPolicy: 'auto' | 'fixed'
     ttlMinutes: number
     allowStaleOnError: boolean
     maxStaleMinutes: number
@@ -233,38 +205,33 @@ export type FetchSGCCCachedResult = {
   }
 }
 
-export async function getElectricityData(
-  options: FetchSGCCCachedOptions = {},
-): Promise<FetchSGCCCachedResult> {
+export async function getElectricityData(options: FetchSGCCCachedOptions = {}): Promise<FetchSGCCCachedResult> {
   const settings = getSettings()
   const now = Date.now()
 
   const boundKey =
-    (typeof options.cacheKey === "string" && options.cacheKey.trim().length > 0
+    typeof options.cacheKey === 'string' && options.cacheKey.trim().length > 0
       ? options.cacheKey.trim()
-      : typeof (settings as any).cacheScopeKey === "string" && (settings as any).cacheScopeKey.trim().length > 0
+      : typeof (settings as any).cacheScopeKey === 'string' && (settings as any).cacheScopeKey.trim().length > 0
         ? String((settings as any).cacheScopeKey).trim()
-        : SETTINGS_KEY)
+        : SETTINGS_KEY
 
   const refreshMinutes =
-    typeof options.refreshIntervalMinutes === "number" && Number.isFinite(options.refreshIntervalMinutes)
+    typeof options.refreshIntervalMinutes === 'number' && Number.isFinite(options.refreshIntervalMinutes)
       ? Math.max(0, options.refreshIntervalMinutes)
       : clampRefreshMinutes((settings as any)?.refreshInterval)
 
-  const cacheSettings: CacheConfig =
-    options.cache ??
-    (settings as any).cache ??
-    defaultSGCCSettings.cache
+  const cacheSettings: CacheConfig = options.cache ?? (settings as any).cache ?? defaultSGCCSettings.cache
 
   const cacheEnabled = cacheSettings.enabled !== false
-  const cacheMode: CacheMode = (cacheSettings.mode ?? "auto") as CacheMode
+  const cacheMode: CacheMode = (cacheSettings.mode ?? 'auto') as CacheMode
   const allowStaleOnError = cacheSettings.allowStaleOnError !== false
   const allowKeyMismatch = (cacheSettings as any).allowStaleOnKeyMismatch !== false
 
   const ttlMs = ttlFromCacheSettings(cacheSettings, refreshMinutes)
 
   const maxStaleMs =
-    typeof cacheSettings.maxStaleMinutes === "number" && Number.isFinite(cacheSettings.maxStaleMinutes)
+    typeof cacheSettings.maxStaleMinutes === 'number' && Number.isFinite(cacheSettings.maxStaleMinutes)
       ? Math.max(0, cacheSettings.maxStaleMinutes) * 60 * 1000
       : DEFAULT_MAX_STALE_MS
 
@@ -277,7 +244,7 @@ export async function getElectricityData(
   const keyMatched = pickKeyMatched(cacheHit)
 
   console.log(
-    `🧠 WSGW Cache 设置消费：enabled=${cacheEnabled ? "Y" : "N"} | mode=${cacheMode} | ttlPolicy=${cacheSettings.ttlPolicy} | ttl=${toMin(ttlMs)}min | allowStale=${allowStaleOnError ? "Y" : "N"} | maxStale=${toMin(maxStaleMs)}min | allowKeyMismatch=${allowKeyMismatch ? "Y" : "N"} | refresh=${refreshMinutes}min | force=${forceRefresh ? "Y" : "N"} | keyMatched=${keyMatched === undefined ? "-" : keyMatched ? "Y" : "N"}`,
+    `🧠 WSGW Cache 设置消费：enabled=${cacheEnabled ? 'Y' : 'N'} | mode=${cacheMode} | ttlPolicy=${cacheSettings.ttlPolicy} | ttl=${toMin(ttlMs)}min | allowStale=${allowStaleOnError ? 'Y' : 'N'} | maxStale=${toMin(maxStaleMs)}min | allowKeyMismatch=${allowKeyMismatch ? 'Y' : 'N'} | refresh=${refreshMinutes}min | force=${forceRefresh ? 'Y' : 'N'} | keyMatched=${keyMatched === undefined ? '-' : keyMatched ? 'Y' : 'N'}`
   )
 
   // ====== cache disabled ======
@@ -291,7 +258,7 @@ export async function getElectricityData(
       try {
         cacheUpdatedAt = writeCache(fresh, boundKey)
       } catch (e) {
-        console.warn("⚠️ WSGW cache_disabled 写缓存失败：", String(e))
+        console.warn('⚠️ WSGW cache_disabled 写缓存失败：', String(e))
       }
     }
 
@@ -299,7 +266,7 @@ export async function getElectricityData(
       data: fresh ?? [],
       fromCache: false,
       ttlMs,
-      mode: fresh ? "cache_disabled" : "none",
+      mode: fresh ? 'cache_disabled' : 'none',
       fetchedAt: now,
       cacheUpdatedAt,
       meta: {
@@ -312,22 +279,20 @@ export async function getElectricityData(
         allowStaleOnKeyMismatch: allowKeyMismatch,
         keyMatched: undefined,
         forceRefresh,
-        decision: fresh
-          ? "cache_disabled(read_off) -> network_ok -> cache_written"
-          : "cache_disabled(read_off) -> network_fail",
-      },
+        decision: fresh ? 'cache_disabled(read_off) -> network_ok -> cache_written' : 'cache_disabled(read_off) -> network_fail'
+      }
     }
   }
 
   // ====== cache_only ======
-  if (cacheMode === "cache_only") {
+  if (cacheMode === 'cache_only') {
     if (cacheHit) {
       return {
         data: cacheHit.data,
         fromCache: true,
         ttlMs,
-        mode: "cache_only_hit",
-        fetchedAt: now,                 // ✅ 当前时间
+        mode: 'cache_only_hit',
+        fetchedAt: now, // ✅ 当前时间
         cacheUpdatedAt: cacheHit.updatedAt,
         meta: {
           cacheEnabled: true,
@@ -340,8 +305,8 @@ export async function getElectricityData(
           keyMatched,
           cacheAgeMinutes: cacheAgeMin,
           forceRefresh,
-          decision: keyMatched ? "cache_only -> hit" : "cache_only -> hit(key_mismatch_reuse)",
-        },
+          decision: keyMatched ? 'cache_only -> hit' : 'cache_only -> hit(key_mismatch_reuse)'
+        }
       }
     }
 
@@ -349,7 +314,7 @@ export async function getElectricityData(
       data: [],
       fromCache: false,
       ttlMs,
-      mode: "cache_only_miss",
+      mode: 'cache_only_miss',
       fetchedAt: now,
       cacheUpdatedAt: undefined,
       meta: {
@@ -362,13 +327,13 @@ export async function getElectricityData(
         allowStaleOnKeyMismatch: allowKeyMismatch,
         keyMatched,
         forceRefresh,
-        decision: "cache_only -> miss",
-      },
+        decision: 'cache_only -> miss'
+      }
     }
   }
 
   // ====== network_only ======
-  if (cacheMode === "network_only") {
+  if (cacheMode === 'network_only') {
     const fresh = await fetchSGCCAllFromNetwork(settings)
     if (fresh) {
       const cacheUpdatedAt = writeCache(fresh, boundKey)
@@ -376,7 +341,7 @@ export async function getElectricityData(
         data: fresh,
         fromCache: false,
         ttlMs,
-        mode: "network_only",
+        mode: 'network_only',
         fetchedAt: now,
         cacheUpdatedAt,
         meta: {
@@ -389,8 +354,8 @@ export async function getElectricityData(
           allowStaleOnKeyMismatch: allowKeyMismatch,
           keyMatched,
           forceRefresh,
-          decision: "network_only -> network_ok -> cache_written",
-        },
+          decision: 'network_only -> network_ok -> cache_written'
+        }
       }
     }
 
@@ -398,7 +363,7 @@ export async function getElectricityData(
       data: [],
       fromCache: false,
       ttlMs,
-      mode: "none",
+      mode: 'none',
       fetchedAt: now,
       cacheUpdatedAt: undefined,
       meta: {
@@ -411,8 +376,8 @@ export async function getElectricityData(
         allowStaleOnKeyMismatch: allowKeyMismatch,
         keyMatched,
         forceRefresh,
-        decision: "network_only -> network_fail",
-      },
+        decision: 'network_only -> network_fail'
+      }
     }
   }
 
@@ -422,8 +387,8 @@ export async function getElectricityData(
       data: cacheHit.data,
       fromCache: true,
       ttlMs,
-      mode: "cache_fresh",
-      fetchedAt: now,                  // ✅ 当前时间
+      mode: 'cache_fresh',
+      fetchedAt: now, // ✅ 当前时间
       cacheUpdatedAt: cacheHit.updatedAt,
       meta: {
         cacheEnabled: true,
@@ -436,8 +401,8 @@ export async function getElectricityData(
         keyMatched,
         cacheAgeMinutes: cacheAgeMin,
         forceRefresh,
-        decision: keyMatched ? "auto -> cache_fresh" : "auto -> cache_fresh(key_mismatch_reuse)",
-      },
+        decision: keyMatched ? 'auto -> cache_fresh' : 'auto -> cache_fresh(key_mismatch_reuse)'
+      }
     }
   }
 
@@ -449,7 +414,7 @@ export async function getElectricityData(
       data: fresh,
       fromCache: false,
       ttlMs,
-      mode: "network_fresh",
+      mode: 'network_fresh',
       fetchedAt: now,
       cacheUpdatedAt,
       meta: {
@@ -462,8 +427,8 @@ export async function getElectricityData(
         allowStaleOnKeyMismatch: allowKeyMismatch,
         keyMatched,
         forceRefresh,
-        decision: "auto -> network_ok -> cache_written",
-      },
+        decision: 'auto -> network_ok -> cache_written'
+      }
     }
   }
 
@@ -473,8 +438,8 @@ export async function getElectricityData(
       data: cacheHit.data,
       fromCache: true,
       ttlMs,
-      mode: "cache_stale_fallback",
-      fetchedAt: now,                  // ✅ 当前时间
+      mode: 'cache_stale_fallback',
+      fetchedAt: now, // ✅ 当前时间
       cacheUpdatedAt: cacheHit.updatedAt,
       meta: {
         cacheEnabled: true,
@@ -487,10 +452,8 @@ export async function getElectricityData(
         keyMatched,
         cacheAgeMinutes: cacheAgeMin,
         forceRefresh,
-        decision: keyMatched
-          ? "auto -> network_fail -> stale_fallback"
-          : "auto -> network_fail -> stale_fallback(key_mismatch_reuse)",
-      },
+        decision: keyMatched ? 'auto -> network_fail -> stale_fallback' : 'auto -> network_fail -> stale_fallback(key_mismatch_reuse)'
+      }
     }
   }
 
@@ -498,7 +461,7 @@ export async function getElectricityData(
     data: [],
     fromCache: false,
     ttlMs,
-    mode: "none",
+    mode: 'none',
     fetchedAt: now,
     cacheUpdatedAt: cacheHit ? cacheHit.updatedAt : undefined,
     meta: {
@@ -512,8 +475,8 @@ export async function getElectricityData(
       keyMatched,
       cacheAgeMinutes: cacheAgeMin,
       forceRefresh,
-      decision: "auto -> network_fail -> no_cache",
-    },
+      decision: 'auto -> network_fail -> no_cache'
+    }
   }
 }
 
@@ -524,7 +487,7 @@ export async function getAccountData(forceRefresh = false): Promise<any> {
   const result = await getElectricityData({
     forceRefresh,
     refreshIntervalMinutes: refreshMinutes,
-    cache: (settings as any).cache,
+    cache: (settings as any).cache
   })
 
   const allData = result.data
@@ -535,30 +498,27 @@ export async function getAccountData(forceRefresh = false): Promise<any> {
     ...(result.meta || {}),
     fromCache: result.fromCache === true,
     mode: result.mode,
-    fetchedAt,      // ✅ 展示用时间
-    cacheUpdatedAt, // ✅ 调试用缓存真实时间
+    fetchedAt, // ✅ 展示用时间
+    cacheUpdatedAt // ✅ 调试用缓存真实时间
   }
 
   if (Array.isArray(allData) && allData.length > 0) {
-    const index = Math.min(
-      Math.max(0, Number((settings as any).accountIndex) || 0),
-      allData.length - 1,
-    )
+    const index = Math.min(Math.max(0, Number((settings as any).accountIndex) || 0), allData.length - 1)
     return {
       ...allData[index],
       lastUpdateTime: fetchedAt, // ✅ 永远用当前时间
-      __cacheMeta: cacheMeta,
+      __cacheMeta: cacheMeta
     }
   }
 
   return {
-    eleBill: { sumMoney: "0.00" },
+    eleBill: { sumMoney: '0.00' },
     arrearsOfFees: false,
     stepElecQuantity: [],
     monthElecQuantity: { dataInfo: {}, mothEleList: [] },
     dayElecQuantity31: { sevenEleList: [] },
     lastUpdateTime: fetchedAt, // ✅ 永远用当前时间
-    __cacheMeta: cacheMeta,
+    __cacheMeta: cacheMeta
   }
 }
 
@@ -582,7 +542,7 @@ export function processBarChartData(data: any, settings: SGCCSettings): BarData[
 
   let barData: BarData[] = []
 
-  if (dimension === "monthly") {
+  if (dimension === 'monthly') {
     barData = monthlyData.map(({ monthElec, level }) => ({ value: monthElec, level }))
   } else {
     const sevenEleList = data.dayElecQuantity31?.sevenEleList || []
@@ -611,27 +571,27 @@ export function processBarChartData(data: any, settings: SGCCSettings): BarData[
 }
 
 export function extractDisplayData(data: any) {
-  const balance = data.eleBill?.sumMoney || "0.00"
+  const balance = data.eleBill?.sumMoney || '0.00'
   const hasArrear = !!data.arrearsOfFees
 
-  let lastBill = "0.00"
-  let lastUsage = "0"
+  let lastBill = '0.00'
+  let lastUsage = '0'
 
   if (data.monthElecQuantity?.mothEleList?.length > 0) {
     const list = data.monthElecQuantity.mothEleList
     const last = list[list.length - 1]
     if (last) {
-      lastBill = last.monthEleCost || last.cost || last.eleCost || "0.00"
-      lastUsage = last.monthEleNum || last.eleNum || last.usage || "0"
+      lastBill = last.monthEleCost || last.cost || last.eleCost || '0.00'
+      lastUsage = last.monthEleNum || last.eleNum || last.usage || '0'
     }
   } else if (data.stepElecQuantity?.[0]?.electricParticulars) {
     const p = data.stepElecQuantity[0].electricParticulars
-    lastBill = p.totalAmount || "0.00"
-    lastUsage = p.totalPq || "0"
+    lastBill = p.totalAmount || '0.00'
+    lastUsage = p.totalPq || '0'
   }
 
-  const yearBill = data.monthElecQuantity?.dataInfo?.totalEleCost || "0"
-  const yearUsage = data.monthElecQuantity?.dataInfo?.totalEleNum || "0"
+  const yearBill = data.monthElecQuantity?.dataInfo?.totalEleCost || '0'
+  const yearUsage = data.monthElecQuantity?.dataInfo?.totalEleNum || '0'
 
   let totalYearPq = 0
   if (data.stepElecQuantity?.[0]?.electricParticulars) {
@@ -646,6 +606,6 @@ export function extractDisplayData(data: any) {
     yearBill,
     yearUsage,
     totalYearPq,
-    lastUpdateTime: data.lastUpdateTime,
+    lastUpdateTime: data.lastUpdateTime
   }
 }

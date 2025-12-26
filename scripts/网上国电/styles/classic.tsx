@@ -40,16 +40,18 @@ function getWidgetSize() {
   }
 
   try {
-    // @ts-ignore
-    if (typeof Device !== 'undefined' && Device.screenSize) {
-      // @ts-ignore
-      let { width, height } = Device.screenSize()
+    if (Device.screen) {
+      const { width } = Device.screen
+      let { height } = Device.screen
+
       if (typeof width === 'number' && typeof height === 'number') {
         if (width > height) height = width
         if (phones[height]) return phones[height]
       }
     }
-  } catch {}
+  } catch {
+    return { small: 155, medium: 329, large: 329 }
+  }
 
   return { small: 155, medium: 329, large: 329 }
 }

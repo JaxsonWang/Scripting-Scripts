@@ -159,7 +159,7 @@ function isCaptchaVerifyError(err: unknown, stageUrl: string): boolean {
   // ⚠️ 可选：部分风控/网关在验证码不匹配时也会返回“账号或密码错误（0100）”
   // 默认关闭，避免误判导致快速触发“错误 5 次锁定 20 分钟”。
   const retryOn0100 = String(process.env.WSGW_LOGIN_RETRY_ON_0100 || '').trim() === '1'
-  if (retryOn0100 && msg.includes('账号或密码错误') && (msg.includes('resultCode=0100') || msg.includes('resultCode\":\"0100\"'))) {
+  if (retryOn0100 && msg.includes('账号或密码错误') && (msg.includes('resultCode=0100') || msg.includes('resultCode":"0100"'))) {
     return true
   }
   return false

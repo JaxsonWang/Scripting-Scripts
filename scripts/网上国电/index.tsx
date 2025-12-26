@@ -188,9 +188,7 @@ function SettingsView() {
               systemImage={fullscreenPref ? 'rectangle.arrowtriangle.2.outward' : 'rectangle'}
               action={async () => {
                 await toggleFullscreen()
-                try {
-                  writeSGCCFullscreenPref(!fullscreenPref)
-                } catch {}
+                writeSGCCFullscreenPref(!fullscreenPref)
               }}
             />,
             <Button title="完成" action={handleSave} />
@@ -215,10 +213,7 @@ function SettingsView() {
           <SecureField title="密码" value={password} onChanged={setPassword} prompt="必填" />
           <Toggle title="调试日志" value={logDebug} onChanged={setLogDebug} />
           <HStack alignment="center">
-            <Button
-              title={testingLogin ? '测试中…' : '测试登录与授权'}
-              action={handleTestLogin}
-            />
+            <Button title={testingLogin ? '测试中…' : '测试登录与授权'} action={handleTestLogin} />
             <Spacer />
             {testMessage ? (
               <Text font="caption2" foregroundStyle="secondaryLabel">
@@ -405,7 +400,9 @@ async function main() {
         message: msg,
         buttonLabel: '知道了'
       })
-    } catch {}
+    } catch (error) {
+      console.error('Dialog.alert error', error)
+    }
     Script.exit()
   }
 }
