@@ -23,6 +23,9 @@ const DEFAULT_SERVER_HOST = 'https://api.120399.xyz'
 const BASE_URL = 'https://www.95598.cn'
 const JSON_HEADERS = { 'content-type': 'application/json' }
 const BIZRT_CACHE_KEY = 'wsgw_sgcc.bizrt.cache.v1'
+const LOCAL_SERVER_DEFAULT_PORT = 8002
+const DEFAULT_POST_TIMEOUT_MS = 9000
+const LOCAL_POST_TIMEOUT_MS = 20000
 
 const API = {
   getKeyCode: '/oauth2/outer/c02/f02',
@@ -81,6 +84,18 @@ const CONFIG = {
 const FORCE_REAUTH_CODES = new Set(['10015', '10108', '10009', '10207', '10005', '10010', '30010'])
 const PREVENTABLE_CODES = new Set(['10010', '30010', '20103'])
 
+type WsgwKeyCodeSm2Fallback = {
+  sm2CipherOrder: 'c1c3c2' | 'c1c2c3'
+  sm2PlainMode: 'hex_uuid' | 'uuid'
+}
+
+const KEYCODE_SM2_FALLBACKS: WsgwKeyCodeSm2Fallback[] = [
+  { sm2CipherOrder: 'c1c3c2', sm2PlainMode: 'hex_uuid' },
+  { sm2CipherOrder: 'c1c2c3', sm2PlainMode: 'hex_uuid' },
+  { sm2CipherOrder: 'c1c3c2', sm2PlainMode: 'uuid' },
+  { sm2CipherOrder: 'c1c2c3', sm2PlainMode: 'uuid' }
+]
+
 class Logger {
   private readonly levels: Array<'trace' | 'debug' | 'info' | 'warn' | 'error'> = ['trace', 'debug', 'info', 'warn', 'error']
   private currentLevelIndex: number
@@ -120,7 +135,7 @@ class Logger {
 }
 
 async function sleep(ms: number) {
-  await new Promise<void>((resolve) => setTimeout(resolve, ms))
+  await new Promise<void>(resolve => setTimeout(resolve, ms))
 }
 
 function normalizeCaptchaCode(raw: any): string {
@@ -138,34 +153,83 @@ function isCaptchaVerifyError(err: unknown, stageUrl: string): boolean {
   // 经验：验证码识别不准时，后端通常返回 “验证错误！” 且 code=-100（从 serverHost decrypt 透传出来）
   if (msg.includes('验证错误')) return true
   if (msg.includes('code=-100')) return true
+  // 经验：验证码 ticket 失效（常见于一次尝试后即作废/过期）
+  if (msg.includes('验证码已失效')) return true
+  if (msg.includes('请重新获取')) return true
+  // ⚠️ 可选：部分风控/网关在验证码不匹配时也会返回“账号或密码错误（0100）”
+  // 默认关闭，避免误判导致快速触发“错误 5 次锁定 20 分钟”。
+  const retryOn0100 = String(process.env.WSGW_LOGIN_RETRY_ON_0100 || '').trim() === '1'
+  if (retryOn0100 && msg.includes('账号或密码错误') && (msg.includes('resultCode=0100') || msg.includes('resultCode\":\"0100\"'))) {
+    return true
+  }
   return false
+}
+
+function extractSrvrtMessage(raw: any): string {
+  if (!raw || typeof raw !== 'object') return ''
+  const srvrt = (raw as any).srvrt
+  if (!srvrt || typeof srvrt !== 'object') return ''
+  const msg = String((srvrt as any).resultMessage || (srvrt as any).message || (srvrt as any).msg || '').trim()
+  if (!msg) return ''
+  const code = (srvrt as any).resultCode ?? (srvrt as any).code
+  const codeStr = code == null ? '' : String(code).trim()
+  return codeStr ? `${msg}（resultCode=${codeStr}）` : msg
 }
 
 function raceTimeout<T>(p: Promise<T>, ms: number, tag: string): Promise<T> {
   return new Promise<T>((resolve, reject) => {
     const timer = setTimeout(() => reject(new Error(`${tag} timeout after ${ms}ms`)), ms)
     p.then(
-      (v) => {
+      v => {
         clearTimeout(timer)
         resolve(v)
       },
-      (e) => {
+      e => {
         clearTimeout(timer)
         reject(e)
-      },
+      }
     )
   })
 }
 
+function normalizeServerHost(raw: string): string {
+  const trimmed = String(raw || '')
+    .trim()
+    .replace(/\/+$/, '')
+  if (!trimmed) return DEFAULT_SERVER_HOST
+  // 公共后端走 https（默认 443），不要自动补端口
+  if (/^https:\/\//i.test(trimmed)) return trimmed
+
+  // 仅对本地 http serverHost 做“默认端口补全”
+  const m = /^http:\/\/([^/]+)$/i.exec(trimmed)
+  if (!m) return trimmed
+  const host = String(m[1] || '').trim()
+  if (!host) return trimmed
+  // 已包含端口
+  if (/:\d+$/.test(host)) return trimmed
+
+  const hostLower = host.toLowerCase()
+  const isLocal =
+    hostLower === 'localhost' ||
+    hostLower.endsWith('.local') ||
+    /^192\.168\./.test(hostLower) ||
+    /^10\./.test(hostLower) ||
+    /^172\.(1[6-9]|2\d|3[0-1])\./.test(hostLower)
+  if (!isLocal) return trimmed
+
+  return `${trimmed}:${LOCAL_SERVER_DEFAULT_PORT}`
+}
+
 async function postJson(url: string, body: unknown): Promise<any> {
+  const timeoutMs = /^http:\/\//i.test(url) ? LOCAL_POST_TIMEOUT_MS : DEFAULT_POST_TIMEOUT_MS
   const resp = await raceTimeout(
     fetch(url, {
       method: 'POST',
       headers: JSON_HEADERS,
       body: JSON.stringify(body)
     }),
-    9000,
-    `postJson(${url})`,
+    timeoutMs,
+    `postJson(${url})`
   )
   if (!resp) throw new Error(`请求 ${url} 无响应`)
   const text = await resp.text()
@@ -280,7 +344,7 @@ class WsgwClient {
     const level = credentials.logDebug ? 'debug' : 'info'
     this.logger = new Logger('WSGW', level)
     this.bizrt = safeGetObject<any | null>(BIZRT_CACHE_KEY, null)
-    this.serverHost = String(credentials.serverHost || DEFAULT_SERVER_HOST).trim() || DEFAULT_SERVER_HOST
+    this.serverHost = normalizeServerHost(String(credentials.serverHost || DEFAULT_SERVER_HOST))
   }
 
   async fetchAllAccounts(): Promise<WsgwAccountPayload[]> {
@@ -349,9 +413,62 @@ class WsgwClient {
 
   private async getKeyCode() {
     this.logger.info('⏳ 获取 keyCode/publicKey…')
-    const req = { url: `/api${API.getKeyCode}`, method: 'post', headers: {} }
-    this.requestKey = await this.request(req)
-    this.logger.debug('🔑 keyCode: ', JSON.stringify(this.requestKey))
+    const baseReq: any = { url: `/api${API.getKeyCode}`, method: 'post', headers: {} }
+
+    let lastErr: unknown = null
+    let lastOut: any = null
+
+    // 兼容差异：不同地区/时间段可能对 SM2 skey 的明文（uuid vs hex_uuid）或密文顺序（c1c3c2 vs c1c2c3）有差异。
+    // 这里对 keyCode 首跳做组合 fallback，尽量让用户“无需手动来回试”。
+    for (let i = 0; i < KEYCODE_SM2_FALLBACKS.length; i += 1) {
+      const variant = KEYCODE_SM2_FALLBACKS[i]
+      const req = { ...baseReq, _wsgw: variant }
+
+      try {
+        const out = await this.request(req)
+        lastOut = out
+
+        const keyCode = (out as any)?.keyCode
+        const publicKey = (out as any)?.publicKey
+        if (keyCode && publicKey) {
+          this.requestKey = out
+          this.logger.debug('🔑 keyCode: ', JSON.stringify(this.requestKey))
+          return
+        }
+
+        const code = (out as any)?.code
+        const message = String((out as any)?.message || (out as any)?.msg || '')
+        const looksLikeGb013 = message.includes('GB013') || String(code) === '10004'
+        if (looksLikeGb013 && i < KEYCODE_SM2_FALLBACKS.length - 1) {
+          this.logger.warn(
+            `⚠️ keyCode 首跳被拒绝（${message || String(code || 'unknown')}），切换 SM2 参数重试：` +
+              `order=${variant.sm2CipherOrder} plain=${variant.sm2PlainMode}`
+          )
+          await sleep(300)
+          continue
+        }
+
+        throw new Error(`获取 keyCode/publicKey 失败：${message || 'unknown'}（code=${String(code ?? '')}）`)
+      } catch (e) {
+        lastErr = e
+        const msg = e instanceof Error ? e.message : String(e)
+        if (msg.includes('GB013') && i < KEYCODE_SM2_FALLBACKS.length - 1) {
+          const variant = KEYCODE_SM2_FALLBACKS[i]
+          this.logger.warn(`⚠️ keyCode 首跳 GB013，切换 SM2 参数重试：order=${variant.sm2CipherOrder} plain=${variant.sm2PlainMode}`)
+          await sleep(300)
+          continue
+        }
+        break
+      }
+    }
+
+    const code = lastOut?.code
+    const message = lastOut?.message || lastOut?.msg
+    throw new Error(
+      `获取 keyCode/publicKey 失败：${String(message || (lastErr instanceof Error ? lastErr.message : lastErr) || 'unknown')}` +
+        `（code=${String(code ?? '')}）\n` +
+        `提示：请确认 serverHost 指向本地 95598Server（且 95598Server/health 的 clientSecretPrefix 正确）。`
+    )
   }
 
   private async getVerifyCode() {
@@ -368,26 +485,36 @@ class WsgwClient {
       }
     }
     const ticketResp = await this.request(payload)
-    const recog = await this.recognize(ticketResp.canvasSrc)
+    // ✅ 滑块验证码：本地 95598Server 支持传入 {canvasSrc, blockY, blockSrc} 以提升缺口识别稳定性；
+    // 但第三方公共中转（如 api.120399.xyz）可能只支持 string，因此仅在本地 http serverHost 时启用。
+    const shouldSendRichCaptcha = /^http:\/\//i.test(this.serverHost)
+    const recogPayload = shouldSendRichCaptcha
+      ? { canvasSrc: ticketResp.canvasSrc, blockY: ticketResp.blockY, blockSrc: ticketResp.blockSrc }
+      : ticketResp.canvasSrc
+    const recog = await this.recognize(recogPayload as any)
     const normalizedCode = normalizeCaptchaCode(recog)
     if (!normalizedCode) {
-      throw new Error('验证码识别失败：OCR 返回为空')
+      throw new Error('验证码识别失败：get_x 返回为空')
     }
     this.logger.debug('🔑 验证码票据: ', ticketResp.ticket)
-    this.logger.debug('🔑 OCR 识别结果: ', normalizedCode)
+    this.logger.debug('🔑 get_x 计算结果: ', normalizedCode)
     return { code: normalizedCode, ticket: ticketResp.ticket }
   }
 
   private async login(loginKey: string, code: string) {
     this.logger.info('⏳ 登录中…')
+    const codeText = String(code ?? '').trim()
+    const codeNum = Number(codeText)
+    const codePayload = Number.isFinite(codeNum) ? codeNum : codeText
     const payload = {
       url: `/api${API.loginTestCodeNew}`,
       method: 'post',
       headers: { ...this.requestKey },
       data: {
         loginKey,
-        // 统一为 string，避免 number 形态在某些中转/加密实现里发生序列化差异
-        code: String(code ?? '').trim(),
+        // ✅ 兼容：部分后端/中转要求 code 为 number（120399 的 get_x 也返回 number）
+        // 这里优先转成 number，失败则回退到 string
+        code: codePayload,
         params: {
           uscInfo: {
             devciceIp: '',
@@ -412,6 +539,13 @@ class WsgwClient {
     const resp = await this.request(payload)
     const bizrt = resp?.bizrt ?? resp
     if (!(bizrt?.userInfo?.length > 0)) {
+      // 兼容后端返回 {srvrt:{resultCode,resultMessage}} 的场景（否则会被误判成“账户信息错误”）
+      const srvrtMsg = extractSrvrtMessage(resp) || extractSrvrtMessage(bizrt)
+      if (srvrtMsg) throw new Error(`登录失败: ${srvrtMsg}`)
+
+      const msg = String(bizrt?.message || bizrt?.msg || resp?.message || resp?.msg || '').trim()
+      if (msg) throw new Error(`登录失败: ${msg}`)
+
       throw new Error('登录失败: 请检查账户信息')
     }
     this.bizrt = bizrt
@@ -827,13 +961,8 @@ class WsgwClient {
     ])
   }
 
-  private async recognize(payload: string) {
-    const resp = await postJsonWithRetry(
-      `${this.serverHost}/wsgw/get_x`,
-      { yuheng: payload },
-      'recognize(get_x)',
-      1,
-    )
+  private async recognize(payload: any) {
+    const resp = await postJsonWithRetry(`${this.serverHost}/wsgw/get_x`, { yuheng: payload }, 'recognize(get_x)', 1)
     return resp
   }
 
@@ -859,7 +988,17 @@ class WsgwClient {
       if (/^\/wsgw\//.test(rawUrl)) {
         data.url = `${this.serverHost}${rawUrl}`
       } else {
-        data.url = `${BASE_URL}${rawUrl}`
+        // ✅ 本地自建 95598Server：用 /wsgw/proxy 代发到 95598（彻底替代公共后端，并由服务端维护 cookie jar）
+        // - iOS/WebKit fetch 可能无法设置/透传 Cookie、User-Agent 等 header，直连 95598 容易触发 GB013/GB010
+        // - 通过 proxy 由服务端发起请求，可完全复刻 HAR 的 header/cookie 行为
+        const shouldUseLocalProxy = /^http:\/\//i.test(this.serverHost)
+        if (shouldUseLocalProxy && /^\/api\//.test(rawUrl)) {
+          const k = String((data as any).encryptKey || '').trim()
+          const kParam = k ? `&k=${encodeURIComponent(k)}` : ''
+          data.url = `${this.serverHost}/wsgw/proxy?u=${encodeURIComponent(rawUrl)}${kParam}`
+        } else {
+          data.url = `${BASE_URL}${rawUrl}`
+        }
       }
     }
     if (data.data !== undefined) {
@@ -904,12 +1043,7 @@ class WsgwClient {
       data: payloadData,
       encryptKey
     }
-    const resp = await postJsonWithRetry(
-      `${this.serverHost}/wsgw/decrypt`,
-      decryptBody,
-      `decrypt(${String(config?.url || '')})`,
-      0,
-    )
+    const resp = await postJsonWithRetry(`${this.serverHost}/wsgw/decrypt`, decryptBody, `decrypt(${String(config?.url || '')})`, 0)
     const inner = resp?.data
     const code = inner?.code
     const message = inner?.message
@@ -964,7 +1098,7 @@ class WsgwClient {
           body: encrypted.body
         }),
         12000,
-        `fetch95598(${String(config?.url || '')})`,
+        `fetch95598(${String(config?.url || '')})`
       )
       if (!resp) throw new Error('请求无响应')
       const text = await resp.text()

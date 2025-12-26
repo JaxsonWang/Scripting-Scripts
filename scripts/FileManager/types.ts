@@ -26,6 +26,7 @@ export type LanguageOption = {
 export type L10n = {
   documents: string
   appGroup: string
+  iCloud: string
   failedRead: string
   fileNotFound: string
   previewFailed: string

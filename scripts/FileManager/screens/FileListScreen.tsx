@@ -41,13 +41,16 @@ export const FileListScreen = () => {
 
   const currentToolbar = toolbarByTab[tabIndex]
 
-  const tabs = useMemo(
-    () => [
+  const tabs = useMemo(() => {
+    const nextTabs = [
       { title: l10n.documents, icon: 'folder.fill', path: FileManager.documentsDirectory },
       { title: l10n.appGroup, icon: 'externaldrive.fill', path: FileManager.appGroupDocumentsDirectory }
-    ],
-    [l10n]
-  )
+    ]
+    if (FileManager.isiCloudEnabled) {
+      nextTabs.push({ title: l10n.iCloud, icon: 'cloud.fill', path: FileManager.iCloudDocumentsDirectory })
+    }
+    return nextTabs
+  }, [l10n])
 
   return (
     <NavigationStack>

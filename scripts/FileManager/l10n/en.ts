@@ -3,6 +3,7 @@ import type { L10n } from '../types'
 export const l10nEN: L10n = {
   documents: 'Documents',
   appGroup: 'App Group',
+  iCloud: 'iCloud',
   failedRead: 'Failed to read directory',
   fileNotFound: 'File not found',
   previewFailed: 'Preview failed',
