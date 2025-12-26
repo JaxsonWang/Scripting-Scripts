@@ -13,7 +13,7 @@
     "name": "淮城一只猫"
   },
   "description": "Manage files in Documents and AppGroup directories.",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "localizedNames": {
     "en": "File Manager",
     "zh": "文件管理器"

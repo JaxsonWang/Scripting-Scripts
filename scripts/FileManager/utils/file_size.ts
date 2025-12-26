@@ -7,7 +7,8 @@ export const computeDirectorySize = async (dirPath: string): Promise<number> => 
   let total = 0
   let entries: string[] = []
   try {
-    entries = await FileManager.readDirectory(dirPath, true)
+    // 仅读取当前目录的直接子项，避免递归列表导致重复统计
+    entries = await FileManager.readDirectory(dirPath)
   } catch (error) {
     console.error('[computeDirectorySize] readDirectory failed', dirPath, error)
     return total
