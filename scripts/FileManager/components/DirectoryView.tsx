@@ -1,5 +1,5 @@
-import { List, Navigation, NavigationLink, Script, VStack, useCallback, useEffect, useMemo, useState } from 'scripting'
-import type { BreadcrumbSegment, DirectoryViewProps, FileEntry, OnSubmitModifier, SearchableModifier } from '../types'
+import { List, Navigation, NavigationLink, Script, TextField, VStack, useCallback, useEffect, useMemo, useState } from 'scripting'
+import type { BreadcrumbSegment, DirectoryViewProps, FileEntry } from '../types'
 import { DirectoryEmptyState } from './DirectoryEmptyState'
 import { useFileOperations } from '../hooks/useFileOperations'
 import { useDirectoryToolbar } from '../hooks/useDirectoryToolbar'
@@ -288,21 +288,12 @@ export const DirectoryView = ({
 
   useEffect(() => {
     if (disableInternalToolbar && onToolbarChange && tag != null) {
-      const rootSearchable: SearchableModifier = {
-        value: searchInput,
-        onChanged: setSearchInput,
-        placement: 'navigationBarDrawerAlwaysDisplay',
-        prompt: l10n.searchPrompt
-      }
-      const rootOnSubmit: OnSubmitModifier = { triggers: 'search', action: handleSearchSubmit }
       onToolbarChange(tag, {
         trailing: toolbarTrailing,
-        navigationTitle: derivedNavigationTitle,
-        searchable: rootSearchable,
-        onSubmit: rootOnSubmit
+        navigationTitle: derivedNavigationTitle
       })
     }
-  }, [disableInternalToolbar, onToolbarChange, tag, toolbarTrailing, derivedNavigationTitle, handleSearchSubmit, l10n.searchPrompt, searchInput])
+  }, [disableInternalToolbar, onToolbarChange, tag, toolbarTrailing, derivedNavigationTitle])
 
   return (
     <VStack
@@ -321,10 +312,25 @@ export const DirectoryView = ({
       }}
     >
       {!isRoot ? <BreadcrumbBar segments={breadcrumbSegments} dismissStack={fullDismissStack} rootPath={rootPath} /> : null}
+      {isRoot ? (
+        <VStack padding={{ horizontal: 24, top: 0 }}>
+          <TextField
+            title={l10n.searchPrompt}
+            value={searchInput}
+            onChanged={setSearchInput}
+            prompt={l10n.searchPrompt}
+            textFieldStyle="roundedBorder"
+            submitLabel="search"
+            onSubmit={() => {
+              void handleSearchSubmit()
+            }}
+          />
+        </VStack>
+      ) : null}
       <List
         listStyle="inset"
         searchable={
-          disableInternalToolbar
+          disableInternalToolbar || isRoot
             ? undefined
             : {
                 value: searchInput,
@@ -333,7 +339,7 @@ export const DirectoryView = ({
                 prompt: l10n.searchPrompt
               }
         }
-        onSubmit={disableInternalToolbar ? undefined : { triggers: 'search', action: handleSearchSubmit }}
+        onSubmit={disableInternalToolbar || isRoot ? undefined : { triggers: 'search', action: handleSearchSubmit }}
       >
         {isSearching ? (
           <DirectoryEmptyState message={l10n.searchInProgress} />
