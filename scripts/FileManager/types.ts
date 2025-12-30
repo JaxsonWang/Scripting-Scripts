@@ -60,6 +60,7 @@ export type L10n = {
   searchInvalidRegexMessage: (error: string) => string
   searchInProgress: string
   searchEmpty: string
+  openContainingDirectory: string
   noPasteTitle: string
   noPasteMessage: string
   deleteTitle: string
@@ -230,6 +231,9 @@ export type UseDirectoryEntriesOptions = {
 
 export type FileRowRendererConfig = {
   l10n: L10n
+  currentPath: string
+  isSearchMode: boolean
+  handleOpenContainingDirectory?: (entry: FileEntry) => void | Promise<void>
   handleOpenFile: (name: string) => void | Promise<void>
   handleCopy: (name: string) => void | Promise<void>
   handleMove: (name: string) => void | Promise<void>

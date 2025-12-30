@@ -1,4 +1,4 @@
-import { List, Navigation, NavigationLink, Script, VStack, useCallback, useEffect, useMemo, useState } from 'scripting'
+import { List, Navigation, NavigationLink, NavigationStack, Path, Script, VStack, useCallback, useEffect, useMemo, useState } from 'scripting'
 import type { BreadcrumbSegment, DirectoryViewProps, FileEntry } from '../types'
 import { DirectoryEmptyState } from './DirectoryEmptyState'
 import { useFileOperations } from '../hooks/useFileOperations'
@@ -182,6 +182,39 @@ export const DirectoryView = ({
     }
   }, [currentPath, l10n, searchControl, searchInput, showHidden])
 
+  const handleOpenContainingDirectory = useCallback(
+    async (entry: FileEntry) => {
+      if (!searchResults) {
+        return
+      }
+      const targetDir = Path.dirname(entry.path)
+      if (!targetDir || targetDir === currentPath) {
+        return
+      }
+      await Navigation.present({
+        element: (
+          <NavigationStack>
+            <DirectoryView
+              rootPath={targetDir}
+              path={targetDir}
+              rootDisplayName={Path.basename(targetDir) || targetDir}
+              disableInternalToolbar={false}
+              transfer={transfer}
+              setTransfer={setTransfer}
+              externalReloadPath={externalReloadPath}
+              requestExternalReload={requestExternalReload}
+              l10n={l10n}
+              locale={locale}
+              onLocaleChange={onLocaleChange}
+              languageOptions={languageOptions}
+            />
+          </NavigationStack>
+        )
+      })
+    },
+    [currentPath, externalReloadPath, languageOptions, l10n, locale, onLocaleChange, requestExternalReload, searchResults, setTransfer, transfer]
+  )
+
   const displayEntries = useMemo(() => {
     if (searchResults) {
       return searchResults
@@ -262,6 +295,9 @@ export const DirectoryView = ({
 
   const renderFileRow = useFileRowRenderer({
     l10n,
+    currentPath,
+    isSearchMode: Boolean(searchResults),
+    handleOpenContainingDirectory,
     handleOpenFile,
     handleCopy,
     handleMove,

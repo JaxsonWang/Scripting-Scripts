@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'scripting'
+import { Path, useCallback, useMemo } from 'scripting'
 import type { FileEntry, FileRowRendererConfig } from '../types'
 import { FileRow } from '../components/FileRow'
 import { canEditWithEditor } from '../utils/text_file'
@@ -9,6 +9,9 @@ import { canEditWithEditor } from '../utils/text_file'
  */
 export const useFileRowRenderer = ({
   l10n,
+  currentPath,
+  isSearchMode,
+  handleOpenContainingDirectory,
   handleOpenFile,
   handleCopy,
   handleMove,
@@ -20,6 +23,7 @@ export const useFileRowRenderer = ({
 }: FileRowRendererConfig) => {
   const labels = useMemo(
     () => ({
+      openContainingDirectory: l10n.openContainingDirectory,
       copy: l10n.copy,
       move: l10n.move,
       info: l10n.info,
@@ -39,6 +43,8 @@ export const useFileRowRenderer = ({
     (entry: FileEntry) => {
       const { name, path, isDir, stat } = entry
       const maybeEditHandler = !isDir && handleEdit && canEditWithEditor(name) ? () => handleEdit(entry) : undefined
+      const maybeOpenContainingDirectory =
+        !isDir && isSearchMode && handleOpenContainingDirectory && Path.dirname(path) !== currentPath ? () => handleOpenContainingDirectory(entry) : undefined
       return (
         <FileRow
           key={name}
@@ -47,6 +53,7 @@ export const useFileRowRenderer = ({
           isDirectory={isDir}
           stat={stat}
           onPress={!isDir ? () => handleOpenFile(name) : undefined}
+          onOpenContainingDirectory={maybeOpenContainingDirectory}
           labels={labels}
           onCopy={() => handleCopy(name)}
           onMove={() => handleMove(name)}
@@ -58,7 +65,20 @@ export const useFileRowRenderer = ({
         />
       )
     },
-    [labels, handleOpenFile, handleCopy, handleMove, handleEdit, handleInfo, handleRename, handleDuplicate, handleDelete]
+    [
+      currentPath,
+      handleCopy,
+      handleDelete,
+      handleDuplicate,
+      handleEdit,
+      handleInfo,
+      handleMove,
+      handleOpenContainingDirectory,
+      handleOpenFile,
+      handleRename,
+      isSearchMode,
+      labels
+    ]
   )
 
   return renderRow

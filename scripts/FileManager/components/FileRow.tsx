@@ -9,6 +9,7 @@ interface FileRowProps {
   isDirectory: boolean
   stat?: FileStat
   onPress?: () => void
+  onOpenContainingDirectory?: () => void
   onCopy: () => void
   onMove: () => void
   onEdit?: () => void
@@ -17,6 +18,7 @@ interface FileRowProps {
   onDuplicate: () => void
   onDelete: () => void
   labels: {
+    openContainingDirectory: string
     copy: string
     move: string
     info: string
@@ -32,7 +34,22 @@ interface FileRowProps {
  * 单行文件展示组件，包含点击和上下文菜单
  * @param props 文件行参数
  */
-export const FileRow = ({ name, path, isDirectory, stat, onPress, onCopy, onMove, onEdit, onInfo, onRename, onDuplicate, onDelete, labels }: FileRowProps) => {
+export const FileRow = ({
+  name,
+  path,
+  isDirectory,
+  stat,
+  onPress,
+  onOpenContainingDirectory,
+  onCopy,
+  onMove,
+  onEdit,
+  onInfo,
+  onRename,
+  onDuplicate,
+  onDelete,
+  labels
+}: FileRowProps) => {
   const iconPath = useMemo(() => `${Script.directory}/assets/icon/${resolveIconName(name, isDirectory)}.svg`, [isDirectory, name])
   /**
    * 统计目录内的条目数量
@@ -67,6 +84,15 @@ export const FileRow = ({ name, path, isDirectory, stat, onPress, onCopy, onMove
         menuItems: (
           <Group>
             <VStack spacing={8}>
+              {!isDirectory && onOpenContainingDirectory ? (
+                <Button action={onOpenContainingDirectory}>
+                  <HStack alignment="center" frame={{ maxWidth: 'infinity' }}>
+                    <Text>{labels.openContainingDirectory}</Text>
+                    <Spacer />
+                    <Image systemName="folder" frame={{ width: 16, height: 16 }} />
+                  </HStack>
+                </Button>
+              ) : null}
               <Button action={onCopy}>
                 <HStack alignment="center" frame={{ maxWidth: 'infinity' }}>
                   <Text>{labels.copy}</Text>
