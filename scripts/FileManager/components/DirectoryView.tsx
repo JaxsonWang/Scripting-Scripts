@@ -1,4 +1,4 @@
-import { Button, HStack, Image, List, Navigation, NavigationLink, Script, TextField, VStack, useCallback, useEffect, useMemo, useState } from 'scripting'
+import { List, Navigation, NavigationLink, Script, VStack, useCallback, useEffect, useMemo, useState } from 'scripting'
 import type { BreadcrumbSegment, DirectoryViewProps, FileEntry } from '../types'
 import { DirectoryEmptyState } from './DirectoryEmptyState'
 import { useFileOperations } from '../hooks/useFileOperations'
@@ -312,45 +312,10 @@ export const DirectoryView = ({
       }}
     >
       {!isRoot ? <BreadcrumbBar segments={breadcrumbSegments} dismissStack={fullDismissStack} rootPath={rootPath} /> : null}
-      {isRoot ? (
-        <VStack padding={{ horizontal: 16 }}>
-          <HStack
-            alignment="center"
-            padding={{ horizontal: 16, vertical: 8 }}
-            background={{ style: 'secondarySystemBackground', shape: { type: 'rect', cornerRadius: 20 } }}
-          >
-            <Image systemName="magnifyingglass" foregroundStyle="secondaryLabel" />
-            <TextField
-              title=""
-              labelsHidden
-              value={searchInput}
-              onChanged={setSearchInput}
-              prompt={l10n.searchPrompt}
-              textFieldStyle="plain"
-              autocorrectionDisabled
-              textInputAutocapitalization="never"
-              submitLabel="search"
-              onSubmit={() => {
-                void handleSearchSubmit()
-              }}
-              frame={{ maxWidth: 'infinity' }}
-            />
-            {searchInput.trim() ? (
-              <Button
-                action={() => {
-                  setSearchInput('')
-                }}
-              >
-                <Image systemName="xmark.circle.fill" foregroundStyle="tertiaryLabel" />
-              </Button>
-            ) : null}
-          </HStack>
-        </VStack>
-      ) : null}
       <List
         listStyle="inset"
         searchable={
-          disableInternalToolbar || isRoot
+          disableInternalToolbar
             ? undefined
             : {
                 value: searchInput,
@@ -359,7 +324,7 @@ export const DirectoryView = ({
                 prompt: l10n.searchPrompt
               }
         }
-        onSubmit={disableInternalToolbar || isRoot ? undefined : { triggers: 'search', action: handleSearchSubmit }}
+        onSubmit={disableInternalToolbar ? undefined : { triggers: 'search', action: handleSearchSubmit }}
       >
         {isSearching ? (
           <DirectoryEmptyState message={l10n.searchInProgress} />

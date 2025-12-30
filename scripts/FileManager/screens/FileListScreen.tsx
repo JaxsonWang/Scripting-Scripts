@@ -1,6 +1,6 @@
-import { Device, Label, NavigationStack, TabView, VStack, useCallback, useMemo, useState } from 'scripting'
+import { Device, Label, NavigationStack, TabView, VStack, useMemo, useState } from 'scripting'
 import { DirectoryView } from '../components/DirectoryView'
-import type { DirectoryToolbarPayload, LanguageOption, Locale, TransferState } from '../types'
+import type { LanguageOption, Locale, TransferState } from '../types'
 import { getL10n, supportedLanguages } from '../l10n'
 
 /**
@@ -19,7 +19,6 @@ export const FileListScreen = () => {
   const [locale, setLocale] = useState<Locale>(detectLocale())
   const l10n = useMemo(() => getL10n(locale), [locale])
   const [tabIndex, setTabIndex] = useState(0)
-  const [toolbarByTab, setToolbarByTab] = useState<Record<number, DirectoryToolbarPayload>>({})
   const [transfer, setTransfer] = useState<TransferState | null>(null)
   const [externalReloadPath, setExternalReloadPath] = useState<string | null>(null)
   const languageOptions = useMemo<LanguageOption[]>(() => {
@@ -28,18 +27,6 @@ export const FileListScreen = () => {
       label: lang.value === 'en' ? l10n.languageEnglish : lang.value === 'zh' ? l10n.languageChinese : lang.label
     }))
   }, [l10n])
-
-  const handleToolbarChange = useCallback((index: number, payload: DirectoryToolbarPayload) => {
-    setToolbarByTab(prev => {
-      const prevEntry = prev[index]
-      if (prevEntry === payload) {
-        return prev
-      }
-      return { ...prev, [index]: payload }
-    })
-  }, [])
-
-  const currentToolbar = toolbarByTab[tabIndex]
 
   const tabs = useMemo(() => {
     const nextTabs = [
@@ -53,26 +40,15 @@ export const FileListScreen = () => {
   }, [l10n])
 
   return (
-    <NavigationStack>
-      <VStack
-        frame={{ maxWidth: 'infinity', maxHeight: 'infinity' }}
-        navigationTitle={currentToolbar?.navigationTitle}
-        toolbarTitleDisplayMode={currentToolbar ? 'inline' : undefined}
-        toolbar={currentToolbar?.trailing ? { topBarTrailing: currentToolbar.trailing } : undefined}
-        searchable={currentToolbar?.searchable}
-        onSubmit={currentToolbar?.onSubmit}
-      >
-        <TabView tabIndex={tabIndex} onTabIndexChanged={setTabIndex}>
-          {tabs.map((tab, index) => (
+    <VStack frame={{ maxWidth: 'infinity', maxHeight: 'infinity' }}>
+      <TabView tabIndex={tabIndex} onTabIndexChanged={setTabIndex}>
+        {tabs.map((tab, index) => (
+          <NavigationStack key={tab.path} tag={index} tabItem={<Label title={tab.title} systemImage={tab.icon} />}>
             <DirectoryView
-              key={tab.path}
               rootPath={tab.path}
               path={tab.path}
               rootDisplayName={tab.title}
-              tag={index}
-              tabItem={<Label title={tab.title} systemImage={tab.icon} />}
-              onToolbarChange={handleToolbarChange}
-              disableInternalToolbar
+              disableInternalToolbar={false}
               transfer={transfer}
               setTransfer={setTransfer}
               externalReloadPath={externalReloadPath}
@@ -82,9 +58,9 @@ export const FileListScreen = () => {
               onLocaleChange={setLocale}
               languageOptions={languageOptions}
             />
-          ))}
-        </TabView>
-      </VStack>
-    </NavigationStack>
+          </NavigationStack>
+        ))}
+      </TabView>
+    </VStack>
   )
 }
