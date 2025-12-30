@@ -1,5 +1,5 @@
-import { List, Navigation, NavigationLink, Script, VStack, useCallback, useEffect, useMemo } from 'scripting'
-import type { BreadcrumbSegment, DirectoryViewProps, FileEntry } from '../types'
+import { List, Navigation, NavigationLink, Script, VStack, useCallback, useEffect, useMemo, useState } from 'scripting'
+import type { BreadcrumbSegment, DirectoryViewProps, FileEntry, OnSubmitModifier, SearchableModifier } from '../types'
 import { DirectoryEmptyState } from './DirectoryEmptyState'
 import { useFileOperations } from '../hooks/useFileOperations'
 import { useDirectoryToolbar } from '../hooks/useDirectoryToolbar'
@@ -11,6 +11,9 @@ import { useFileInfoPresenter } from '../hooks/useFileInfoPresenter'
 import { useReopenableSheet } from '../hooks/useReopenableSheet'
 import { BreadcrumbBar } from './BreadcrumbBar'
 import { sleep } from '../utils/common'
+import { parseSearchRegex, searchFilesRecursively } from '../utils/search_files'
+
+const MAX_SEARCH_RESULTS = 2000
 
 const trimTrailingSlash = (path: string) => {
   if (path === '/') return '/'
@@ -89,6 +92,11 @@ export const DirectoryView = ({
   const dismiss = Navigation.useDismiss()
   const fullDismissStack = useMemo(() => [...(dismissStack || []), dismiss], [dismissStack, dismiss])
 
+  const [searchInput, setSearchInput] = useState('')
+  const [searchResults, setSearchResults] = useState<FileEntry[] | null>(null)
+  const [isSearching, setIsSearching] = useState(false)
+  const searchControl = useMemo(() => ({ id: 0 }), [])
+
   const { entries, showHidden, setShowHidden, currentStat, triggerReload, softRemoveEntry, softInsertEntry, restoreRenderEntries } = useDirectoryState({
     path: currentPath,
     l10n,
@@ -125,6 +133,70 @@ export const DirectoryView = ({
   const isRoot = currentPath === rootPath
   const currentDirName = isRoot ? rootDisplayName : currentPath.split('/').pop() || rootDisplayName
   const breadcrumbSegments = buildBreadcrumbSegments(rootDisplayName, rootPath, currentPath)
+
+  const handleSearchSubmit = useCallback(async () => {
+    const raw = searchInput.trim()
+    if (!raw) {
+      setSearchResults(null)
+      setIsSearching(false)
+      return
+    }
+
+    let regex: RegExp
+    try {
+      regex = parseSearchRegex(raw)
+    } catch (error) {
+      console.error('[DirectoryView] invalid search regex', raw, error)
+      await Dialog.alert({ title: l10n.searchInvalidRegexTitle, message: l10n.searchInvalidRegexMessage(String(error)) })
+      return
+    }
+
+    searchControl.id += 1
+    const currentId = searchControl.id
+
+    setIsSearching(true)
+    setSearchResults([])
+    try {
+      const results = await searchFilesRecursively({
+        basePath: currentPath,
+        regex,
+        showHidden,
+        maxResults: MAX_SEARCH_RESULTS,
+        shouldCancel: () => searchControl.id !== currentId
+      })
+      if (searchControl.id !== currentId) {
+        return
+      }
+      setSearchResults(results)
+    } catch (error) {
+      console.error('[DirectoryView] search failed', currentPath, error)
+      if (searchControl.id !== currentId) {
+        return
+      }
+      setSearchResults([])
+      await Dialog.alert({ title: l10n.previewFailed, message: String(error) })
+    } finally {
+      if (searchControl.id === currentId) {
+        setIsSearching(false)
+      }
+    }
+  }, [currentPath, l10n, searchControl, searchInput, showHidden])
+
+  const displayEntries = useMemo(() => {
+    if (searchResults) {
+      return searchResults
+    }
+    return entries
+  }, [entries, searchResults])
+
+  useEffect(() => {
+    if (searchInput.trim()) {
+      return
+    }
+    searchControl.id += 1
+    setIsSearching(false)
+    setSearchResults(null)
+  }, [searchControl, searchInput])
 
   /**
    * 行级“简介”点击事件，复用已有 stat 并开启体积计算
@@ -216,12 +288,21 @@ export const DirectoryView = ({
 
   useEffect(() => {
     if (disableInternalToolbar && onToolbarChange && tag != null) {
+      const rootSearchable: SearchableModifier = {
+        value: searchInput,
+        onChanged: setSearchInput,
+        placement: 'navigationBarDrawerAlwaysDisplay',
+        prompt: l10n.searchPrompt
+      }
+      const rootOnSubmit: OnSubmitModifier = { triggers: 'search', action: handleSearchSubmit }
       onToolbarChange(tag, {
         trailing: toolbarTrailing,
-        navigationTitle: derivedNavigationTitle
+        navigationTitle: derivedNavigationTitle,
+        searchable: rootSearchable,
+        onSubmit: rootOnSubmit
       })
     }
-  }, [disableInternalToolbar, onToolbarChange, tag, toolbarTrailing, derivedNavigationTitle])
+  }, [disableInternalToolbar, onToolbarChange, tag, toolbarTrailing, derivedNavigationTitle, handleSearchSubmit, l10n.searchPrompt, searchInput])
 
   return (
     <VStack
@@ -232,13 +313,34 @@ export const DirectoryView = ({
       toolbarTitleDisplayMode={disableInternalToolbar ? undefined : 'inline'}
       toolbar={disableInternalToolbar ? undefined : { topBarTrailing: toolbarTrailing }}
       alignment="leading"
+      onAppear={() => {
+        searchControl.id += 1
+        setIsSearching(false)
+        setSearchInput('')
+        setSearchResults(null)
+      }}
     >
       {!isRoot ? <BreadcrumbBar segments={breadcrumbSegments} dismissStack={fullDismissStack} rootPath={rootPath} /> : null}
-      {entries.length === 0 ? (
-        <DirectoryEmptyState message={l10n.emptyFolder} />
-      ) : (
-        <List listStyle="inset">
-          {entries.map(entry => {
+      <List
+        listStyle="inset"
+        searchable={
+          disableInternalToolbar
+            ? undefined
+            : {
+                value: searchInput,
+                onChanged: setSearchInput,
+                placement: 'navigationBarDrawerAlwaysDisplay',
+                prompt: l10n.searchPrompt
+              }
+        }
+        onSubmit={disableInternalToolbar ? undefined : { triggers: 'search', action: handleSearchSubmit }}
+      >
+        {isSearching ? (
+          <DirectoryEmptyState message={l10n.searchInProgress} />
+        ) : displayEntries.length === 0 ? (
+          <DirectoryEmptyState message={searchResults ? l10n.searchEmpty : l10n.emptyFolder} />
+        ) : (
+          displayEntries.map(entry => {
             const { name, path: childPath, isDir } = entry
             if (isDir) {
               return (
@@ -270,9 +372,9 @@ export const DirectoryView = ({
             }
 
             return renderFileRow(entry)
-          })}
-        </List>
-      )}
+          })
+        )}
+      </List>
     </VStack>
   )
 }

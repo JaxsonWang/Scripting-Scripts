@@ -1,5 +1,30 @@
 export type Locale = 'en' | 'zh'
 
+export type SearchFieldPlacement =
+  | 'automatic'
+  | 'navigationBarDrawer'
+  | 'navigationBarDrawerAlwaysDisplay'
+  | 'navigationBarDrawerAutomaticDisplay'
+  | 'toolbar'
+  | 'sidebar'
+
+export type SearchPresentedBinding = {
+  value: boolean
+  onChanged: (value: boolean) => void
+}
+
+export type SearchableModifier = {
+  value: string
+  onChanged: (value: string) => void
+  placement?: SearchFieldPlacement
+  prompt?: string
+  presented?: SearchPresentedBinding
+}
+
+export type SubmitTriggers = 'text' | 'search'
+
+export type OnSubmitModifier = (() => void) | { triggers: SubmitTriggers; action: () => void }
+
 export type BreadcrumbSegment = {
   label: string
   targetPath: string | null
@@ -30,6 +55,11 @@ export type L10n = {
   failedRead: string
   fileNotFound: string
   previewFailed: string
+  searchPrompt: string
+  searchInvalidRegexTitle: string
+  searchInvalidRegexMessage: (error: string) => string
+  searchInProgress: string
+  searchEmpty: string
   noPasteTitle: string
   noPasteMessage: string
   deleteTitle: string
@@ -109,6 +139,8 @@ export type DirectoryState = {
 export type DirectoryToolbarPayload = {
   trailing?: JSX.Element | null
   navigationTitle?: string
+  searchable?: SearchableModifier
+  onSubmit?: OnSubmitModifier
 }
 
 export type DirectoryViewProps = {
@@ -248,4 +280,13 @@ export type DirectoryToolbarOptions = {
   handlePreferences: () => void
   handleExit: () => void
   handleShowInfo: () => void | Promise<void>
+}
+
+export type SearchFilesOptions = {
+  basePath: string
+  regex: RegExp
+  showHidden: boolean
+  maxResults: number
+  shouldCancel?: () => boolean
+  yieldEvery?: number
 }

@@ -59,6 +59,8 @@ export const FileListScreen = () => {
         navigationTitle={currentToolbar?.navigationTitle}
         toolbarTitleDisplayMode={currentToolbar ? 'inline' : undefined}
         toolbar={currentToolbar?.trailing ? { topBarTrailing: currentToolbar.trailing } : undefined}
+        searchable={currentToolbar?.searchable}
+        onSubmit={currentToolbar?.onSubmit}
       >
         <TabView tabIndex={tabIndex} onTabIndexChanged={setTabIndex}>
           {tabs.map((tab, index) => (
