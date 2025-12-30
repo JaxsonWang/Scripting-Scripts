@@ -1,4 +1,4 @@
-import { List, Navigation, NavigationLink, Script, TextField, VStack, useCallback, useEffect, useMemo, useState } from 'scripting'
+import { Button, HStack, Image, List, Navigation, NavigationLink, Script, TextField, VStack, useCallback, useEffect, useMemo, useState } from 'scripting'
 import type { BreadcrumbSegment, DirectoryViewProps, FileEntry } from '../types'
 import { DirectoryEmptyState } from './DirectoryEmptyState'
 import { useFileOperations } from '../hooks/useFileOperations'
@@ -313,18 +313,38 @@ export const DirectoryView = ({
     >
       {!isRoot ? <BreadcrumbBar segments={breadcrumbSegments} dismissStack={fullDismissStack} rootPath={rootPath} /> : null}
       {isRoot ? (
-        <VStack padding={{ horizontal: 24, top: 0 }}>
-          <TextField
-            title={l10n.searchPrompt}
-            value={searchInput}
-            onChanged={setSearchInput}
-            prompt={l10n.searchPrompt}
-            textFieldStyle="roundedBorder"
-            submitLabel="search"
-            onSubmit={() => {
-              void handleSearchSubmit()
-            }}
-          />
+        <VStack padding={{ horizontal: 16 }}>
+          <HStack
+            alignment="center"
+            padding={{ horizontal: 16, vertical: 8 }}
+            background={{ style: 'secondarySystemBackground', shape: { type: 'rect', cornerRadius: 20 } }}
+          >
+            <Image systemName="magnifyingglass" foregroundStyle="secondaryLabel" />
+            <TextField
+              title=""
+              labelsHidden
+              value={searchInput}
+              onChanged={setSearchInput}
+              prompt={l10n.searchPrompt}
+              textFieldStyle="plain"
+              autocorrectionDisabled
+              textInputAutocapitalization="never"
+              submitLabel="search"
+              onSubmit={() => {
+                void handleSearchSubmit()
+              }}
+              frame={{ maxWidth: 'infinity' }}
+            />
+            {searchInput.trim() ? (
+              <Button
+                action={() => {
+                  setSearchInput('')
+                }}
+              >
+                <Image systemName="xmark.circle.fill" foregroundStyle="tertiaryLabel" />
+              </Button>
+            ) : null}
+          </HStack>
         </VStack>
       ) : null}
       <List
