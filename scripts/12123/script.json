@@ -1,0 +1,11 @@
+{
+  "color": "systemBlue",
+  "icon": "car.fill",
+  "runInApp": false,
+  "intentInputTypes": [],
+  "name": "交管12123小组件",
+  "description": "展示交管12123账号车辆与记分信息（需自行配置抓包参数）",
+  "version": "0.1.0",
+  "changelog": ["新增：记分与车辆信息小组件"]
+}
+
