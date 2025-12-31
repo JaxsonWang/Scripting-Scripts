@@ -21,6 +21,7 @@ export type BizRequestParams = {
 export type WidgetConfig = {
   endpoint: string
   bizParams: BizRequestParams
+  vehicleImagePath?: string
 }
 
 export type CachedResponse = {

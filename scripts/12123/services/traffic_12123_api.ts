@@ -21,6 +21,7 @@ export type IntegrationData = {
     validityEnd?: string
     inspectionValidityEnd?: string
     issueOrganizationName?: string
+    status?: string
   }
 }
 

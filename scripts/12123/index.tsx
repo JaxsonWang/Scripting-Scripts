@@ -7,14 +7,15 @@ import {
   NavigationStack,
   RoundedRectangle,
   Script,
-  Section,
-  Spacer,
-  Text,
-  TextField,
-  VStack,
-  Widget,
-  useMemo,
-  useState
+	Section,
+	Spacer,
+	Text,
+	TextField,
+	Path,
+	VStack,
+	Widget,
+	useMemo,
+	useState
 } from 'scripting'
 import { ConfigStorage } from './services/config_storage'
 import { Traffic12123Auth } from './services/traffic_12123_auth'
@@ -77,6 +78,7 @@ const SettingsScreen = () => {
   const savedLogin = ConfigStorage.loadLogin()
   const [input, setInput] = useState(saved ? `params=${encodeURIComponent(JSON.stringify(saved.bizParams))}` : '')
   const [loginBody, setLoginBody] = useState(savedLogin?.loginBody || '')
+  const [vehicleImagePath, setVehicleImagePath] = useState(saved?.vehicleImagePath || '')
   const [status, setStatus] = useState<string | null>(null)
   const [previewData, setPreviewData] = useState<any | null>(null)
 
@@ -92,7 +94,7 @@ const SettingsScreen = () => {
       setStatus('业务参数格式不正确：请粘贴 params=...（URL 编码 JSON）')
       return
     }
-    const config: WidgetConfig = { endpoint: DEFAULT_ENDPOINT, bizParams }
+    const config: WidgetConfig = { endpoint: DEFAULT_ENDPOINT, bizParams, vehicleImagePath: vehicleImagePath.trim() || undefined }
     ConfigStorage.saveConfig(config)
     const nextLoginBody = loginBody.trim()
     if (nextLoginBody) {
@@ -102,6 +104,41 @@ const SettingsScreen = () => {
       ConfigStorage.clearLogin()
     }
     setStatus('已保存配置，可去桌面刷新小组件验证。')
+  }
+
+  const pickVehicleImage = async () => {
+    try {
+      setStatus('选择图片中...')
+      const selectedPhotos = await Photos.pickPhotos(1)
+      const photo = selectedPhotos?.[0]
+      if (!photo) {
+        setStatus('已取消选择')
+        return
+      }
+
+      // 优先保留 PNG 透明通道，若失败再降级为 JPEG
+      const png = Data.fromPNG(photo)
+      const imageData = png ?? Data.fromJPEG(photo, 1)
+      if (!imageData) {
+        setStatus('选择失败：无法读取所选图片数据')
+        return
+      }
+
+      const dir = Path.join(FileManager.appGroupDocumentsDirectory, 'scripting_12123')
+      await FileManager.createDirectory(dir, true)
+      const ext = png ? '.png' : '.jpg'
+      const dest = Path.join(dir, `vehicle_image${ext}`)
+      try {
+        await FileManager.remove(dest)
+      } catch {
+        // ignore
+      }
+      await FileManager.writeAsData(dest, imageData)
+      setVehicleImagePath(dest)
+      setStatus('已选择车辆图片（保存后生效）')
+    } catch (e) {
+      setStatus(`选择图片失败：${String(e)}`)
+    }
   }
 
   const refreshVerifyToken = async (config: WidgetConfig) => {
@@ -196,6 +233,7 @@ const SettingsScreen = () => {
     ConfigStorage.clearLogin()
     setInput('')
     setLoginBody('')
+    setVehicleImagePath('')
     setPreviewData(null)
     setStatus('已清除配置、缓存与登录参数')
   }
@@ -218,6 +256,13 @@ const SettingsScreen = () => {
             prompt="login_method=2&login_token=...&client_version=...&device=...&wxa_session=..."
           />
           <TextField title="业务请求参数（params=...）" value={input} onChanged={setInput} prompt="粘贴 params=...（URL 编码 JSON）" />
+          <HStack>
+            <Button title="选择车辆图片" action={() => void pickVehicleImage()} />
+            <Spacer />
+            <Text font={10} foregroundStyle="secondaryLabel" lineLimit={1}>
+              {vehicleImagePath ? Path.basename(vehicleImagePath) : '未设置'}
+            </Text>
+          </HStack>
           <Button title="保存" disabled={!canSave} action={save} />
           <Button title="测试" action={() => void test()} />
           <Button

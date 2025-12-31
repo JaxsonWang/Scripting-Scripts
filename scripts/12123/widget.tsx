@@ -9,6 +9,7 @@ type WidgetViewProps = {
   data: IntegrationData
   updatedAtText: string
   fromCache: boolean
+  vehicleImagePath?: string
 }
 
 const greedColor: Color = '#67c23a'
@@ -34,13 +35,20 @@ const formatDate = (timestamp: number) => {
   }
 }
 
-const WidgetView = ({ data, updatedAtText, fromCache }: WidgetViewProps) => {
+type ImageSourceProps = { filePath: string } | { imageUrl: string }
+
+const buildImageProps = (path: string): ImageSourceProps => {
+  return /^https?:\/\//.test(path) ? { imageUrl: path } : { filePath: path }
+}
+
+const WidgetView = ({ data, updatedAtText, fromCache, vehicleImagePath }: WidgetViewProps) => {
   const viewModel = useMemo(() => {
     const vehicle = data.vehicles?.[0]
     const drivingLicense = data.drivingLicense
     const points = parsePointNumber(drivingLicense?.cumulativePoint)
     const pointsText = safeText(drivingLicense?.cumulativePoint) || '-'
     const inspectionValidityEnd = safeText(drivingLicense?.inspectionValidityEnd)
+    const status = safeText(drivingLicense?.status)
 
     return {
       title: '交管12123',
@@ -53,6 +61,7 @@ const WidgetView = ({ data, updatedAtText, fromCache }: WidgetViewProps) => {
       vehicleValidEnd: safeText(vehicle?.validPeriodEnd),
       allowToDrive: safeText(data.drivingLicense?.allowToDrive),
       licenseValidEnd: safeText(data.drivingLicense?.validityEnd || data.drivingLicense?.inspectionValidityEnd),
+      status,
       points,
       pointsText,
       inspectionValidityEnd
@@ -82,62 +91,85 @@ const WidgetView = ({ data, updatedAtText, fromCache }: WidgetViewProps) => {
   }
 
   return (
-    <VStack padding={12} spacing={10} frame={{ maxWidth: 'infinity', maxHeight: 'infinity' }}>
-      <HStack spacing={12} frame={{ maxWidth: 'infinity', alignment: 'leading' }}>
-        <VStack spacing={6} frame={{ maxWidth: 'infinity', alignment: 'leading' }}>
-          <Text font={18} foregroundStyle="label" lineLimit={1}>
-            {viewModel.plateNumber}
+    <HStack padding frame={{ maxWidth: 'infinity', alignment: 'leading' }}>
+      <VStack spacing={6} frame={{ alignment: 'leading' }}>
+        <Text font={18} foregroundStyle="label" lineLimit={1}>
+          {viewModel.plateNumber}
+        </Text>
+        {viewModel.vehicleValidEnd ? (
+          <Text font={10} foregroundStyle="secondaryLabel" lineLimit={1}>
+            年检 {viewModel.vehicleValidEnd}
           </Text>
-          {viewModel.vehicleValidEnd ? (
-            <Text font={10} foregroundStyle="secondaryLabel" lineLimit={1}>
-              年检 {viewModel.vehicleValidEnd}
-            </Text>
-          ) : (
+        ) : (
+          <Text font={10} foregroundStyle="secondaryLabel">
+            暂无年检信息
+          </Text>
+        )}
+        {viewModel.licenseValidEnd ? (
+          <Text font={10} foregroundStyle="secondaryLabel" lineLimit={1}>
+            换证 {viewModel.licenseValidEnd}
+          </Text>
+        ) : (
+          <Text font={10} foregroundStyle="secondaryLabel">
+            暂无换证信息
+          </Text>
+        )}
+
+        <HStack
+          padding={{ vertical: 2, horizontal: 4 }}
+          background={
+            <RoundedRectangle
+              cornerRadius={8}
+              stroke={{ shapeStyle: viewModel.pointsText === '0' ? greedColor : dangerColor, strokeStyle: { lineWidth: 1 } }}
+            />
+          }
+        >
+          <Image systemName="person.text.rectangle" font="caption" foregroundStyle={viewModel.pointsText === '0' ? greedColor : dangerColor} />
+          <Text font="caption" foregroundStyle={viewModel.pointsText === '0' ? greedColor : dangerColor}>
+            记 {viewModel.pointsText} 分
+          </Text>
+        </HStack>
+
+        <HStack
+          padding={{ vertical: 2, horizontal: 4 }}
+          background={<RoundedRectangle cornerRadius={8} stroke={{ shapeStyle: 'systemBlue', strokeStyle: { lineWidth: 1 } }} />}
+        >
+          <Image systemName="person.text.rectangle.trianglebadge.exclamationmark" font="caption" foregroundStyle="systemBlue" />
+          <Text font="caption" foregroundStyle="systemBlue">
+            0 违章
+          </Text>
+        </HStack>
+      </VStack>
+
+      <VStack frame={{ maxWidth: 'infinity', alignment: 'trailing' }}>
+        {vehicleImagePath ? (
+          <Image
+            {...buildImageProps(vehicleImagePath)}
+            resizable
+            scaleToFit
+            frame={{
+              idealWidth: 'infinity',
+              maxHeight: 'infinity'
+            }}
+          />
+        ) : (
+          <VStack frame={{ maxWidth: 'infinity', maxHeight: 'infinity', alignment: 'center' }}>
+            <Image systemName="car" font={24} foregroundStyle="secondaryLabel" />
             <Text font={10} foregroundStyle="secondaryLabel">
-              暂无年检信息
+              未设置车辆图片
             </Text>
-          )}
-          {viewModel.licenseValidEnd ? (
-            <Text font={10} foregroundStyle="secondaryLabel" lineLimit={1}>
-              换证 {viewModel.licenseValidEnd}
-            </Text>
-          ) : (
-            <Text font={10} foregroundStyle="secondaryLabel">
-              暂无换证信息
-            </Text>
-          )}
-
-          <HStack
-            padding={{ vertical: 2, horizontal: 4 }}
-            background={
-              <RoundedRectangle
-                cornerRadius={8}
-                stroke={{ shapeStyle: viewModel.pointsText === '0' ? greedColor : dangerColor, strokeStyle: { lineWidth: 1 } }}
-              />
-            }
-          >
-            <Image systemName="person.text.rectangle" font="caption" foregroundStyle={viewModel.pointsText === '0' ? greedColor : dangerColor} />
-            <Text font="caption" foregroundStyle={viewModel.pointsText === '0' ? greedColor : dangerColor}>
-              记 {viewModel.pointsText} 分
-            </Text>
-          </HStack>
-
-          <HStack
-            padding={{ vertical: 2, horizontal: 4 }}
-            background={<RoundedRectangle cornerRadius={8} stroke={{ shapeStyle: 'systemBlue', strokeStyle: { lineWidth: 1 } }} />}
-          >
-            <Image systemName="person.crop.rectangle" font="caption" foregroundStyle="systemBlue" />
-            <Text font="caption" foregroundStyle="systemBlue">
-              车型 {viewModel.allowToDrive}
-            </Text>
-          </HStack>
-        </VStack>
-
-        <VStack spacing={6} frame={{ maxWidth: 'infinity', alignment: 'trailing' }}>
-          {/*<!--车辆展示图片-->*/}
-        </VStack>
-      </HStack>
-    </VStack>
+          </VStack>
+        )}
+        <HStack>
+          <Text font="caption2" foregroundStyle="gray">
+            准驾车型: {viewModel.allowToDrive}
+          </Text>
+          <Text font="caption2" foregroundStyle="gray">
+            驾照状态: {viewModel.status === 'A' ? '正常' : '异常'}
+          </Text>
+        </HStack>
+      </VStack>
+    </HStack>
   )
 }
 
@@ -174,13 +206,22 @@ const formatUpdatedAt = (timestamp: number) => {
 const main = async () => {
   const config = ConfigStorage.loadConfig()
   const cache = ConfigStorage.loadCache()
+  const vehicleImagePath = config?.vehicleImagePath
 
   // Widget 环境里直接发起网络请求可能触发 “message channel not found”，因此只读取 App 端写入的缓存。
   if (cache?.response) {
-    Widget.present(<WidgetView data={cache.response as IntegrationData} updatedAtText={formatUpdatedAt(cache.fetchedAt)} fromCache={true} />, {
-      policy: 'after',
-      date: new Date(Date.now() + 1000 * 60 * RELOAD_MINUTES)
-    })
+    Widget.present(
+      <WidgetView
+        data={cache.response as IntegrationData}
+        updatedAtText={formatUpdatedAt(cache.fetchedAt)}
+        fromCache={true}
+        vehicleImagePath={vehicleImagePath}
+      />,
+      {
+        policy: 'after',
+        date: new Date(Date.now() + 1000 * 60 * RELOAD_MINUTES)
+      }
+    )
     return
   }
 
