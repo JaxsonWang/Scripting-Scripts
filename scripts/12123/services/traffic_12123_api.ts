@@ -1,11 +1,14 @@
 import { fetch } from 'scripting'
-import type { BizRequestParams, WidgetConfig } from './config_storage'
+import type { WidgetConfig } from './config_storage'
 
 export type IntegrationData = {
   name?: string
   platformName?: string
   userType?: string
   userCode?: string
+  issueOrganization?: string
+  idType?: string
+  idNumber?: string
   vehicles?: Array<{
     plateNumber?: string
     plateType?: string
@@ -16,6 +19,9 @@ export type IntegrationData = {
     forceScrapTime?: string
   }>
   drivingLicense?: {
+    idType?: string
+    idNumber?: string
+    issueOrganization?: string
     cumulativePoint?: string
     allowToDrive?: string
     validityEnd?: string
@@ -31,6 +37,25 @@ type IntegrationResponse = {
   resultMsg?: string
   data?: IntegrationData
 }
+
+type UnhandledVioCountData = {
+  list?: Array<{
+    plateNumber?: string
+    count?: string
+    internalOrder?: string
+  }>
+}
+
+type UnhandledVioCountResponse = {
+  success: boolean
+  resultCode?: string
+  resultMsg?: string
+  data?: UnhandledVioCountData
+}
+
+// 对齐「交管12123」demo：使用 miniappcsfw 渠道的 openapi_business_url（更稳定）
+const STABLE_INFO_URL = 'https://miniappcsfw.122.gov.cn:8443/openapi/invokeApi/business/biz'
+const DEFAULT_PRODUCT_ID = 'p10000000000000000001'
 
 const WECHAT_MINIAPP_REFERER = 'https://servicewechat.com/wx49a80525eebd2583/37/page-frame.html'
 const WECHAT_MINIAPP_USER_AGENT =
@@ -50,29 +75,32 @@ export class Traffic12123ApiError extends Error {
   }
 }
 
-const buildFormBody = (paramsObj: any) => {
-  const encoded = encodeURIComponent(JSON.stringify(paramsObj))
-  return `params=${encoded}`
+const getAuthParams = (config: WidgetConfig) => {
+  const p = config.bizParams
+  return {
+    sign: p.sign,
+    verifyToken: p.verifyToken,
+    productId: p.productId || DEFAULT_PRODUCT_ID
+  }
 }
 
-const normalizeParams = (bizParams: BizRequestParams): BizRequestParams => {
-  // HAR 里 params 有时是对象、有时是字符串。服务端接受对象即可。
-  const inner = typeof bizParams.params === 'string' ? JSON.parse(bizParams.params) : bizParams.params
-  return { ...bizParams, params: inner }
+const buildBizBody = (payload: any, encode: boolean) => {
+  const jsonText = JSON.stringify(payload)
+  return encode ? `params=${encodeURIComponent(jsonText)}` : `params=${jsonText}`
 }
 
 export const Traffic12123Api = {
   async queryIntegration(config: WidgetConfig): Promise<IntegrationData> {
-    const endpoint = config.endpoint.replace(/\/+$/, '')
-    const url = `${endpoint}/openapi/invokeApi/business/biz`
-
-    const paramsObj = normalizeParams({
-      ...config.bizParams,
+    const auth = getAuthParams(config)
+    const paramsObj = {
       api: 'biz.user.integration.query',
-      params: {}
-    })
+      productId: auth.productId,
+      sign: auth.sign,
+      verifyToken: auth.verifyToken
+    }
 
-    const res = await fetch(url, {
+    // 对齐 demo：该接口使用 encodeURIComponent 包一层
+    const res = await fetch(STABLE_INFO_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
@@ -82,7 +110,7 @@ export const Traffic12123Api = {
         Accept: '*/*',
         Referer: WECHAT_MINIAPP_REFERER
       },
-      body: buildFormBody(paramsObj)
+      body: buildBizBody(paramsObj, true)
     })
 
     if (!res.ok) {
@@ -95,5 +123,41 @@ export const Traffic12123Api = {
     }
     console.log('response', json)
     return json.data || {}
+  },
+
+  async queryUnhandledVioCount(config: WidgetConfig, _integration?: IntegrationData): Promise<string> {
+    const auth = getAuthParams(config)
+    // 对齐 demo：违章数量接口仅需要 sign+verifyToken+productId
+    const paramsObj = {
+      api: 'biz.vio.unhandledVioCount.query',
+      productId: auth.productId,
+      sign: auth.sign,
+      verifyToken: auth.verifyToken
+    }
+
+    // 对齐 demo：该接口不 encodeURIComponent（直接 JSON.stringify）
+    const res = await fetch(STABLE_INFO_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'X-WEAPP-BIZ-VERSION': '1.0.25',
+        'User-Agent': WECHAT_MINIAPP_USER_AGENT,
+        xweb_xhr: '1',
+        Accept: '*/*',
+        Referer: WECHAT_MINIAPP_REFERER
+      },
+      body: buildBizBody(paramsObj, false)
+    })
+
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status}`)
+    }
+
+    const json = (await res.json()) as UnhandledVioCountResponse
+    if (!json.success) {
+      throw new Traffic12123ApiError(json.resultCode, json.resultMsg)
+    }
+    const count = json.data?.list?.[0]?.count
+    return typeof count === 'string' ? count : '0'
   }
 }

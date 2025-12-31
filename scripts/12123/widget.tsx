@@ -10,6 +10,7 @@ type WidgetViewProps = {
   updatedAtText: string
   fromCache: boolean
   vehicleImagePath?: string
+  vioCount?: string
 }
 
 const greedColor: Color = '#67c23a'
@@ -41,7 +42,7 @@ const buildImageProps = (path: string): ImageSourceProps => {
   return /^https?:\/\//.test(path) ? { imageUrl: path } : { filePath: path }
 }
 
-const WidgetView = ({ data, updatedAtText, fromCache, vehicleImagePath }: WidgetViewProps) => {
+const WidgetView = ({ data, updatedAtText, fromCache, vehicleImagePath, vioCount }: WidgetViewProps) => {
   const viewModel = useMemo(() => {
     const vehicle = data.vehicles?.[0]
     const drivingLicense = data.drivingLicense
@@ -132,11 +133,19 @@ const WidgetView = ({ data, updatedAtText, fromCache, vehicleImagePath }: Widget
 
         <HStack
           padding={{ vertical: 2, horizontal: 4 }}
-          background={<RoundedRectangle cornerRadius={8} stroke={{ shapeStyle: 'systemBlue', strokeStyle: { lineWidth: 1 } }} />}
+          background={
+            <RoundedRectangle
+              cornerRadius={8}
+              stroke={{
+                shapeStyle: vioCount === '0' ? greedColor : dangerColor,
+                strokeStyle: { lineWidth: 1 }
+              }}
+            />
+          }
         >
-          <Image systemName="person.text.rectangle.trianglebadge.exclamationmark" font="caption" foregroundStyle="systemBlue" />
-          <Text font="caption" foregroundStyle="systemBlue">
-            0 违章
+          <Image systemName="person.text.rectangle" font="caption" foregroundStyle={vioCount === '0' ? greedColor : dangerColor} />
+          <Text font="caption" foregroundStyle={vioCount === '0' ? greedColor : dangerColor}>
+            {vioCount} 违章
           </Text>
         </HStack>
       </VStack>
@@ -210,12 +219,16 @@ const main = async () => {
 
   // Widget 环境里直接发起网络请求可能触发 “message channel not found”，因此只读取 App 端写入的缓存。
   if (cache?.response) {
+    const cachedAny = cache.response as any
+    const integration = (cachedAny && typeof cachedAny === 'object' && 'integration' in cachedAny ? cachedAny.integration : cachedAny) as IntegrationData
+    const vioCount = cachedAny && typeof cachedAny === 'object' && 'vioCount' in cachedAny ? String(cachedAny.vioCount) : undefined
     Widget.present(
       <WidgetView
-        data={cache.response as IntegrationData}
+        data={integration}
         updatedAtText={formatUpdatedAt(cache.fetchedAt)}
         fromCache={true}
         vehicleImagePath={vehicleImagePath}
+        vioCount={vioCount}
       />,
       {
         policy: 'after',
