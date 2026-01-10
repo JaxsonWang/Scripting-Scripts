@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'scripting'
 import type { FileEntry, UseDirectoryEntriesOptions } from '../types'
+import { joinFilePath, normalizeFilePath } from '../utils/common'
 
 /**
  * 目录项排序规则，确保目录优先 + 名称升序
@@ -48,10 +49,11 @@ export const useDirectoryEntries = ({ path, l10n, externalReloadPath, requestExt
    */
   const loadFiles = useCallback(async () => {
     try {
-      const names = await FileManager.readDirectory(path)
+      const normalizedPath = normalizeFilePath(path)
+      const names = await FileManager.readDirectory(normalizedPath)
       const filtered = names.filter(name => showHidden || !name.startsWith('.'))
       const withMeta: FileEntry[] = filtered.map(name => {
-        const fullPath = `${path}/${name}`
+        const fullPath = joinFilePath(normalizedPath, name)
         let isDir = false
         let stat: FileStat | undefined
         try {

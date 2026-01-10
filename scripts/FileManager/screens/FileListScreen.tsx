@@ -1,4 +1,4 @@
-import { Device, Label, NavigationStack, TabView, VStack, useMemo, useState } from 'scripting'
+import { Device, Label, NavigationStack, TabView, VStack, useMemo, useObservable, useState } from 'scripting'
 import { DirectoryView } from '../components/DirectoryView'
 import type { LanguageOption, Locale, TransferState } from '../types'
 import { getL10n, supportedLanguages } from '../l10n'
@@ -18,6 +18,9 @@ const detectLocale = (): Locale => {
 export const FileListScreen = () => {
   const [locale, setLocale] = useState<Locale>(detectLocale())
   const l10n = useMemo(() => getL10n(locale), [locale])
+  const documentsNavigationPath = useObservable<string[]>([])
+  const appGroupNavigationPath = useObservable<string[]>([])
+  const iCloudNavigationPath = useObservable<string[]>([])
   const [tabIndex, setTabIndex] = useState(0)
   const [transfer, setTransfer] = useState<TransferState | null>(null)
   const [externalReloadPath, setExternalReloadPath] = useState<string | null>(null)
@@ -42,24 +45,34 @@ export const FileListScreen = () => {
   return (
     <VStack frame={{ maxWidth: 'infinity', maxHeight: 'infinity' }}>
       <TabView tabIndex={tabIndex} onTabIndexChanged={setTabIndex}>
-        {tabs.map((tab, index) => (
-          <NavigationStack key={tab.path} tag={index} tabItem={<Label title={tab.title} systemImage={tab.icon} />}>
-            <DirectoryView
-              rootPath={tab.path}
-              path={tab.path}
-              rootDisplayName={tab.title}
-              disableInternalToolbar={false}
-              transfer={transfer}
-              setTransfer={setTransfer}
-              externalReloadPath={externalReloadPath}
-              requestExternalReload={setExternalReloadPath}
-              l10n={l10n}
-              locale={locale}
-              onLocaleChange={setLocale}
-              languageOptions={languageOptions}
-            />
-          </NavigationStack>
-        ))}
+        {tabs.map((tab, index) => {
+          const navigationPath =
+            tab.path === FileManager.documentsDirectory
+              ? documentsNavigationPath
+              : tab.path === FileManager.appGroupDocumentsDirectory
+                ? appGroupNavigationPath
+                : iCloudNavigationPath
+
+          return (
+            <NavigationStack key={tab.path} path={navigationPath} tag={index} tabItem={<Label title={tab.title} systemImage={tab.icon} />}>
+              <DirectoryView
+                rootPath={tab.path}
+                path={tab.path}
+                rootDisplayName={tab.title}
+                navigationPath={navigationPath}
+                disableInternalToolbar={false}
+                transfer={transfer}
+                setTransfer={setTransfer}
+                externalReloadPath={externalReloadPath}
+                requestExternalReload={setExternalReloadPath}
+                l10n={l10n}
+                locale={locale}
+                onLocaleChange={setLocale}
+                languageOptions={languageOptions}
+              />
+            </NavigationStack>
+          )
+        })}
       </TabView>
     </VStack>
   )

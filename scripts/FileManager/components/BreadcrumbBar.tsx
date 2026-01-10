@@ -1,32 +1,50 @@
 import { Button, HStack, Image, Text } from 'scripting'
+
 import type { BreadcrumbBarProps } from '../types'
-import { sleep } from '../utils/common'
+import { encodeNavigationPathId, joinFilePath, normalizeFilePath, sleep } from '../utils/common'
 
-/**
- * 计算目标路径与根路径的相对深度
- * @param path 目标路径
- * @param rootPath 根路径
- */
-const getRelativeDepth = (path: string, rootPath: string) => {
-  // 处理根目录情况
-  const cleanRoot = rootPath.endsWith('/') && rootPath.length > 1 ? rootPath.slice(0, -1) : rootPath
-  const cleanPath = path.endsWith('/') && path.length > 1 ? path.slice(0, -1) : path
-
-  if (cleanPath === cleanRoot) return 0
-
-  // 确保 path 以 rootPath 开头
-  const normalizedRoot = cleanRoot.endsWith('/') ? cleanRoot : `${cleanRoot}/`
-  if (!cleanPath.startsWith(normalizedRoot)) return 0
-
-  const relative = cleanPath.slice(normalizedRoot.length)
-  return relative.split('/').filter(Boolean).length
+const normalizePath = (path: string) => {
+  return normalizeFilePath(path)
 }
 
-/**
- * 顶部面包屑导航条
- * @param props 面包屑配置
- */
-export const BreadcrumbBar = ({ segments, dismissStack, rootPath }: BreadcrumbBarProps) => (
+const joinPath = (base: string, part: string) => {
+  return joinFilePath(base, part)
+}
+
+const DEBUG_NAVIGATION = false
+
+const debugLog = (...args: unknown[]) => {
+  if (!DEBUG_NAVIGATION) return
+  console.log('[FileManagerNavDebug]', ...args)
+}
+
+const buildNavigationPathValues = (rootPath: string, targetPath: string): string[] => {
+  const normalizedRoot = normalizePath(rootPath)
+  const normalizedTarget = normalizePath(targetPath)
+
+  if (normalizedTarget === normalizedRoot) {
+    return []
+  }
+
+  const rootPrefix = normalizedRoot === '/' ? '/' : `${normalizedRoot}/`
+  if (!normalizedTarget.startsWith(rootPrefix)) {
+    return []
+  }
+
+  const relative = normalizedTarget.slice(rootPrefix.length).replace(/^\/+/, '')
+  const parts = relative.split('/').filter(Boolean)
+
+  const values: string[] = []
+  let accumulated = normalizedRoot
+  for (const part of parts) {
+    accumulated = joinPath(accumulated, part)
+    values.push(encodeNavigationPathId(accumulated))
+  }
+
+  return values
+}
+
+export const BreadcrumbBar = ({ segments, dismissStack, rootPath, navigationPath }: BreadcrumbBarProps) => (
   <HStack alignment="center" padding={{ horizontal: 26 }} spacing={4}>
     {segments.map((segment, index) => {
       const isLast = index === segments.length - 1
@@ -41,30 +59,34 @@ export const BreadcrumbBar = ({ segments, dismissStack, rootPath }: BreadcrumbBa
       let handler: (() => Promise<void>) | undefined
 
       if (segment.targetPath) {
-        const depth = getRelativeDepth(segment.targetPath, rootPath)
-        // 目标是 Depth D
-        // 栈结构: [dismissRoot, dismissA, dismissB, dismissC] (Length 4, C is current)
-        // Root(0), A(1), B(2), C(3).
-        // 当前层级 = stack.length - 1.
-        // 如果要去 Depth 1 (A). 我们需要 dismiss C (idx 3), 然后 dismiss B (idx 2).
-        // 此时回到 A.
-        // 也就是我们要调用 indices: length-1, length-2, ... until depth+1.
-
-        // 检查是否需要 pop
-        const currentDepth = dismissStack.length - 1
-        if (depth < currentDepth) {
+        if (navigationPath) {
+          const nextPath = buildNavigationPathValues(rootPath, segment.targetPath)
           handler = async () => {
-            const steps = currentDepth - depth
-            console.log(`[Breadcrumb] Pop sequence: current=${currentDepth}, target=${depth}, steps=${steps}`)
+            debugLog('breadcrumbTap', {
+              segmentLabel: segment.label,
+              segmentTargetPath: segment.targetPath,
+              rootPath,
+              before: navigationPath.value,
+              nextPath
+            })
+            navigationPath.setValue(nextPath)
+          }
+        } else if (dismissStack) {
+          const depth = buildNavigationPathValues(rootPath, segment.targetPath).length
+          const currentDepth = dismissStack.length - 1
 
-            // 顺序执行 dismiss
-            for (let i = 0; i < steps; i++) {
-              const stackIndex = currentDepth - i
-              const fn = dismissStack[stackIndex]
-              if (fn) {
-                fn()
-                // 等待动画完成
-                await sleep(50)
+          if (depth < currentDepth) {
+            handler = async () => {
+              const steps = currentDepth - depth
+              console.log(`[Breadcrumb] Pop sequence: current=${currentDepth}, target=${depth}, steps=${steps}`)
+
+              for (let i = 0; i < steps; i++) {
+                const stackIndex = currentDepth - i
+                const fn = dismissStack[stackIndex]
+                if (fn) {
+                  fn()
+                  await sleep(50)
+                }
               }
             }
           }
@@ -76,9 +98,7 @@ export const BreadcrumbBar = ({ segments, dismissStack, rootPath }: BreadcrumbBa
           {handler ? (
             <Button
               action={() => {
-                if (handler) {
-                  handler()
-                }
+                handler?.()
               }}
             >
               {node}

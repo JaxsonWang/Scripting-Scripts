@@ -32,10 +32,16 @@ export type BreadcrumbSegment = {
   isEllipsis?: boolean
 }
 
+export type NavigationPath = {
+  value: string[]
+  setValue: (value: string[]) => void
+}
+
 export type BreadcrumbBarProps = {
   segments: BreadcrumbSegment[]
-  dismissStack: (() => void)[]
   rootPath: string
+  navigationPath?: NavigationPath
+  dismissStack?: (() => void)[]
 }
 
 export type TransferState = {
@@ -148,6 +154,7 @@ export type DirectoryViewProps = {
   rootPath: string
   path: string
   rootDisplayName: string
+  navigationPath?: NavigationPath
   dismissStack?: (() => void)[]
   tag?: number
   tabItem?: JSX.Element
@@ -233,6 +240,7 @@ export type FileRowRendererConfig = {
   l10n: L10n
   currentPath: string
   isSearchMode: boolean
+  handleOpenDirectory?: (entry: FileEntry) => void | Promise<void>
   handleOpenContainingDirectory?: (entry: FileEntry) => void | Promise<void>
   handleOpenFile: (name: string) => void | Promise<void>
   handleCopy: (name: string) => void | Promise<void>

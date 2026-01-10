@@ -1,4 +1,4 @@
-import { List, Navigation, NavigationLink, NavigationStack, Path, Script, VStack, useCallback, useEffect, useMemo, useState } from 'scripting'
+import { List, Navigation, NavigationDestination, Path, VStack, useCallback, useEffect, useMemo, useState } from 'scripting'
 import type { BreadcrumbSegment, DirectoryViewProps, FileEntry } from '../types'
 import { DirectoryEmptyState } from './DirectoryEmptyState'
 import { useFileOperations } from '../hooks/useFileOperations'
@@ -10,14 +10,20 @@ import { usePreviewHandlers } from '../hooks/usePreviewHandlers'
 import { useFileInfoPresenter } from '../hooks/useFileInfoPresenter'
 import { useReopenableSheet } from '../hooks/useReopenableSheet'
 import { BreadcrumbBar } from './BreadcrumbBar'
-import { sleep } from '../utils/common'
+import { decodeNavigationPathId, encodeNavigationPathId, normalizeFilePath, normalizeNavigationPathId, sleep } from '../utils/common'
 import { parseSearchRegex, searchFilesRecursively } from '../utils/search_files'
 
 const MAX_SEARCH_RESULTS = 2000
 
+const DEBUG_NAVIGATION = false
+
+const debugLog = (...args: unknown[]) => {
+  if (!DEBUG_NAVIGATION) return
+  console.log('[FileManagerNavDebug]', ...args)
+}
+
 const trimTrailingSlash = (path: string) => {
-  if (path === '/') return '/'
-  return path.replace(/\/+$/, '')
+  return normalizeFilePath(path)
 }
 
 const joinPath = (base: string, part: string) => {
@@ -26,6 +32,32 @@ const joinPath = (base: string, part: string) => {
     return `/${part}`
   }
   return `${normalizedBase}/${part}`
+}
+
+const buildNavigationPathValues = (rootPath: string, targetPath: string): string[] => {
+  const normalizedRoot = trimTrailingSlash(rootPath)
+  const normalizedTarget = trimTrailingSlash(targetPath)
+
+  if (normalizedTarget === normalizedRoot) {
+    return []
+  }
+
+  const rootPrefix = normalizedRoot === '/' ? '/' : `${normalizedRoot}/`
+  if (!normalizedTarget.startsWith(rootPrefix)) {
+    return []
+  }
+
+  const relative = normalizedTarget.slice(rootPrefix.length).replace(/^\/+/, '')
+  const parts = relative.split('/').filter(Boolean)
+
+  const values: string[] = []
+  let accumulated = normalizedRoot
+  for (const part of parts) {
+    accumulated = joinPath(accumulated, part)
+    values.push(encodeNavigationPathId(accumulated))
+  }
+
+  return values
 }
 
 const buildBreadcrumbSegments = (rootDisplayName: string, rootPath: string, currentPath: string): BreadcrumbSegment[] => {
@@ -74,6 +106,7 @@ export const DirectoryView = ({
   rootPath,
   path,
   rootDisplayName,
+  navigationPath,
   dismissStack,
   tag,
   tabItem,
@@ -88,8 +121,20 @@ export const DirectoryView = ({
   onLocaleChange,
   languageOptions
 }: DirectoryViewProps) => {
-  const currentPath = path
+  const normalizedRootPath = useMemo(() => normalizeFilePath(rootPath), [rootPath])
+  const currentPath = useMemo(() => normalizeFilePath(path), [path])
   const dismiss = Navigation.useDismiss()
+
+  useEffect(() => {
+    debugLog('render', {
+      rootPath,
+      normalizedRootPath,
+      path,
+      currentPath,
+      navPathValue: navigationPath?.value,
+      navPathValueDecoded: navigationPath?.value?.map(decodeNavigationPathId)
+    })
+  }, [currentPath, normalizedRootPath, navigationPath?.value, path, rootPath])
   const fullDismissStack = useMemo(() => [...(dismissStack || []), dismiss], [dismissStack, dismiss])
 
   const [searchInput, setSearchInput] = useState('')
@@ -130,9 +175,9 @@ export const DirectoryView = ({
   const { handleOpenFile, handleEdit } = usePreviewHandlers({ currentPath, l10n, triggerReload })
   const { showInfo } = useFileInfoPresenter({ l10n })
 
-  const isRoot = currentPath === rootPath
+  const isRoot = currentPath === normalizedRootPath
   const currentDirName = isRoot ? rootDisplayName : currentPath.split('/').pop() || rootDisplayName
-  const breadcrumbSegments = buildBreadcrumbSegments(rootDisplayName, rootPath, currentPath)
+  const breadcrumbSegments = buildBreadcrumbSegments(rootDisplayName, normalizedRootPath, currentPath)
 
   const handleSearchSubmit = useCallback(async () => {
     const raw = searchInput.trim()
@@ -187,32 +232,33 @@ export const DirectoryView = ({
       if (!searchResults) {
         return
       }
+      if (!navigationPath) {
+        return
+      }
+
       const targetDir = Path.dirname(entry.path)
       if (!targetDir || targetDir === currentPath) {
         return
       }
-      await Navigation.present({
-        element: (
-          <NavigationStack>
-            <DirectoryView
-              rootPath={targetDir}
-              path={targetDir}
-              rootDisplayName={Path.basename(targetDir) || targetDir}
-              disableInternalToolbar={false}
-              transfer={transfer}
-              setTransfer={setTransfer}
-              externalReloadPath={externalReloadPath}
-              requestExternalReload={requestExternalReload}
-              l10n={l10n}
-              locale={locale}
-              onLocaleChange={onLocaleChange}
-              languageOptions={languageOptions}
-            />
-          </NavigationStack>
-        )
+
+      const normalizedTargetDir = normalizeFilePath(targetDir)
+      const nextPath = buildNavigationPathValues(normalizedRootPath, normalizedTargetDir)
+
+      debugLog('openContainingDirectory', {
+        entryPath: entry.path,
+        currentPath,
+        normalizedRootPath,
+        targetDir,
+        normalizedTargetDir,
+        before: navigationPath.value,
+        beforeDecoded: navigationPath.value.map(decodeNavigationPathId),
+        nextPath,
+        nextPathDecoded: nextPath.map(decodeNavigationPathId)
       })
+
+      navigationPath.setValue(nextPath)
     },
-    [currentPath, externalReloadPath, languageOptions, l10n, locale, onLocaleChange, requestExternalReload, searchResults, setTransfer, transfer]
+    [currentPath, navigationPath, normalizedRootPath, searchResults]
   )
 
   const displayEntries = useMemo(() => {
@@ -293,10 +339,37 @@ export const DirectoryView = ({
     // Script.exit()
   }, [fullDismissStack])
 
+  const handleOpenDirectory = useCallback(
+    (entry: FileEntry) => {
+      if (!navigationPath) {
+        return
+      }
+
+      const encodedEntryPath = encodeNavigationPathId(entry.path)
+      const before = navigationPath.value
+      const next = [...before.map(normalizeNavigationPathId), encodedEntryPath]
+
+      debugLog('openDirectory', {
+        entryPath: entry.path,
+        encodedEntryPath,
+        currentPath,
+        normalizedRootPath,
+        before,
+        beforeDecoded: before.map(decodeNavigationPathId),
+        next,
+        nextDecoded: next.map(decodeNavigationPathId)
+      })
+
+      navigationPath.setValue(next)
+    },
+    [currentPath, navigationPath, normalizedRootPath]
+  )
+
   const renderFileRow = useFileRowRenderer({
     l10n,
     currentPath,
     isSearchMode: Boolean(searchResults),
+    handleOpenDirectory,
     handleOpenContainingDirectory,
     handleOpenFile,
     handleCopy,
@@ -339,6 +412,42 @@ export const DirectoryView = ({
       navigationTitle={disableInternalToolbar ? undefined : derivedNavigationTitle}
       toolbarTitleDisplayMode={disableInternalToolbar ? undefined : 'inline'}
       toolbar={disableInternalToolbar ? undefined : { topBarTrailing: toolbarTrailing }}
+      navigationDestination={
+        navigationPath && isRoot ? (
+          <NavigationDestination>
+            {page => {
+              const decoded = decodeNavigationPathId(page)
+              debugLog('navigationDestination', {
+                page,
+                decoded,
+                navPathValue: navigationPath.value,
+                navPathValueDecoded: navigationPath.value.map(decodeNavigationPathId)
+              })
+
+              return (
+                <DirectoryView
+                  rootPath={normalizedRootPath}
+                  path={decoded}
+                  rootDisplayName={rootDisplayName}
+                  navigationPath={navigationPath}
+                  tag={tag}
+                  onToolbarChange={onToolbarChange}
+                  disableInternalToolbar={false}
+                  transfer={transfer}
+                  setTransfer={setTransfer}
+                  externalReloadPath={externalReloadPath}
+                  requestExternalReload={requestExternalReload}
+                  l10n={l10n}
+                  locale={locale}
+                  onLocaleChange={onLocaleChange}
+                  languageOptions={languageOptions}
+                  dismissStack={fullDismissStack}
+                />
+              )
+            }}
+          </NavigationDestination>
+        ) : undefined
+      }
       alignment="leading"
       onAppear={() => {
         searchControl.id += 1
@@ -347,7 +456,9 @@ export const DirectoryView = ({
         setSearchResults(null)
       }}
     >
-      {!isRoot ? <BreadcrumbBar segments={breadcrumbSegments} dismissStack={fullDismissStack} rootPath={rootPath} /> : null}
+      {!isRoot ? (
+        <BreadcrumbBar segments={breadcrumbSegments} dismissStack={fullDismissStack} rootPath={normalizedRootPath} navigationPath={navigationPath} />
+      ) : null}
       <List
         listStyle="inset"
         searchable={
@@ -367,39 +478,7 @@ export const DirectoryView = ({
         ) : displayEntries.length === 0 ? (
           <DirectoryEmptyState message={searchResults ? l10n.searchEmpty : l10n.emptyFolder} />
         ) : (
-          displayEntries.map(entry => {
-            const { name, path: childPath, isDir } = entry
-            if (isDir) {
-              return (
-                <NavigationLink
-                  key={name}
-                  destination={
-                    <DirectoryView
-                      rootPath={rootPath}
-                      path={childPath}
-                      rootDisplayName={rootDisplayName}
-                      tag={tag}
-                      onToolbarChange={onToolbarChange}
-                      disableInternalToolbar={false}
-                      transfer={transfer}
-                      setTransfer={setTransfer}
-                      externalReloadPath={externalReloadPath}
-                      requestExternalReload={requestExternalReload}
-                      l10n={l10n}
-                      locale={locale}
-                      onLocaleChange={onLocaleChange}
-                      languageOptions={languageOptions}
-                      dismissStack={fullDismissStack}
-                    />
-                  }
-                >
-                  {renderFileRow(entry)}
-                </NavigationLink>
-              )
-            }
-
-            return renderFileRow(entry)
-          })
+          displayEntries.map(entry => renderFileRow(entry))
         )}
       </List>
     </VStack>

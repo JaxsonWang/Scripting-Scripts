@@ -11,6 +11,7 @@ export const useFileRowRenderer = ({
   l10n,
   currentPath,
   isSearchMode,
+  handleOpenDirectory,
   handleOpenContainingDirectory,
   handleOpenFile,
   handleCopy,
@@ -52,7 +53,7 @@ export const useFileRowRenderer = ({
           path={path}
           isDirectory={isDir}
           stat={stat}
-          onPress={!isDir ? () => handleOpenFile(name) : undefined}
+          onPress={isDir ? (handleOpenDirectory ? () => handleOpenDirectory(entry) : undefined) : () => handleOpenFile(name)}
           onOpenContainingDirectory={maybeOpenContainingDirectory}
           labels={labels}
           onCopy={() => handleCopy(name)}
@@ -74,6 +75,7 @@ export const useFileRowRenderer = ({
       handleInfo,
       handleMove,
       handleOpenContainingDirectory,
+      handleOpenDirectory,
       handleOpenFile,
       handleRename,
       isSearchMode,
