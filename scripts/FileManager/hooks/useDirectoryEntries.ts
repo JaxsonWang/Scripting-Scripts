@@ -13,6 +13,9 @@ const compareEntries = (a: FileEntry, b: FileEntry) => {
   return a.name.localeCompare(b.name)
 }
 
+const DIRECTORY_DETECTION_CONCURRENCY = 12
+const PROGRESS_UPDATE_EVERY = 150
+
 /**
  * 将条目按 compareEntries 插入并去重
  * @param entries 当前渲染数组
@@ -43,33 +46,78 @@ export const useDirectoryEntries = ({ path, l10n, externalReloadPath, requestExt
   const [dataEntries, setDataEntries] = useState<FileEntry[]>([])
   const [showHidden, setShowHidden] = useState(showHiddenDefault)
   const [version, bumpVersion] = useState(0)
+  const [loadRef] = useState(() => ({ id: 0 }))
+
+  useEffect(() => {
+    return () => {
+      loadRef.id += 1
+    }
+  }, [loadRef])
 
   /**
    * 读取目录并缓存排序结果
    */
   const loadFiles = useCallback(async () => {
+    const loadId = (loadRef.id += 1)
     try {
       const normalizedPath = normalizeFilePath(path)
       const names = await FileManager.readDirectory(normalizedPath)
       const filtered = names.filter(name => showHidden || !name.startsWith('.'))
-      const withMeta: FileEntry[] = filtered.map(name => {
+
+      const baseEntries: FileEntry[] = filtered.map(name => {
         const fullPath = joinFilePath(normalizedPath, name)
-        let isDir = false
-        try {
-          isDir = FileManager.isDirectorySync(fullPath)
-        } catch (err) {
-          console.error('[DirectoryView] isDirectorySync failed', fullPath, err)
-        }
-        return { name, path: fullPath, isDir }
+        return { name, path: fullPath, isDir: false }
       })
-      const sorted = withMeta.sort(compareEntries)
+
+      const initial = [...baseEntries].sort((a, b) => a.name.localeCompare(b.name))
+      setDataEntries(initial)
+      setEntries(initial)
+
+      const working: FileEntry[] = [...initial]
+      const workerCount = Math.max(1, Math.min(DIRECTORY_DETECTION_CONCURRENCY, working.length))
+      let nextIndex = 0
+      let completed = 0
+
+      const workers = Array.from({ length: workerCount }, async () => {
+        while (true) {
+          const index = nextIndex
+          nextIndex += 1
+          if (index >= working.length) {
+            return
+          }
+
+          const entry = working[index]
+          let isDir = false
+          try {
+            isDir = await FileManager.isDirectory(entry.path)
+          } catch {
+            isDir = false
+          }
+
+          const updated: FileEntry = { ...entry, isDir }
+          working[index] = updated
+          completed += 1
+
+          if (completed % PROGRESS_UPDATE_EVERY === 0 && loadRef.id === loadId) {
+            setEntries([...working])
+          }
+        }
+      })
+
+      await Promise.all(workers)
+
+      if (loadRef.id !== loadId) {
+        return
+      }
+
+      const sorted = [...working].sort(compareEntries)
       setDataEntries(sorted)
       setEntries(sorted)
     } catch (error) {
       console.error(error)
       await Dialog.alert({ message: l10n.failedRead })
     }
-  }, [path, showHidden, l10n])
+  }, [loadRef, path, showHidden, l10n])
 
   useEffect(() => {
     loadFiles()
