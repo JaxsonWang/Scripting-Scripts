@@ -55,18 +55,12 @@ export const useDirectoryEntries = ({ path, l10n, externalReloadPath, requestExt
       const withMeta: FileEntry[] = filtered.map(name => {
         const fullPath = joinFilePath(normalizedPath, name)
         let isDir = false
-        let stat: FileStat | undefined
         try {
           isDir = FileManager.isDirectorySync(fullPath)
         } catch (err) {
           console.error('[DirectoryView] isDirectorySync failed', fullPath, err)
         }
-        try {
-          stat = FileManager.statSync(fullPath)
-        } catch (err) {
-          console.error('[DirectoryView] statSync failed', fullPath, err)
-        }
-        return { name, path: fullPath, isDir, stat }
+        return { name, path: fullPath, isDir }
       })
       const sorted = withMeta.sort(compareEntries)
       setDataEntries(sorted)

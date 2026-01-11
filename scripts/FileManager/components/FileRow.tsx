@@ -51,29 +51,14 @@ export const FileRow = ({
   labels
 }: FileRowProps) => {
   const iconPath = useMemo(() => `${Script.directory}/assets/icon/${resolveIconName(name, isDirectory)}.svg`, [isDirectory, name])
-  /**
-   * 统计目录内的条目数量
-   */
-  const directoryItemCount = useMemo(() => {
-    if (!isDirectory) return null
-    try {
-      return FileManager.readDirectorySync(path).length
-    } catch (error) {
-      console.error('[FileRow] readDirectorySync failed', path, error)
-      return null
-    }
-  }, [isDirectory, path, stat])
   const detailText = useMemo(() => {
     if (!stat) return null
     const datePart = formatDate(stat.modificationDate)
-    if (!isDirectory) {
-      return `${datePart} - ${formatSize(stat.size)}`
-    }
-    if (directoryItemCount == null) {
+    if (isDirectory) {
       return datePart
     }
-    return `${datePart} - ${labels.items(directoryItemCount)}`
-  }, [stat, isDirectory, directoryItemCount, labels])
+    return `${datePart} - ${formatSize(stat.size)}`
+  }, [stat, isDirectory])
   return (
     <HStack
       frame={{ height: 60 }}
