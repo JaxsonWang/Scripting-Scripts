@@ -404,6 +404,46 @@ export const DirectoryView = ({
     }
   }, [disableInternalToolbar, onToolbarChange, tag, toolbarTrailing, derivedNavigationTitle])
 
+  /**
+   * Memoized props for nested DirectoryView instances in NavigationDestination
+   * This prevents unnecessary prop object creation on every render
+   */
+  const nestedDirectoryViewProps = useMemo(
+    () => ({
+      rootPath: normalizedRootPath,
+      rootDisplayName,
+      navigationPath,
+      tag,
+      onToolbarChange,
+      disableInternalToolbar: false,
+      transfer,
+      setTransfer,
+      externalReloadPath,
+      requestExternalReload,
+      l10n,
+      locale,
+      onLocaleChange,
+      languageOptions,
+      dismissStack: fullDismissStack
+    }),
+    [
+      normalizedRootPath,
+      rootDisplayName,
+      navigationPath,
+      tag,
+      onToolbarChange,
+      transfer,
+      setTransfer,
+      externalReloadPath,
+      requestExternalReload,
+      l10n,
+      locale,
+      onLocaleChange,
+      languageOptions,
+      fullDismissStack
+    ]
+  )
+
   return (
     <VStack
       tag={tag}
@@ -417,33 +457,11 @@ export const DirectoryView = ({
           <NavigationDestination>
             {page => {
               const decoded = decodeNavigationPathId(page)
-              debugLog('navigationDestination', {
-                page,
-                decoded,
-                navPathValue: navigationPath.value,
-                navPathValueDecoded: navigationPath.value.map(decodeNavigationPathId)
-              })
+              if (DEBUG_NAVIGATION) {
+                debugLog('navigationDestination', { page, decoded })
+              }
 
-              return (
-                <DirectoryView
-                  rootPath={normalizedRootPath}
-                  path={decoded}
-                  rootDisplayName={rootDisplayName}
-                  navigationPath={navigationPath}
-                  tag={tag}
-                  onToolbarChange={onToolbarChange}
-                  disableInternalToolbar={false}
-                  transfer={transfer}
-                  setTransfer={setTransfer}
-                  externalReloadPath={externalReloadPath}
-                  requestExternalReload={requestExternalReload}
-                  l10n={l10n}
-                  locale={locale}
-                  onLocaleChange={onLocaleChange}
-                  languageOptions={languageOptions}
-                  dismissStack={fullDismissStack}
-                />
-              )
+              return <DirectoryView key={page} {...nestedDirectoryViewProps} path={decoded} />
             }}
           </NavigationDestination>
         ) : undefined
