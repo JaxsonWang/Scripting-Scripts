@@ -1,4 +1,5 @@
 import type { FileEntry, SearchFilesOptions } from '../types'
+import { createFileEntry } from './common'
 
 const trimTrailingSlash = (path: string) => {
   if (path === '/') return '/'
@@ -118,7 +119,7 @@ export const searchFilesRecursively = async ({
       }
 
       const relativeName = resolveRelativeName(normalizedBase, fullPath)
-      results.push({ name: relativeName || name, path: fullPath, isDir: false, stat })
+      results.push(createFileEntry({ name: relativeName || name, path: fullPath, isDir: false, stat }))
 
       if (results.length >= maxResults) {
         return results

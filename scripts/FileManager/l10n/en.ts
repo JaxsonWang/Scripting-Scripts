@@ -4,6 +4,7 @@ export const l10nEN: L10n = {
   documents: 'Documents',
   appGroup: 'App Group',
   iCloud: 'iCloud',
+  tmp: 'Temporary',
   failedRead: 'Failed to read directory',
   fileNotFound: 'File not found',
   previewFailed: 'Preview failed',

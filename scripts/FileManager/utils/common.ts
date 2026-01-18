@@ -33,3 +33,14 @@ export const encodeNavigationPathId = (path: string) => {
 export const normalizeNavigationPathId = (id: string) => {
   return encodeNavigationPathId(decodeNavigationPathId(id))
 }
+
+export const createFileEntry = (params: { name: string; path: string; isDir: boolean; stat?: FileStat }): import('../types').FileEntry => {
+  const normalizedPath = normalizeFilePath(params.path)
+  return {
+    id: normalizedPath,
+    name: params.name,
+    path: normalizedPath,
+    isDir: params.isDir,
+    stat: params.stat
+  }
+}

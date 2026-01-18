@@ -11,14 +11,11 @@ export const useFilePreview = (currentPath: string, l10n: L10n) => {
     async (name: string) => {
       const newPath = `${currentPath}/${name}`
       const encodedURL = `file://${encodeURI(newPath)}`
-      console.log('[handleOpenFile] tap', { newPath, encodedURL })
       try {
         if (!FileManager.existsSync(newPath)) {
-          console.error('[QuickLook] file not found', newPath)
           await Dialog.alert({ title: l10n.fileNotFound, message: newPath })
           return
         }
-        console.log('[QuickLook] preview', { path: newPath, encodedURL })
         await QuickLook.previewURLs([encodedURL])
       } catch (error) {
         console.error(error)

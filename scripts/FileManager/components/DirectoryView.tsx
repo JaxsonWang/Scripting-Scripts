@@ -1,4 +1,4 @@
-import { List, Navigation, NavigationDestination, Path, VStack, useCallback, useEffect, useMemo, useState } from 'scripting'
+import { ForEach, List, Navigation, NavigationDestination, Path, Script, VStack, useCallback, useEffect, useMemo, useObservable, useState } from 'scripting'
 import type { BreadcrumbSegment, DirectoryViewProps, FileEntry } from '../types'
 import { DirectoryEmptyState } from './DirectoryEmptyState'
 import { useFileOperations } from '../hooks/useFileOperations'
@@ -138,7 +138,8 @@ export const DirectoryView = ({
   const fullDismissStack = useMemo(() => [...(dismissStack || []), dismiss], [dismissStack, dismiss])
 
   const [searchInput, setSearchInput] = useState('')
-  const [searchResults, setSearchResults] = useState<FileEntry[] | null>(null)
+  const searchResults = useObservable<FileEntry[] | null>(null)
+  const isSearchActive = useObservable(false)
   const [isSearching, setIsSearching] = useState(false)
   const searchControl = useMemo(() => ({ id: 0 }), [])
 
@@ -182,7 +183,8 @@ export const DirectoryView = ({
   const handleSearchSubmit = useCallback(async () => {
     const raw = searchInput.trim()
     if (!raw) {
-      setSearchResults(null)
+      searchResults.setValue(null)
+      isSearchActive.setValue(false)
       setIsSearching(false)
       return
     }
@@ -200,7 +202,8 @@ export const DirectoryView = ({
     const currentId = searchControl.id
 
     setIsSearching(true)
-    setSearchResults([])
+    searchResults.setValue([])
+    isSearchActive.setValue(true)
     try {
       const results = await searchFilesRecursively({
         basePath: currentPath,
@@ -212,24 +215,24 @@ export const DirectoryView = ({
       if (searchControl.id !== currentId) {
         return
       }
-      setSearchResults(results)
+      searchResults.setValue(results)
     } catch (error) {
       console.error('[DirectoryView] search failed', currentPath, error)
       if (searchControl.id !== currentId) {
         return
       }
-      setSearchResults([])
+      searchResults.setValue([])
       await Dialog.alert({ title: l10n.previewFailed, message: String(error) })
     } finally {
       if (searchControl.id === currentId) {
         setIsSearching(false)
       }
     }
-  }, [currentPath, l10n, searchControl, searchInput, showHidden])
+  }, [currentPath, l10n, searchControl, searchInput, showHidden, searchResults, isSearchActive])
 
   const handleOpenContainingDirectory = useCallback(
     async (entry: FileEntry) => {
-      if (!searchResults) {
+      if (!isSearchActive.value) {
         return
       }
       if (!navigationPath) {
@@ -258,15 +261,15 @@ export const DirectoryView = ({
 
       navigationPath.setValue(nextPath)
     },
-    [currentPath, navigationPath, normalizedRootPath, searchResults]
+    [currentPath, navigationPath, normalizedRootPath, isSearchActive]
   )
 
-  const displayEntries = useMemo(() => {
-    if (searchResults) {
-      return searchResults
+  const displayData = useMemo(() => {
+    if (isSearchActive.value) {
+      return searchResults.value || []
     }
-    return entries
-  }, [entries, searchResults])
+    return entries.value
+  }, [isSearchActive.value, searchResults.value, entries.value])
 
   useEffect(() => {
     if (searchInput.trim()) {
@@ -274,8 +277,9 @@ export const DirectoryView = ({
     }
     searchControl.id += 1
     setIsSearching(false)
-    setSearchResults(null)
-  }, [searchControl, searchInput])
+    searchResults.setValue(null)
+    isSearchActive.setValue(false)
+  }, [searchControl, searchInput, searchResults, isSearchActive])
 
   /**
    * 行级“简介”点击事件，复用已有 stat 并开启体积计算
@@ -323,20 +327,16 @@ export const DirectoryView = ({
    */
   const handleExit = useCallback(async () => {
     const count = fullDismissStack.length
-    console.log(`[DirectoryView] Exit requested. Stack length: ${count}`)
 
-    // 顺序执行 dismiss
     for (let i = 0; i < count; i++) {
       const stackIndex = count - 1 - i
       const fn = fullDismissStack[stackIndex]
-      console.log(`[DirectoryView] Scheduling dismiss for index ${stackIndex}`)
       if (fn) {
         fn()
-        // 等待动画完成
         await sleep(50)
       }
     }
-    // Script.exit()
+    Script.exit()
   }, [fullDismissStack])
 
   const handleOpenDirectory = useCallback(
@@ -368,7 +368,7 @@ export const DirectoryView = ({
   const renderFileRow = useFileRowRenderer({
     l10n,
     currentPath,
-    isSearchMode: Boolean(searchResults),
+    isSearchMode: isSearchActive.value,
     handleOpenDirectory,
     handleOpenContainingDirectory,
     handleOpenFile,
@@ -404,46 +404,6 @@ export const DirectoryView = ({
     }
   }, [disableInternalToolbar, onToolbarChange, tag, toolbarTrailing, derivedNavigationTitle])
 
-  /**
-   * Memoized props for nested DirectoryView instances in NavigationDestination
-   * This prevents unnecessary prop object creation on every render
-   */
-  const nestedDirectoryViewProps = useMemo(
-    () => ({
-      rootPath: normalizedRootPath,
-      rootDisplayName,
-      navigationPath,
-      tag,
-      onToolbarChange,
-      disableInternalToolbar: false,
-      transfer,
-      setTransfer,
-      externalReloadPath,
-      requestExternalReload,
-      l10n,
-      locale,
-      onLocaleChange,
-      languageOptions,
-      dismissStack: fullDismissStack
-    }),
-    [
-      normalizedRootPath,
-      rootDisplayName,
-      navigationPath,
-      tag,
-      onToolbarChange,
-      transfer,
-      setTransfer,
-      externalReloadPath,
-      requestExternalReload,
-      l10n,
-      locale,
-      onLocaleChange,
-      languageOptions,
-      fullDismissStack
-    ]
-  )
-
   return (
     <VStack
       tag={tag}
@@ -457,11 +417,33 @@ export const DirectoryView = ({
           <NavigationDestination>
             {page => {
               const decoded = decodeNavigationPathId(page)
-              if (DEBUG_NAVIGATION) {
-                debugLog('navigationDestination', { page, decoded })
-              }
+              debugLog('navigationDestination', {
+                page,
+                decoded,
+                navPathValue: navigationPath.value,
+                navPathValueDecoded: navigationPath.value.map(decodeNavigationPathId)
+              })
 
-              return <DirectoryView key={page} {...nestedDirectoryViewProps} path={decoded} />
+              return (
+                <DirectoryView
+                  rootPath={normalizedRootPath}
+                  path={decoded}
+                  rootDisplayName={rootDisplayName}
+                  navigationPath={navigationPath}
+                  tag={tag}
+                  onToolbarChange={onToolbarChange}
+                  disableInternalToolbar={false}
+                  transfer={transfer}
+                  setTransfer={setTransfer}
+                  externalReloadPath={externalReloadPath}
+                  requestExternalReload={requestExternalReload}
+                  l10n={l10n}
+                  locale={locale}
+                  onLocaleChange={onLocaleChange}
+                  languageOptions={languageOptions}
+                  dismissStack={fullDismissStack}
+                />
+              )
             }}
           </NavigationDestination>
         ) : undefined
@@ -471,7 +453,8 @@ export const DirectoryView = ({
         searchControl.id += 1
         setIsSearching(false)
         setSearchInput('')
-        setSearchResults(null)
+        searchResults.setValue(null)
+        isSearchActive.setValue(false)
       }}
     >
       {!isRoot ? (
@@ -493,10 +476,10 @@ export const DirectoryView = ({
       >
         {isSearching ? (
           <DirectoryEmptyState message={l10n.searchInProgress} />
-        ) : displayEntries.length === 0 ? (
-          <DirectoryEmptyState message={searchResults ? l10n.searchEmpty : l10n.emptyFolder} />
+        ) : displayData.length === 0 ? (
+          <DirectoryEmptyState message={isSearchActive.value ? l10n.searchEmpty : l10n.emptyFolder} />
         ) : (
-          displayEntries.map(entry => renderFileRow(entry))
+          displayData.map(entry => renderFileRow(entry))
         )}
       </List>
     </VStack>

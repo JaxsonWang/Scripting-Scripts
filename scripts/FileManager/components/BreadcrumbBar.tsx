@@ -78,7 +78,6 @@ export const BreadcrumbBar = ({ segments, dismissStack, rootPath, navigationPath
           if (depth < currentDepth) {
             handler = async () => {
               const steps = currentDepth - depth
-              console.log(`[Breadcrumb] Pop sequence: current=${currentDepth}, target=${depth}, steps=${steps}`)
 
               for (let i = 0; i < steps; i++) {
                 const stackIndex = currentDepth - i

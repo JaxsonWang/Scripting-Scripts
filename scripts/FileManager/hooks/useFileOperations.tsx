@@ -1,5 +1,6 @@
 import { useCallback } from 'scripting'
 import type { FileEntry, FileOperationsConfig } from '../types'
+import { createFileEntry } from '../utils/common'
 import { importEntries } from '../utils/import_entries'
 
 /**
@@ -49,7 +50,7 @@ export const useFileOperations = ({
     } catch (error) {
       console.error('[useFileOperations] isDirectorySync failed', sourcePath, error)
     }
-    return { name, path: targetPath, isDir }
+    return createFileEntry({ name, path: targetPath, isDir })
   }, [])
 
   /**

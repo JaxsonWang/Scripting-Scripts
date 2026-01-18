@@ -48,7 +48,7 @@ export const useFileRowRenderer = ({
         !isDir && isSearchMode && handleOpenContainingDirectory && Path.dirname(path) !== currentPath ? () => handleOpenContainingDirectory(entry) : undefined
       return (
         <FileRow
-          key={name}
+          key={entry.id}
           name={name}
           path={path}
           isDirectory={isDir}

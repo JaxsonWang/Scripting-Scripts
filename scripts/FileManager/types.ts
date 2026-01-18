@@ -58,6 +58,7 @@ export type L10n = {
   documents: string
   appGroup: string
   iCloud: string
+  tmp: string
   failedRead: string
   fileNotFound: string
   previewFailed: string
@@ -119,6 +120,7 @@ export type L10n = {
 }
 
 export type FileEntry = {
+  id: string
   name: string
   path: string
   isDir: boolean
@@ -133,7 +135,7 @@ export type DirectoryStateOptions = {
 }
 
 export type DirectoryState = {
-  entries: FileEntry[]
+  entries: { value: FileEntry[]; setValue: (value: FileEntry[]) => void }
   showHidden: boolean
   setShowHidden: (value: boolean) => void
   currentStat: FileStat | null
