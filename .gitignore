@@ -30,3 +30,4 @@ demo
 .gemini
 .ace-tool/
 opencode.jsonc
+/.vscode/settings.json

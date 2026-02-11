@@ -51,9 +51,51 @@ declare global {
    */
   namespace Device {
     /**
+     * A type that represents the orientation of the device.
+     */
+    type Orientation =
+      | "portrait"
+      | "portraitUpsideDown"
+      | "landscapeLeft"
+      | "landscapeRight"
+      | "faceUp"
+      | "faceDown"
+      | "unknown"
+
+    type InterfaceOrientation =
+      | "portrait"
+      | "portraitUpsideDown"
+      | "landscape"
+      | "landscapeLeft"
+      | "landscapeRight"
+      | "all"
+      | "allButUpsideDown"
+
+    /**
+     * Network interface information
+     */
+    type NetworkInterface = {
+      address: string
+      netmask: string | null
+      family: 'IPv4' | 'IPv6'
+      mac: string | null
+      isInternal: boolean
+      cidr: string | null
+    }
+
+    /**
+     * A type that represents the state of the battery.
+     */
+    type BatteryState = "full" | "charging" | "unplugged" | "unknown"
+
+    /**
      * Model of the device, e.g. "iPhone".
      */
     const model: string
+    /**
+     * Localized model of the device, e.g. "iPhone".
+     */
+    const localizedModel: string
     /**
      * The current version of the operating system.
      */
@@ -69,11 +111,44 @@ declare global {
       height: number
       scale: number
     }
-    const batteryState: "full" | "charging" | "unplugged" | "unknown"
+
+    /**
+     * The current state of the battery.
+     */
+    const batteryState: BatteryState
+
+    /**
+     * The current level of the battery.
+     */
     const batteryLevel: number
+
+    /**
+     * A boolean value that indicates whether the proximity sensor is close to the user.
+     */
+    const proximityState: boolean
+
+    /**
+     * Whether the device is in a landscape orientation.
+     */
     const isLandscape: boolean
+
+    /**
+     * Whether the device is in a portrait orientation.
+     */
     const isPortrait: boolean
+
+    /**
+     * Whether the device is in a flat orientation.
+     */
     const isFlat: boolean
+    /**
+     * The current orientation of the device.
+     */
+    const orientation: Orientation
+
+    /**
+     * The current color scheme of the device.
+     */
     const colorScheme: ColorScheme
     /**
      * A boolean value that indicates whether the process is an iPhone or iPad app running on a Mac.
@@ -115,22 +190,65 @@ declare global {
     const isWakeLockEnabled: Promise<boolean>
 
     /**
+     * The user configured interface orientations. You can reset the `supportedInterfaceOrientations` to this value.
+     */
+    const userConfiguredInterfaceOrientations: InterfaceOrientation[]
+
+    /**
+     * The supported interface orientations for the app.
+     * Currently, this property is only available on iPhone.
+     */
+    var supportedInterfaceOrientations: InterfaceOrientation[]
+
+    /**
      * Enable or disable the wakelock. This method is only available in Scripting app.
      * @param enabled Whether to enable or disable the wake lock.
      */
     function setWakeLockEnabled(enabled: boolean): void
 
     /**
-     * Network interface information
+     * Add a battery state listener.
+     * @param callback The callback function to be called when the battery state changes.
      */
-    type NetworkInterface = {
-      address: string
-      netmask: string | null
-      family: 'IPv4' | 'IPv6'
-      mac: string | null
-      isInternal: boolean
-      cidr: string | null
-    }
+    function addBatteryStateListener(callback: (state: BatteryState) => void): void
+    /**
+     * Remove a battery state listener.
+     * @param callback The callback function to be removed. If callback is not specified, all battery state listeners will be removed.
+     */
+    function removeBatteryStateListener(callback?: (state: BatteryState) => void): void
+    /**
+     * Add a battery level listener. 
+     * @param callback The callback function to be called when the battery level changes.
+     */
+    function addBatteryLevelListener(callback: (level: number) => void): void
+    /**
+     * Remove a battery level listener.
+     * @param callback The callback function to be removed. If callback is not specified, all battery level listeners will be removed.
+     */
+    function removeBatteryLevelListener(callback?: (level: number) => void): void
+
+    /**
+     * Add an orientation change listener. You should call this method first to begin the orientation observation.
+     * This only works when your device has disabled the orientation lock.
+     * @param callback The callback function to be called when the orientation changes.
+     */
+    function addOrientationListener(callback: (orientation: Orientation) => void): void
+    /**
+     * Remove an orientation change listener. If callback is not specified, all orientation change listeners will be removed and the orientation observation will be stopped.
+     * This only works when your device has disabled the orientation lock.
+     * @param callback The callback function to be removed.
+     */
+    function removeOrientationListener(callback?: (orientation: Orientation) => void): void
+    /**
+     * Add a proximity state listener.
+     * @param callback The callback function to be called when the proximity state changes.
+     */
+    function addProximityStateListener(callback: (state: boolean) => void): void
+    /**
+     * Remove a proximity state listener.
+     * @param callback The callback function to be removed. If callback is not specified, all proximity state listeners will be removed.
+     */
+    function removeProximityStateListener(callback?: (state: boolean) => void): void
 
     /**
      * Get the network interfaces of the device.
@@ -1178,7 +1296,7 @@ declare global {
   /**
    * The accuracy of a geographical coordinate.
    */
-  type LocationAccuracy = "best" | "tenMeters" | "hundredMeters" | "kilometer" | "threeKilometers"
+  type LocationAccuracy = "best" | "tenMeters" | "hundredMeters" | "kilometer" | "threeKilometers" | "bestForNavigation" | "reduced"
   type LocationInfo = {
     /**
      * The latitude in degrees.
@@ -1257,12 +1375,51 @@ declare global {
   namespace Location {
 
     /**
-     * A Boolean value that indicates whether a widget is eligible to receive location updates.
+     * A Heading object contains computed values for the deviceâ€™s azimuth (orientation) relative to true or magnetic north. It also includes the raw data for the three-dimensional vector used to compute those values.
      */
-    const isAuthorizedForWidgetUpdates: Promise<boolean>
+    type Heading = {
+      /**
+       * The maximum deviation (measured in degrees) between the reported heading and the true geomagnetic heading.
+       */
+      headingAccuracy: number
+      /**
+       * The heading (measured in degrees) relative to true north.
+       */
+      trueHeading: number
+      /**
+       * The heading (measured in degrees) relative to magnetic north.
+       */
+      magneticHeading: number
+      /**
+       * The time at which this heading was determined.
+       */
+      timestamp: Date
+      /**
+       * The geomagnetic data (measured in microteslas) for the x-axis.
+       */
+      x: number
+      /**
+       * The geomagnetic data (measured in microteslas) for the y-axis.
+       */
+      y: number
+      /**
+       * The geomagnetic data (measured in microteslas) for the z-axis.
+       */
+      z: number
+    }
 
     /**
-     * Set the accuracy of the location data that your app wants to receive.
+     * A Boolean value that indicates whether a widget is eligible to receive location updates.
+     */
+    const isAuthorizedForWidgetUpdates: boolean
+
+    /**
+     * The accuracy of the location data that your script wants to receive.
+     */
+    const accuracy: LocationAccuracy
+
+    /**
+     * Set the accuracy of the location data that your script wants to receive.
      */
     function setAccuracy(accuracy: LocationAccuracy): Promise<void>
     /**
@@ -1282,21 +1439,53 @@ declare global {
     function pickFromMap(): Promise<LocationInfo | null>
     /**
      * Submits a reverse-geocoding request for the specified location and locale.
+     * @param options The options for the reverse geocoding request.
+     * @param options.latitude The latitude in degrees.
+     * @param options.longitude The longitude in degrees.
+     * @param options.locale The preferred locale to use when returning the address information.
+     * @returns A promise that resolves to an array of `LocationPlacemark` objects, or rejects with an error if the request fails.
      */
     function reverseGeocode(options: {
-      /**
-       * The latitude in degrees.
-       */
       latitude: number
-      /**
-       * The longitude in degrees.
-       */
       longitude: number
-      /**
-       * The locale to use when returning the address information. You might specify a value for this parameter when you want the address returned in a locale that differs from the userâ€™s current language settings. Specify null to use the userâ€™s default locale information.
-       */
       locale?: string
     }): Promise<LocationPlacemark[] | null>
+
+    /**
+     * Submits a forward-geocoding request for the specified address and locale.
+     * @param options The options for the forward geocoding request.
+     * @param options.address The address to geocode.
+     * @param options.locale The preferred locale to use when returning the address information.
+     * @returns A promise that resolves to an array of `LocationPlacemark` objects, or rejects with an error if the request fails.
+     */
+    function geocodeAddress(options: {
+      address: string
+      locale?: string
+    }): Promise<LocationPlacemark[] | null>
+
+
+    /**
+     * Requests the most recently reported heading. The value of this property is null if heading updates have never been initiated.
+     */
+    function requestHeading(): Promise<Heading | null>
+    /**
+     * Starts updating the heading.
+     */
+    function startUpdatingHeading(): Promise<void>
+    /**
+     * Stops updating the heading.
+     */
+    function stopUpdatingHeading(): void
+    /**
+     * Add a listener to be notified when the heading changes.
+     * @param listener The listener is called when the heading changes.
+     */
+    function addHeadingListener(listener: (heading: Heading) => void): void
+    /**
+     * Remove a heading listener, if you do not specify a listener, all heading listeners will be removed.
+     * @param listener The listener is called when the heading changes.
+     */
+    function removeHeadingListener(listener?: (heading: Heading) => void): void
   }
 
   /**
@@ -4368,7 +4557,7 @@ If the eventâ€™s calendar does not support availability settings, this propertyâ
      *  - `keepSource`: Keep the color space of the source video.
      *  - `forceSDR`: Force the color space to SDR.
      */
-    type colorSpacePolicy = 'keepSource' | 'forceSDR'
+    type ColorSpacePolicy = 'keepSource' | 'forceSDR'
 
     type ExportFileType = "mp4" | "mov" | "qta" | "m4v" | "m4a" | "mobile3GPP" | "mobile3GPP2"
 
@@ -4382,7 +4571,7 @@ If the eventâ€™s calendar does not support availability settings, this propertyâ
        */
       frameRate?: number
       /**
-       * The color space policy to use when rendering the video. Defaults to `forceSDR`.
+       * The color space policy to use when rendering the video. Defaults to `fit`.
        */
       scaleMode?: VideoScaleMode
       /**
@@ -4405,6 +4594,10 @@ If the eventâ€™s calendar does not support availability settings, this propertyâ
        * The output file type to use. Defaults to `mp4`.
        */
       outputFileType?: ExportFileType
+      /**
+       * The color space policy to use when rendering the video. Defaults to `forceSDR`.
+       */
+      colorSpacePolicy?: ColorSpacePolicy
     }
 
     /**
@@ -4452,6 +4645,10 @@ If the eventâ€™s calendar does not support availability settings, this propertyâ
      */
     currentTime: DurationInSeconds
     /**
+     * A default rate at which to begin playback.
+     */
+    defaultRate: number
+    /**
      * Controls the playback rate of the media.
      * Value `1.0` is normal speed, values less than `1.0` slow down playback, and values greater than `1.0` speed up playback.
      */
@@ -4473,9 +4670,10 @@ If the eventâ€™s calendar does not support availability settings, this propertyâ
     setSource(filePathOrURL: string): boolean
     /**
      * Plays the current media.
+     * @param atRate The playback rate at which to play the media.
      * @returns `true` if the media starts playing successfully, otherwise `false`.
      */
-    play(): boolean
+    play(atRate?: number): boolean
     /**
      * Pauses the current media playback.
      */
@@ -4638,182 +4836,216 @@ If the eventâ€™s calendar does not support availability settings, this propertyâ
   }
 
   /**
-   * A type that represents a camera position.
+   * A class that represents a capture session.
    */
-  type CameraPosition = "front" | "back"
+  class AVCaptureSession {
+    private constructor()
+  }
 
-  /**
-   * A type that represents a camera type.
-   */
-  type CameraType = "wide" | "ultraWide" | "telephoto" | "trueDepth" | "dual" | "dualWide" | "triple"
+  namespace VideoRecorder {
 
-  type VideoRecorderState = "idle" | "preparing" | "ready" | "recording" | "paused" | "finishing" | "finished" | "failed"
-
-  type VideoCaptureSessionPreset = "high" | "medium" | "low" | "cif352x288" | "vga640x480" | "iFrame960x540" | "iFrame1280x720" | "hd1280x720" | "hd1920x1080" | "hd4K3840x2160"
-
-  type VideoCodec = "hevc" | "h264" | "jpeg" | "JPEGXL" | "proRes4444" | "appleProRes4444XQ" | "proRes422" | "proRes422HQ" | "proRes422LT" | "proRes422Proxy" | "proResRAW" | "proResRAWHQ" | "hevcWithAlpha"
-
-  type VideoOrientation = "portrait" | "landscapeLeft" | "landscapeRight"
-
-  class VideoRecorder {
     /**
-     * Creates a video recorder with settings.
-     * @param settings The video settings to use for the recording.
-     * @param settings.camera The camera to use for the recording. Defaults to { position: "back" }. If you don't provide the preferredTypes, it will use the default types by camera position.
-     * @param settings.frameRate The frame rate to use for the recording. Supports 24, 30, 60, 120. Defaults to 30.
-     * @param settings.audioEnabled A boolean value that indicates whether audio is enabled for the recording. Defaults to true.
-     * @param settings.sessionPreset The session preset to use for the recording. Defaults to "high".
-     * @param settings.videoCodec The video codec to use for the recording. Defaults to "hevc".
-     * @param settings.videoBitRate The average bit rateâ€”as bits per secondâ€”used in compressing video.
-     * @param settings.orientation The orientation to use for the recording. Defaults to "portrait".
-     * @param settings.mirrorFrontCamera A boolean value that indicates whether the front camera is mirrored. Defaults to true.
+     * A type that represents a camera position.
      */
-    constructor(settings?: {
+    type CameraPosition = "front" | "back"
+
+    /**
+     * A type that represents a camera type.
+     */
+    type CameraType = "wide" | "ultraWide" | "telephoto" | "trueDepth" | "dual" | "dualWide" | "triple"
+
+    type State = "idle" | "preparing" | "ready" | "recording" | "paused" | "stopping" | "finished" | "failed"
+
+    type SessionPreset = "high" | "medium" | "low" | "cif352x288" | "vga640x480" | "iFrame960x540" | "iFrame1280x720" | "hd1280x720" | "hd1920x1080" | "hd4K3840x2160"
+
+    type VideoCodec = "hevc" | "h264" | "jpeg" | "JPEGXL" | "proRes4444" | "appleProRes4444XQ" | "proRes422" | "proRes422HQ" | "proRes422LT" | "proRes422Proxy" | "proResRAW" | "proResRAWHQ" | "hevcWithAlpha"
+
+    type VideoOrientation = "portrait" | "landscapeLeft" | "landscapeRight"
+
+    /**
+     * A type that represents video recorder configuration.
+     *  - `camera`: The camera to use for the recording. Defaults to { position: "back" }. If you don't provide the preferredTypes, it will use the default types by camera position.
+     * - `frameRate`: The frame rate to use for the recording. Supports 24, 30, 60, 120. Defaults to 30.
+     * - `audioEnabled`: A boolean value that indicates whether audio is enabled for the recording. Defaults to true.
+     * - `sessionPreset`: The session preset to use for the recording. Defaults to "high".
+     * - `videoCodec`: The video codec to use for the recording. Defaults to "hevc".
+     * - `videoBitRate`: The video bit rate to use for the recording. Defaults to 5000000.
+     * - `orientation`: The orientation to use for the recording. Defaults to "portrait".
+     * - `mirrorFrontCamera`: A boolean value that indicates whether the front camera should be mirrored. Defaults to false.
+     * - `autoConfigAppAudioSession`: A boolean value that indicates whether the capture session automatically changes settings in the SharedAudioSession. The value of this property defaults to true, causing the capture session to automatically configure the SharedAudioSession for optimal recording. For example, if the capture session uses a deviceâ€™s rear-facing camera, the system sets the audio sessionâ€™s microphone and polar pattern for optimal recording of sound from that direction. The audio sessionâ€™s original state isnâ€™t restored after capture finishes.If you set value to false, your app is responsible for selecting appropriate audio session settings. Recording may fail if the audio sessionâ€™s settings are incompatible with the capture session.
+     */
+    type Configuration = {
       camera?: {
         position: CameraPosition
         preferredTypes?: CameraType[]
       }
       frameRate?: number
       audioEnabled?: boolean
-      sessionPreset?: VideoCaptureSessionPreset
+      sessionPreset?: SessionPreset
       videoCodec?: VideoCodec
       videoBitRate?: number
       orientation?: VideoOrientation
       mirrorFrontCamera?: boolean
-    })
+      autoConfigAppAudioSession?: boolean
+    }
+
+    /**
+     * The current capture session for the video recorder.
+     */
+    const session: AVCaptureSession
 
     /**
      * The minimum zoom factor for the video recorder.
      */
-    readonly minZoomFactor: number
+    const minZoomFactor: number
     /**
      * The maximum zoom factor for the video recorder.
      */
-    readonly maxZoomFactor: number
+    const maxZoomFactor: number
     /**
      * The current zoom factor for the video recorder.
      */
-    readonly currentZoomFactor: number
+    const currentZoomFactor: number
     /**
      * A video zoom factor multiplier to use when displaying zoom information in a user interface.
      * @available iOS 18.0+
      */
-    readonly displayZoomFactor: number
+    const displayZoomFactor: number
     /**
      * A video zoom factor multiplier to use when displaying zoom information in a user interface.
      * @available iOS 18.0+
      */
-    readonly displayZoomFactorMultiplier: number
+    const displayZoomFactorMultiplier: number
     /**
      * A boolean value that indicates whether the current device of the video recorder has a torch.
      */
-    readonly hasTorch: boolean
+    const hasTorch: boolean
     /**
      * The current torch mode for the video recorder.
      */
-    readonly torchMode: 'auto' | 'on' | 'off'
+    const torchMode: 'auto' | 'on' | 'off'
 
     /**
-     * The current state of the video recorder.
+     * A promise that resolves to the current state of the video recorder.
      */
-    state: VideoRecorderState
+    function getState(): Promise<State>
 
     /**
-     * The callback that is called when the state of the video recorder changes.
-     * @param state The new state of the video recorder.
-     * @param details Additional details about the state change. When the state is "failed", this parameter contains the error message, and when the state is "finished", this parameter contains the path to the video file.
+     * Add a listener to receive state change notifications.
+     * @param listener The listener to add.
+     *  - `state`: The new state of the video recorder.
+     *  - `details`: Additional details about the state change. When the state is "failed", this parameter contains the error message, and when the state is "finished", this parameter contains the path to the video file.
      */
-    onStateChanged?:
-      | ((state: VideoRecorderState, details?: string) => void)
-      | null
+    function addStateListener(listener: (state: State, details?: string) => void): void
+    /**
+     * Remove a listener from receiving state change notifications, or remove all listeners.
+     * @param listener The listener to remove.
+     */
+    function removeStateListener(listener?: (state: State, details?: string) => void): void
 
     /**
      * Prepares the video recorder for recording.
+     * @param configuration The configuration for the video recorder.
      * @returns A promise that resolves when the video recorder is ready for recording, or rejects with an error.
      */
-    prepare(): Promise<void>
+    function prepare(configuration?: Configuration): Promise<void>
 
     /**
      * Starts a video recording, saving it to the specified path.
      * @param toPath The path to save the video recording to.
-     * @throws An error if the video recording could not be started.
+     * @returns A promise that resolves when the video recording is started, or rejects with an error.
      */
-    startRecording(toPath: string): void
+    function start(toPath: string): Promise<void>
 
     /**
      * Pauses a video recording.
-     * @throws An error if the video recording could not be paused.
+     * @returns A promise that resolves when the video recording is paused, or rejects with an error.
      */
-    pauseRecording(): void
+    function pause(): Promise<void>
 
     /**
      * Resumes a video recording.
-     * @throws An error if the video recording could not be resumed.
+     * @returns A promise that resolves when the video recording is resumed, or rejects with an error.
      */
-    resumeRecording(): void
+    function resume(): Promise<void>
+
+    /**
+     * Cancels a video recording, the file will be deleted.
+     * @param options The options for resuming the video recording.
+     * @param options.closeSession A boolean value that indicates whether to close the capture session.
+     * @returns A promise that resolves when the video recording is canceled.
+     */
+    function cancel(options?: {
+      closeSession?: boolean
+    }): Promise<void>
 
     /**
      * Stops a video recording.
+     * @param options The options for resuming the video recording.
+     * @param options.closeSession A boolean value that indicates whether to close the capture session.
      * @returns A promise that resolves when the video recording is stopped, or rejects with an error.
      */
-    stopRecording(): Promise<void>
+    function stop(options?: {
+      closeSession?: boolean
+    }): Promise<void>
 
     /**
-     * Resets the video recorder, resetting the state. You should call this method when the video recorder is stopped and you want to start a new recording.
-     * @returns A promise that resolves when the video recorder is reset, or rejects with an error.
+     * Resets the video recorder, the state will be reset to `idle` and the session will be closed. It's useful when you no longer need the video recorder, and you can restart the video recorder by calling the `prepare` method.
+     * @returns A promise that resolves when the video recorder is reset.
      */
-    reset(): Promise<void>
+    function reset(): Promise<void>
+
+    /**
+     * Takes a photo when the video recorder is in the `recording` state.
+     * @returns A promise that resolves to the captured image, or null if the video recorder is not in the `recording` state.
+     */
+    function takePhoto(): Promise<UIImage | null>
 
     /**
      * Sets the torch mode for the video recorder.
      * @param mode The torch mode to set.
      */
-    setTorchMode(mode: 'auto' | 'off' | 'on'): void
+    function setTorchMode(mode: 'auto' | 'off' | 'on'): void
 
     /**
      * Sets the focus point.
      * @param focusPoint The focus point to set.
      */
-    setFocusPoint(focusPoint: { x: number; y: number }): void
+    function setFocusPoint(focusPoint: { x: number; y: number }): void
 
     /**
      * Sets the exposure point.
      * @param focusPoint The exposure point to set.
      */
-    setExposurePoint(focusPoint: { x: number; y: number }): void
+    function setExposurePoint(focusPoint: { x: number; y: number }): void
 
     /**
      * Resets the focus point.
      */
-    resetFocus(): void
+    function resetFocus(): void
 
     /**
      * Resets the exposure point.
      */
-    resetExposure(): void
+    function resetExposure(): void
 
     /**
      * Sets the zoom factor for the video recorder.
      * @param factor The zoom factor to set.
      */
-    setZoomFactor(factor: number): void
+    function setZoomFactor(factor: number): void
 
     /**
      * Sets the zoom factor for the video recorder using a ramp.
      * @param toFactor The new magnification factor.
      * @param rate The rate at which to transition to the new magnification factor, specified in powers of two per second.
      */
-    rampZoomFactor(toFactor: number, rate: number): void
+    function rampZoomFactor(toFactor: number, rate: number): void
 
     /**
      * Resets the zoom factor for the video recorder.
      */
-    resetZoom(): void
-
-    /**
-     * Disposes the video recorder. You should call this method when the video recorder is no longer needed. After this method is called, the video recorder will be destroyed and cannot be used again.
-     */
-    dispose(): Promise<void>
+    function resetZoom(): void
   }
 
   type SocketIOStatus =
@@ -6115,10 +6347,20 @@ If the eventâ€™s calendar does not support availability settings, this propertyâ
    * Provides an interface for obtaining weather data.
    */
   namespace Weather {
+    type Location = {
+      /**
+     * The latitude in degrees.
+     */
+      latitude: number
+      /**
+       * The longitude in degrees.
+       */
+      longitude: number
+    }
     /**
      * Query current weather by speficeid location.
      */
-    function requestCurrent(location: LocationInfo): Promise<CurrentWeather>
+    function requestCurrent(location: Location): Promise<CurrentWeather>
     /**
      * Query the daily forecast by specified location. This returns 10 contiguous days, beginning with the current day.
      * @param location The location to query.
@@ -6127,7 +6369,7 @@ If the eventâ€™s calendar does not support availability settings, this propertyâ
      * @param options.endDate The end date for the forecast.
      * @returns A promise that resolves to the daily forecast.
      */
-    function requestDailyForecast(location: LocationInfo, options?: {
+    function requestDailyForecast(location: Location, options?: {
       startDate: Date
       endDate: Date
     }): Promise<WeatherDailyForecast>
@@ -6139,7 +6381,7 @@ If the eventâ€™s calendar does not support availability settings, this propertyâ
      * @param options.endDate The end date for the forecast.
      * @returns A promise that resolves to the hourly forecast.
      */
-    function requestHourlyForecast(location: LocationInfo, options?: {
+    function requestHourlyForecast(location: Location, options?: {
       startDate: Date
       endDate: Date
     }): Promise<WeatherHourlyForecast>
@@ -6626,6 +6868,22 @@ If the eventâ€™s calendar does not support availability settings, this propertyâ
   type AssistantToolExecuteTestFn<P> = (params: P) => void
 
   namespace AssistantTool {
+
+    type OnCancel = () => string | null | undefined
+
+    /**
+     * The function to be called when the tool is cancelled by the user.
+     * Returns a message to the assistant. 
+     * 
+     * This function will be set to `null` after it is called, you should set this function in your tool execution function.
+     */
+    var onCancel: OnCancel | null | undefined
+
+    /**
+     * Indicates whether the tool has been cancelled by the user.
+     */
+    const isCancelled: boolean
+
     /**
      * Registers the function that generates an approval request prompt for the user.
      * @param requestFn - The function that creates the approval request.
@@ -6653,8 +6911,9 @@ If the eventâ€™s calendar does not support availability settings, this propertyâ
     /**
      * Reports a message when the tool is executing.
      * @param message - The message to report.
+     * @param id - The id of the report message, you can replace the message with the same id. It is useful when you want to update the message.
      */
-    function report(message: string): void
+    function report(message: string, id?: string): void
   }
 
   /**
@@ -9412,73 +9671,76 @@ If the eventâ€™s calendar does not support availability settings, this propertyâ
     /**
      * The text before the cursor, or null if there is no text before the cursor.
      */
-    const textBeforeCursor: Promise<string | null>
+    const textBeforeCursor: string | null
     /**
      * The text after the cursor, or null if there is no text after the cursor.
      */
-    const textAfterCursor: Promise<string | null>
+    const textAfterCursor: string | null
+    /**
+     * The currently entered text.
+     */
+    const allText: string
     /**
      * The currently selected text, or null if there is no selected text.
      */
-    const selectedText: Promise<string | null>
+    const selectedText: string | null
     /**
      * A Boolean value that indicates whether the text input object has any text.
      */
-    const hasText: Promise<boolean>
+    const hasText: boolean
 
     /**
      * Sets the visibility of the dictation key of the system.
      * @param value A boolean value indicating whether the dictation key should be shown (true) or hidden (false).
-     * @returns A promise that resolves when the dictation key visibility is successfully set.
      */
-    function setHasDictationKey(value: boolean): Promise<void>
+    function setHasDictationKey(value: boolean): void
 
     /**
      * Dismisses the custom keyboard.
      */
-    function dismiss(): Promise<void>
+    function dismiss(): void
     /**
      * Switches to the next keyboard in the list of enabled keyboards.
      */
-    function nextKeyboard(): Promise<void>
+    function nextKeyboard(): void
     /**
      * Moves the cursor by the specified offset.
      * @param offset The number of characters to move the cursor. A positive value moves the cursor to the right, while a negative value moves it to the left.
      */
-    function moveCursor(offset: number): Promise<void>
+    function moveCursor(offset: number): void
     /**
      * Inserts the specified text at the current cursor position.
      * @param text The text to insert.
      */
-    function insertText(text: string): Promise<void>
+    function insertText(text: string): void
     /**
      * Deletes a character before the current cursor position.
      */
-    function deleteBackward(): Promise<void>
+    function deleteBackward(): void
     /**
      * Inserts the provided text and marks it to indicate that itâ€™s part of an active input session.
      * @param text The text to be marked.
      * @param location The starting position of the marked text.
      * @param length The length of the marked text.
      */
-    function setMarkedText(text: string, location: number, length: number): Promise<void>
+    function setMarkedText(text: string, location: number, length: number): void
     /**
      * Unmarks the currently marked text.
      */
-    function unmarkText(): Promise<void>
+    function unmarkText(): void
 
     /**
      * Requests the system to adjust the height of the custom keyboard.
      * @param height The desired height in points.
      * Note: The system may ignore this request if the height is too small or too large.
      */
-    function requestHeight(height: number): Promise<void>
+    function requestHeight(height: number): void
 
     /**
      * Sets the visibility of the custom keyboard's toolbar. The toolbar defaults to visible, and it is useful for debugging.
      * @param visible A boolean value indicating whether the toolbar should be visible (true) or hidden (false).
      */
-    function setToolbarVisible(visible: boolean): Promise<void>
+    function setToolbarVisible(visible: boolean): void
 
     /**
      *  Play keyboard clicks sound.
@@ -9494,10 +9756,10 @@ If the eventâ€™s calendar does not support availability settings, this propertyâ
      *
      * Example:
      * ```ts
-     * await CustomKeyboard.dismissToHome()
+     * CustomKeyboard.dismissToHome()
      * ```
      */
-    function dismissToHome(): Promise<void>
+    function dismissToHome(): void
 
     /**
      * Adds an event listener for the specified event.
@@ -11553,6 +11815,130 @@ If the length of the value parameter exceeds the length of the `maximumUpdateVal
      * Dismiss the modal that was opened using `presentApp`.
      */
     function dismissApp(): Promise<void>
+  }
+
+  namespace SQLite {
+    type Configuration = {
+      foreignKeysEnabled: boolean
+      readonly: boolean
+      label: string | null
+      busyMode: "immediateError" | DurationInSeconds
+      journalMode: "wal" | "default"
+      maximumReaderCount: number
+    }
+
+    type ColumnInfo = {
+      name: string
+      type: string
+      defaultValueSQL: string | null
+      isNotNull: boolean
+      primaryKeyIndex: number
+    }
+
+    type PrimaryKeyInfo = {
+      columns: string[]
+      rowIDColumn: string | null
+      isRowID: boolean
+    }
+
+    type ForeignKeyInfo = {
+      id: number
+      originColumns: string[]
+      destinationTable: string
+      destinationColumns: string[]
+      mapping: {
+        origin: string
+        destination: string
+      }[]
+    }
+
+    type IndexInfo = {
+      name: string
+      columns: string[]
+      isUnique: boolean
+      origin: "createIndex" | "primaryKeyConstraint" | "uniqueConstraint"
+    }
+
+    type DatabaseValue = string | number | boolean | Data | Date | null
+
+    type DatabaseCollation = "binary" | "rtrim" | "nocase" | "caseInsensitiveCompare" | "localizedCaseInsensitiveCompare" | "localizedCompare" | "localizedStandardCompare" | "unicodeCompare"
+
+    type ForeignKeyAction = "cascade" | "restrict" | "setNull" | "setDefault"
+
+    type ColumnReferences = {
+      table: string
+      column?: string
+      onDelete?: ForeignKeyAction
+      onUpdate?: ForeignKeyAction
+      deferred?: boolean
+    }
+
+    type ColumnDefinition = {
+      name: string
+      type: string
+      primaryKey?: boolean
+      autoIncrement?: boolean
+      notNull?: boolean
+      unique?: boolean
+      indexed?: boolean
+      checkSQL?: string
+      collation?: DatabaseCollation
+      defaultValue?: DatabaseValue
+      defaultSQL?: string
+      references?: ColumnReferences
+    }
+
+    type Arguments = DatabaseValue[] | Record<string, DatabaseValue>
+
+    type TranscationStep = {
+      sql: string
+      args?: Arguments | null
+    }
+
+    class Database {
+      private constructor()
+
+      schemaVersion(): Promise<number>
+
+      tableExists(tableName: string, schemaName?: string): Promise<boolean>
+      isTableHasUniqueKeys(tableName: string, uniqueKeys: string[]): Promise<boolean>
+
+      columnsIn(tableName: string, schemaName?: string): Promise<ColumnInfo[]>
+
+      primaryKey(tableName: string, schemaName?: string): Promise<PrimaryKeyInfo>
+      foreignKeys(tableName: string, schemaName?: string): Promise<ForeignKeyInfo[]>
+      indexes(tableName: string, schemaName?: string): Promise<IndexInfo[]>
+
+      execute(sql: string, arguments?: Arguments): Promise<void>
+
+      transcation(steps: TranscationStep, options?: {
+        kind?: "deferred" | "immediate" | "exclusive"
+      }): Promise<void>
+
+      fetchAll<T>(sql: string, arguments?: Arguments): Promise<T[]>
+      fetchSet<T>(sql: string, arguments?: Arguments): Promise<T[]>
+      fetchOne<T>(sql: string, arguments?: Arguments): Promise<T>
+
+      createTable(name: string, options: {
+        columns: ColumnDefinition[]
+        ifNotExists?: boolean
+      }): Promise<void>
+      renameTable(name: string, newName: string): Promise<void>
+      dropTable(name: string): Promise<void>
+
+      createIndex(name: string, options: {
+        table: string
+        columns: string[]
+        unique?: boolean
+        ifNotExists?: boolean
+        condition?: string
+      }): Promise<void>
+      dropIndex(name: string): Promise<void>
+      dropIndexOn(tableName: string, columns: string[]): Promise<void>
+    }
+
+    function open(path: string, configuration?: Configuration): Database
+    function openInMemory(name: string, configuration?: Configuration): Database
   }
 }
 
