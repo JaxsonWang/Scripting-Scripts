@@ -1,10 +1,83 @@
 {
-  "displayName": "OpenClaw API Ping",
-  "id": "openclaw_api_ping",
-  "description": "Calls OpenClaw /tools/invoke and /v1/chat/completions for diagnostics.",
+  "displayName": "OpenClaw Gateway",
+  "id": "openclaw_gateway",
+  "description": "直接与 OpenClaw 对话、调用指定网关工具，或执行接口连通性诊断。",
   "icon": "network",
   "color": "systemBlue",
-  "parameters": [],
+  "parameters": [
+    {
+      "type": "string",
+      "required": false,
+      "name": "mode",
+      "enumValues": ["auto", "chat", "invoke", "diagnose"],
+      "hint": "auto",
+      "description": "可选。auto 会根据其他参数自动判断模式。chat 调用 /v1/chat/completions；invoke 调用 /tools/invoke；diagnose 执行健康检查。"
+    },
+    {
+      "type": "string",
+      "required": false,
+      "name": "message",
+      "enumValues": null,
+      "hint": "Summarize this text...",
+      "description": "mode=chat 时必填。发送给 OpenClaw 的用户消息。"
+    },
+    {
+      "type": "string",
+      "required": false,
+      "name": "tool",
+      "enumValues": null,
+      "hint": "sessions_list",
+      "description": "mode=invoke 时必填。要调用的 OpenClaw 工具名（/tools/invoke）。"
+    },
+    {
+      "type": "string",
+      "required": false,
+      "name": "argsJson",
+      "enumValues": null,
+      "hint": "{\"key\":\"value\"}",
+      "description": "可选。invoke 的参数 JSON 对象字符串。"
+    },
+    {
+      "type": "string",
+      "required": false,
+      "name": "sessionKey",
+      "enumValues": null,
+      "hint": "main",
+      "description": "可选。OpenClaw 会话键。"
+    },
+    {
+      "type": "string",
+      "required": false,
+      "name": "agentId",
+      "enumValues": null,
+      "hint": "main",
+      "description": "可选。chat 请求使用的 OpenClaw agent id。"
+    },
+    {
+      "type": "string",
+      "required": false,
+      "name": "model",
+      "enumValues": null,
+      "hint": "openclaw:main",
+      "description": "可选。chat 使用的模型。默认值为 openclaw:<agentId>。"
+    },
+    {
+      "type": "string",
+      "required": false,
+      "name": "user",
+      "enumValues": null,
+      "hint": "scriptclaw-user",
+      "description": "可选。用于保持会话连续性的稳定 user 标识。"
+    },
+    {
+      "type": "string",
+      "required": false,
+      "name": "action",
+      "enumValues": null,
+      "hint": "json",
+      "description": "可选。/tools/invoke 的 action，默认 json。"
+    }
+  ],
   "requireApproval": false,
   "autoApprove": false,
   "scriptEditorOnly": false
