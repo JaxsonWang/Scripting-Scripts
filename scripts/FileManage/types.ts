@@ -41,8 +41,7 @@ export type EntryRowProps = {
   onCopy: (entry: FileEntry) => void
   onDelete: (entry: FileEntry) => void
   onMove: (entry: FileEntry) => void
-  onOpenDirectory: (path: string) => void
-  onPreviewFile: (path: string) => void
+  onOpenEntry: (entry: FileEntry) => void
   onRename: (entry: FileEntry) => void
 }
 

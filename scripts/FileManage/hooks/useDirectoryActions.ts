@@ -245,13 +245,6 @@ export const useDirectoryActions = ({ currentPath, l10n, navigationPath, refresh
     })
   }, [buildAvailableName, currentPath, l10n, runWithErrorAlert, setTransfer, transfer])
 
-  const handleOpenDirectory = useCallback(
-    (directoryPath: string) => {
-      navigationPath.setValue([...navigationPath.value, directoryPath])
-    },
-    [navigationPath]
-  )
-
   const handlePreviewFile = useCallback(
     async (filePath: string) => {
       try {
@@ -287,6 +280,18 @@ export const useDirectoryActions = ({ currentPath, l10n, navigationPath, refresh
     [l10n]
   )
 
+  const handleOpenEntry = useCallback(
+    async (entry: FileEntry) => {
+      if (entry.isDirectory) {
+        navigationPath.setValue([...navigationPath.value, entry.path])
+        return
+      }
+
+      await handlePreviewFile(entry.path)
+    },
+    [handlePreviewFile, navigationPath]
+  )
+
   return {
     handleApplyTransfer,
     handleCancelTransfer,
@@ -295,8 +300,7 @@ export const useDirectoryActions = ({ currentPath, l10n, navigationPath, refresh
     handleCreateFolder,
     handleDelete,
     handleMove,
-    handleOpenDirectory,
-    handlePreviewFile,
+    handleOpenEntry,
     handleRename
   }
 }

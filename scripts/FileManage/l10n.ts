@@ -25,6 +25,7 @@ export type L10n = {
   invalidNameMessage: string
   invalidNameTitle: string
   itemCount: (count: number) => string
+  loadMoreHint: string
   loading: string
   move: string
   noActiveTaskMessage: string
@@ -45,6 +46,7 @@ export type L10n = {
   tabDocuments: string
   tabICloud: string
   tabTemporary: string
+  showingItems: (shown: number, total: number) => string
   unavailable: string
   untitledName: string
 }
@@ -74,6 +76,7 @@ const l10nEN: L10n = {
   invalidNameMessage: 'File or folder name cannot contain "/".',
   invalidNameTitle: 'Invalid Name',
   itemCount: (count: number) => `${count} item(s)`,
+  loadMoreHint: 'Scroll down to auto load more',
   loading: 'Loading...',
   move: 'Move',
   noActiveTaskMessage: 'Copy or move an item first.',
@@ -94,6 +97,7 @@ const l10nEN: L10n = {
   tabDocuments: 'Documents',
   tabICloud: 'iCloud',
   tabTemporary: 'Temporary',
+  showingItems: (shown: number, total: number) => `Showing ${shown} / ${total}`,
   unavailable: 'Unavailable',
   untitledName: 'untitled'
 }
@@ -123,6 +127,7 @@ const l10nZH: L10n = {
   invalidNameMessage: '文件或文件夹名称不能包含 "/"。',
   invalidNameTitle: '名称无效',
   itemCount: (count: number) => `${count} 项`,
+  loadMoreHint: '下滑到底自动加载更多',
   loading: '加载中...',
   move: '移动',
   noActiveTaskMessage: '请先选择拷贝或移动项目。',
@@ -143,6 +148,7 @@ const l10nZH: L10n = {
   tabDocuments: 'Documents',
   tabICloud: 'iCloud',
   tabTemporary: 'Temporary',
+  showingItems: (shown: number, total: number) => `已显示 ${shown} / ${total}`,
   unavailable: '不可用',
   untitledName: '未命名'
 }

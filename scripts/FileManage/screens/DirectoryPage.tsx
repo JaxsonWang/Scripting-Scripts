@@ -1,4 +1,21 @@
-import { Button, HStack, Image, List, Menu, Navigation, NavigationDestination, Path, Script, Section, Text, VStack, useCallback, useMemo } from 'scripting'
+import {
+  Button,
+  HStack,
+  Image,
+  List,
+  Menu,
+  Navigation,
+  NavigationDestination,
+  Path,
+  Script,
+  Section,
+  Text,
+  VStack,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef
+} from 'scripting'
 import { EntryRow } from '../components/EntryRow'
 import { useDirectoryActions } from '../hooks/useDirectoryActions'
 import { useDirectoryEntries } from '../hooks/useDirectoryEntries'
@@ -6,6 +23,7 @@ import type { DirectoryPageProps } from '../types'
 
 export const DirectoryPage = ({ currentPath, l10n, navigationPath, rootPath, rootTitle, setTransfer, transfer }: DirectoryPageProps) => {
   const dismiss = Navigation.useDismiss()
+  const autoLoadCursorRef = useRef(-1)
 
   const isRoot = useMemo(() => Path.normalize(currentPath) === Path.normalize(rootPath), [currentPath, rootPath])
 
@@ -18,10 +36,26 @@ export const DirectoryPage = ({ currentPath, l10n, navigationPath, rootPath, roo
     return base || rootTitle
   }, [currentPath, isRoot, rootTitle])
 
-  const { filteredEntries, isLoading, refreshEntries, searchKeyword, setSearchKeyword } = useDirectoryEntries({
+  const {
+    filteredEntries,
+    hasMoreEntries,
+    hasPendingEntries,
+    isLoading,
+    loadMoreEntries,
+    refreshEntries,
+    resolvedCount,
+    searchKeyword,
+    setSearchKeyword,
+    totalCount,
+    visibleEntries
+  } = useDirectoryEntries({
     currentPath,
     l10n
   })
+
+  useEffect(() => {
+    autoLoadCursorRef.current = -1
+  }, [currentPath, filteredEntries.length, searchKeyword])
 
   const {
     handleApplyTransfer,
@@ -31,8 +65,7 @@ export const DirectoryPage = ({ currentPath, l10n, navigationPath, rootPath, roo
     handleCreateFolder,
     handleDelete,
     handleMove,
-    handleOpenDirectory,
-    handlePreviewFile,
+    handleOpenEntry,
     handleRename
   } = useDirectoryActions({
     currentPath,
@@ -51,6 +84,20 @@ export const DirectoryPage = ({ currentPath, l10n, navigationPath, rootPath, roo
     }
     Script.exit()
   }, [dismiss])
+
+  const handleAutoLoadMoreOnAppear = useCallback(() => {
+    if (!hasMoreEntries) {
+      return
+    }
+
+    const cursor = visibleEntries.length
+    if (autoLoadCursorRef.current === cursor) {
+      return
+    }
+
+    autoLoadCursorRef.current = cursor
+    loadMoreEntries()
+  }, [hasMoreEntries, loadMoreEntries, visibleEntries.length])
 
   return (
     <VStack
@@ -112,17 +159,23 @@ export const DirectoryPage = ({ currentPath, l10n, navigationPath, rootPath, roo
             {currentPath}
           </Text>
           <Text font="caption" foregroundStyle="secondaryLabel">
-            {l10n.itemCount(filteredEntries.length)}
+            {hasPendingEntries
+              ? l10n.showingItems(resolvedCount, totalCount)
+              : hasMoreEntries
+                ? l10n.showingItems(visibleEntries.length, filteredEntries.length)
+                : l10n.itemCount(filteredEntries.length)}
           </Text>
         </Section>
 
         <Section title={l10n.entries}>
-          {isLoading ? (
-            <Text>{l10n.loading}</Text>
-          ) : filteredEntries.length === 0 ? (
-            <Text>{searchKeyword.trim() ? l10n.noMatchingEntries : l10n.directoryEmpty}</Text>
+          {filteredEntries.length === 0 ? (
+            isLoading ? (
+              <Text>{l10n.loading}</Text>
+            ) : (
+              <Text>{searchKeyword.trim() ? l10n.noMatchingEntries : l10n.directoryEmpty}</Text>
+            )
           ) : (
-            filteredEntries.map(entry => (
+            visibleEntries.map(entry => (
               <EntryRow
                 key={entry.path}
                 entry={entry}
@@ -130,13 +183,22 @@ export const DirectoryPage = ({ currentPath, l10n, navigationPath, rootPath, roo
                 onCopy={handleCopy}
                 onDelete={handleDelete}
                 onMove={handleMove}
-                onOpenDirectory={handleOpenDirectory}
-                onPreviewFile={handlePreviewFile}
+                onOpenEntry={entryItem => void handleOpenEntry(entryItem)}
                 onRename={handleRename}
               />
             ))
           )}
         </Section>
+
+        {hasMoreEntries ? (
+          <Section>
+            <VStack alignment="center" padding={{ vertical: 8 }} onAppear={handleAutoLoadMoreOnAppear}>
+              <Text font="caption" foregroundStyle="secondaryLabel">
+                {l10n.loadMoreHint}
+              </Text>
+            </VStack>
+          </Section>
+        ) : null}
       </List>
     </VStack>
   )
