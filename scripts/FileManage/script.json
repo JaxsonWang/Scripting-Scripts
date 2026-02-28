@@ -1,0 +1,24 @@
+{
+  "name": "FileManage",
+  "localizedNames": {
+    "en": "File Manage",
+    "zh": "文件管理"
+  },
+  "description": "Minimal file manager for Documents, App Group, Temporary, and iCloud directories.",
+  "localizedDescriptions": {
+    "en": "Browse and manage files with create, delete, rename, and search support.",
+    "zh": "支持在 Documents、App Group、Temporary 与 iCloud 目录中浏览与管理文件。"
+  },
+  "version": "0.1.0",
+  "runInApp": false,
+  "icon": "folder.badge.gearshape",
+  "color": "rgba(49, 120, 199, 1.00)",
+  "intentInputTypes": [],
+  "contributors": [],
+  "author": {
+    "homepage": "https://github.com/JaxsonWang",
+    "email": "jaxson.j.wang@gmail.com",
+    "name": "Jaxson Wang"
+  },
+  "remoteResource": null
+}

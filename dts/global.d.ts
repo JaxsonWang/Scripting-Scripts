@@ -3055,9 +3055,9 @@ declare global {
      */
     readonly identifier: string
     /**
-     * The calendar for the reminder.
+     * The calendar for the reminder. The calendar can be null if the reminder is not associated with a calendarm, but you must do not set the calendar to null.
      */
-    calendar: Calendar
+    calendar: Calendar | null
     /**
      * The title of the reminder.
      */
@@ -6648,6 +6648,17 @@ If the eventâ€™s calendar does not support availability settings, this propertyâ
   }
 
   /**
+   * Represents a replace instruction within the script editor.
+   */
+  type ScriptEditorReplaceInstruction = {
+    existingBlock: string
+    newBlock: string
+    contextBefore?: string
+    contextAfter?: string
+    startLineHint?: number
+  }
+
+  /**
    * Represents a lint error in a script.
    */
   type ScriptLintError = {
@@ -6655,6 +6666,18 @@ If the eventâ€™s calendar does not support availability settings, this propertyâ
      * The line number where the error occurred.
      */
     line: number
+    /**
+     * The column number where the error occurred.
+     */
+    column: number
+    /**
+     * The range start of characters where the error occurred.
+     */
+    from: number
+    /**
+     * The range end of characters where the error occurred.
+     */
+    to: number
     /**
      * A message describing the linting issue.
      */
@@ -6713,10 +6736,10 @@ If the eventâ€™s calendar does not support availability settings, this propertyâ
     /**
      * Replaces content in the specified file based on the provided operations.
      * @param relativePath - The relative path to the file.
-     * @param operations - An array of operations describing where and what content to replace.
+     * @param instructions - An array of instructions describing where and what content to replace.
      * @returns A promise that resolves with a boolean indicating success.
      */
-    replaceInFile(relativePath: string, operations: ScriptEditorFileOperation[]): Promise<boolean>
+    replaceInFile(relativePath: string, instructions: ScriptEditorReplaceInstruction[]): Promise<boolean>
     /**
      * Opens a diff editor for the specified file, comparing its current content with the provided content.
      * @param relativePath - The relative path to the file.
@@ -11890,7 +11913,7 @@ If the length of the value parameter exceeds the length of the `maximumUpdateVal
 
     type Arguments = DatabaseValue[] | Record<string, DatabaseValue>
 
-    type TranscationStep = {
+    type TransactionStep = {
       sql: string
       args?: Arguments | null
     }
@@ -11911,7 +11934,7 @@ If the length of the value parameter exceeds the length of the `maximumUpdateVal
 
       execute(sql: string, arguments?: Arguments): Promise<void>
 
-      transcation(steps: TranscationStep, options?: {
+      transaction(steps: TransactionStep, options?: {
         kind?: "deferred" | "immediate" | "exclusive"
       }): Promise<void>
 
@@ -11939,6 +11962,73 @@ If the length of the value parameter exceeds the length of the `maximumUpdateVal
 
     function open(path: string, configuration?: Configuration): Database
     function openInMemory(name: string, configuration?: Configuration): Database
+  }
+
+  /**
+   * Apple Intelligence Language Model Session.
+   */
+  class LanguageModelSession {
+
+    /**
+     * Whether the language model session is available on the current device.
+     */
+    static readonly isAvailable: boolean
+
+    /**
+     * Creates a new language model session.
+     * @param options The options for the language model session.
+     * @param options.instructions Instructions that control the modelâ€™s behavior.
+     */
+    constructor(options?: {
+      instructions?: string
+    })
+
+    /**
+     * A Boolean value that indicates a response is being generated.
+     */
+    readonly isResponding: boolean
+
+    /**
+     * Requests that the system eagerly load the resources required for this session into memory and optionally caches a prefix of your prompt.
+     * @param promptPrefix The prompt prefix to cache.
+     */
+    prewarm(promptPrefix?: string): void
+
+    /**
+     * Produces a response to a prompt.
+     * @param prompt A prompt for the model to respond to.
+     * @param options GenerationOptions that control how tokens are sampled from the distribution the model produces.
+     * @param options.temperature The temperature (0.0 ~ 1.0) to use when sampling from the distribution. A higher temperature results in more random output.
+     * @param options.maxResponseTokens The maximum number of tokens to generate in the response.
+     * @param options.schema The expected output JSON schema.
+     * @returns A response to the prompt. `content` is the text response and `json` is the parsed JSON response, the `json` could be `null` if the response not contains valid JSON.
+     */
+    respond<T>(prompt: string, options?: {
+      temperature?: number
+      maxResponseTokens?: number
+      schema?: JSONSchemaObject
+    }): Promise<{
+      content: string
+      json: T | null
+    }>
+
+    /**
+     * Produces a stream of responses to a prompt.
+     * @param prompt A prompt for the model to respond to.
+     * @param options GenerationOptions that control how tokens are sampled from the distribution the model produces.
+     * @param options.temperature The temperature (0.0 ~ 1.0) to use when sampling from the distribution. A higher temperature results in more random output.
+     * @param options.maxResponseTokens The maximum number of tokens to generate in the response.
+     * @returns A stream of responses to the prompt.
+     */
+    streamResponse(prompt: string, options?: {
+      temperature?: number
+      maxResponseTokens?: number
+    }): Promise<ReadableStream>
+
+    /**
+     * Releases resources associated with the language model session.
+     */
+    dispose(): void
   }
 }
 
