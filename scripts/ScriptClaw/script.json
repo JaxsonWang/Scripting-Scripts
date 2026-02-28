@@ -1,0 +1,43 @@
+{
+  "remoteResource" : null,
+  "intentInputTypes" : [
+
+  ],
+  "author" : {
+    "email" : "i@iiong.com",
+    "homepage" : "https:\/\/iiong.com",
+    "name" : "淮城一只猫"
+  },
+  "localizedDescriptions" : {
+    "fr" : "",
+    "pt" : "",
+    "ru" : "",
+    "it" : "",
+    "en" : "",
+    "zh" : "",
+    "de" : "",
+    "es" : "",
+    "ja" : ""
+  },
+  "iconImage" : null,
+  "version" : "1.0.0",
+  "color" : "rgba(184, 158, 128,1)",
+  "icon" : "brain.head.profile",
+  "localizedNames" : {
+    "fr" : "",
+    "pt" : "",
+    "ru" : "",
+    "it" : "",
+    "en" : "",
+    "zh" : "",
+    "de" : "",
+    "es" : "",
+    "ja" : ""
+  },
+  "name" : "ScriptClaw",
+  "runInApp" : false,
+  "contributors" : [
+
+  ],
+  "description" : null
+}

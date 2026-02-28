@@ -1,0 +1,11 @@
+{
+  "displayName": "OpenClaw API Ping",
+  "id": "openclaw_api_ping",
+  "description": "Calls OpenClaw /tools/invoke and /v1/chat/completions for diagnostics.",
+  "icon": "network",
+  "color": "systemBlue",
+  "parameters": [],
+  "requireApproval": false,
+  "autoApprove": false,
+  "scriptEditorOnly": false
+}
