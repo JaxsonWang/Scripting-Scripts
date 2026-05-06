@@ -1,4 +1,4 @@
-import { HStack, Image, Path, Spacer, Text, VStack, Widget } from 'scripting'
+import { HStack, Image, Spacer, Text, VStack, Widget } from 'scripting'
 import { DEFAULT_SETTINGS as DEFAULT_GLOBAL_SETTINGS, carFileName, carLogoName, getCurrentGlobalSettings } from './components/global-settings-page'
 import { getCurrentSmallWidgetSettings } from './components/small-widget-settings-page'
 import { getCurrentMediumWidgetSettings } from './components/medium-widget-settings-page'
@@ -66,13 +66,6 @@ const formatCurrentTime = (format = 'YYYY-MM-dd HH:mm:ss'): string => {
   const seconds = String(now.getSeconds()).padStart(2, '0')
 
   return format.replace('YYYY', String(year)).replace('MM', month).replace('dd', day).replace('HH', hours).replace('mm', minutes).replace('ss', seconds)
-}
-
-/**
- * 获取背景图片路径
- */
-const getWidgetBackgroundImagePath = (settings: any) => {
-  return settings.transparentBg && Widget.parameter ? Path.join(settings.transparentBg, Widget.parameter) : undefined
 }
 
 /**
@@ -342,18 +335,10 @@ const SmallWidgetView = () => {
   const settings = getCurrentSettings()
   const currentTime = formatCurrentTime('HH:mm:ss')
 
-  // 获取背景图片路径和背景样式
-  const getWidgetBg = getWidgetBackgroundImagePath(settings)
-  const widgetBgSource = getWidgetBg ? buildImageProps(getWidgetBg) : undefined
   const widgetBackground = generateWidgetBackground(settings)
 
   return (
-    <VStack
-      spacing={4}
-      padding={16}
-      background={!settings.enableColorBackground && widgetBgSource ? <Image {...widgetBgSource} resizable scaleToFit /> : undefined}
-      widgetBackground={widgetBackground}
-    >
+    <VStack spacing={4} padding={16} widgetBackground={widgetBackground}>
       <VStack
         frame={{
           maxWidth: 'infinity',
@@ -423,16 +408,12 @@ const MediumWidgetView = () => {
   const mediumSettings = getCurrentMediumWidgetSettings()
   const currentTime = formatCurrentTime('HH:mm:ss')
 
-  // 获取背景图片路径和背景样式
-  const getWidgetBg = getWidgetBackgroundImagePath(settings)
-  const widgetBgSource = getWidgetBg ? buildImageProps(getWidgetBg) : undefined
   const widgetBackground = generateWidgetBackground(settings)
 
   return (
     <HStack
       spacing={20}
       padding={16}
-      background={!settings.enableColorBackground && widgetBgSource ? <Image {...widgetBgSource} resizable scaleToFit /> : undefined}
       widgetBackground={widgetBackground}
       overlay={{
         alignment: 'topLeading',
@@ -500,19 +481,10 @@ const LargeWidgetView = () => {
   const largeSettings = getCurrentLargeWidgetSettings()
   const currentTime = formatCurrentTime('HH:mm:ss')
 
-  // 获取背景图片路径和背景样式
-  const getWidgetBg = getWidgetBackgroundImagePath(settings)
-  const widgetBgSource = getWidgetBg ? buildImageProps(getWidgetBg) : undefined
   const widgetBackground = generateWidgetBackground(settings)
 
   return (
-    <VStack
-      alignment="leading"
-      spacing={10}
-      padding={16}
-      background={!settings.enableColorBackground && widgetBgSource ? <Image {...widgetBgSource} resizable scaleToFit /> : undefined}
-      widgetBackground={widgetBackground}
-    >
+    <VStack alignment="leading" spacing={10} padding={16} widgetBackground={widgetBackground}>
       <HStack spacing={0} frame={{ maxWidth: 'infinity', maxHeight: 0 }}>
         <VStack
           frame={{

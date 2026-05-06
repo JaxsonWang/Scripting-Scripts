@@ -1,4 +1,4 @@
-import { Button, ColorPicker, HStack, List, Navigation, NavigationStack, Picker, Section, Spacer, Text, TextField, Toggle, VStack } from 'scripting'
+import { Button, ColorPicker, HStack, List, Navigation, NavigationStack, Picker, Section, Spacer, Text, Toggle, VStack } from 'scripting'
 import { useState } from 'scripting'
 import type { Color } from 'scripting'
 import { getCurrentSettings, refreshIntervalOptions, saveSettings } from '../utils/news-service'
@@ -11,7 +11,6 @@ export const SettingsPage = () => {
   const [currentSettings, setCurrentSettings] = useState(() => getCurrentSettings())
   const [autoRefresh, setAutoRefresh] = useState(currentSettings.autoRefresh ?? true)
   const [refreshInterval, setRefreshInterval] = useState(currentSettings.refreshInterval ?? 30)
-  const [bgPath, setBgPath] = useState<string>(() => currentSettings.bgPath ?? '')
   const [lightModeColor, setLightModeColor] = useState<Color>(() => currentSettings.lightModeColor ?? '#000000')
   const [darkModeColor, setDarkModeColor] = useState<Color>(() => currentSettings.darkModeColor ?? '#FFFFFF')
 
@@ -55,13 +54,6 @@ export const SettingsPage = () => {
     setShowAddColorModal(false)
   }
 
-  // 处理背景图片路径变化
-  const handleBgPathChange = (path: string) => {
-    setBgPath(path)
-    const newSettings = { ...currentSettings, bgPath: path }
-    updateSettings(newSettings)
-  }
-
   // 处理刷新间隔选择
   const handleRefreshIntervalChange = (value: string) => {
     const interval = parseInt(value)
@@ -101,33 +93,12 @@ export const SettingsPage = () => {
           cancellationAction: <Button title="完成" action={dismiss} />
         }}
       >
-        {/* 透明背景图片 */}
-        <Section
-          header={<Text font="headline">透明背景图片</Text>}
-          footer={
-            <Text font="footnote" foregroundStyle="secondaryLabel">
-              填空不开启，若要使用需要安装 "透明背景" 脚本组件。{'\n'}关注微信公众号「组件派」获取。
-            </Text>
-          }
-        >
-          <VStack>
-            <TextField
-              title="背景图片路径"
-              value={bgPath}
-              onChanged={handleBgPathChange}
-              prompt="请输入背景图路径"
-              axis="vertical"
-              lineLimit={{ min: 2, max: 4 }}
-            />
-          </VStack>
-        </Section>
-
         {/* 颜色背景设置 */}
         <Section
           header={<Text font="headline">颜色背景</Text>}
           footer={
             <Text font="footnote" foregroundStyle="secondaryLabel">
-              开启后将强制显示颜色背景，即使设置了透明背景也会被覆盖
+              开启后显示纯色或渐变背景，关闭后使用系统默认背景
             </Text>
           }
         >

@@ -1,4 +1,4 @@
-import { Color, ColorScheme, Size, VirtualNode, KeyboardType, Edge, Point, KeywordPoint, Visibility, ReadableStream } from "scripting"
+import { Color, ColorScheme, Size, VirtualNode, KeyboardType, Edge, Point, KeywordPoint, Visibility, ReadableStream, FunctionComponent, AppIntent, AppIntentProtocol } from "scripting"
 
 declare global {
   type Without<T, U> = {
@@ -1529,6 +1529,14 @@ declare global {
      */
     const iCloudDocumentsDirectory: string
     /**
+     * Returns a boolean value indicating whether WebDAV is available.
+     */
+    const isWebDAVAvailable: boolean
+    /**
+     * Returns the path to WebDAV's `Documents` directory, you should check `isWebDAVAvailable` first.
+     */
+    const webDAVDocumentsDirectory: string
+    /**
      * Returns a boolean value indicating whether the file is targeted for storage in iCloud.
      * @param filePath The path of the file
      */
@@ -1786,7 +1794,9 @@ declare global {
 
 
   /**
-   * Share activity item. Supports a text or an image.
+   * Share activity item. Supports text, URL strings such as `https://example.com`
+   * and `file:///path/to/file`, existing absolute file paths such as
+   * `/private/var/mobile/...`, or an image.
    */
   type ActivityItem = string | UIImage
 
@@ -1796,7 +1806,11 @@ declare global {
   namespace ShareSheet {
     /**
      * Present a ShareSheet UI.
-     * @param items The array of data on which to perform the activity. You can share text, url, or UIImage.
+     * String items are shared as text by default. If a string is a URL such as
+     * `https://example.com` or `file:///path/to/file`, it will be shared as a URL.
+     * If a string is an existing absolute file path such as `/private/var/mobile/...`,
+     * it will be shared as a file URL. Non-existing file paths are still shared as text.
+     * @param items The array of data on which to perform the activity. You can share text, a URL string, an existing absolute file path, or UIImage.
      * @returns Returns a promise, it is fulfilled with a boolean value indicates that whether the share is completed when the sheet is dismissed.
      */
     function present(items: ActivityItem[]): Promise<boolean>
@@ -1818,6 +1832,24 @@ declare global {
      * ```
      */
     function parse(filePath: string): Promise<string | null>
+
+    /**
+     * Parse QRCode image.
+     * @example
+     * const result = await QRCode.parseImage(image)
+     * if (result != null) {
+     *   // handle QRCode result
+     * }
+     */
+    function parseImage(image: UIImage): Promise<string | null>
+
+    /**
+     * Generate QRCode image.
+     * @example
+     * const image = await QRCode.generate('https://example.com')
+     */
+    function generate(text: string): Promise<UIImage | null>
+
     /**
      * Open the QRCode scan page and scan.
      * @example
@@ -2731,6 +2763,18 @@ declare global {
      */
     reload(): void
     /**
+     * Take a snapshot of the WebView's currently visible viewport and return it as a `UIImage`. Returns `null` if the WebView is not on screen (e.g. `present()` has not been called and it is not used by a `<WebView>` view), or if the snapshot fails.
+     * @param options Optional snapshot configuration.
+     * @param options.rect The rectangle (in the WebView's coordinate space, in points) to capture. Defaults to the full visible viewport.
+     * @param options.snapshotWidth The width (in points) of the resulting image. The height is scaled proportionally. Defaults to the WebView's width.
+     * @param options.afterScreenUpdates Whether to take the snapshot after pending screen updates have been applied. Defaults to `true`.
+     */
+    takeSnapshot(options?: {
+      rect?: { x: number, y: number, width: number, height: number }
+      snapshotWidth?: number
+      afterScreenUpdates?: boolean
+    }): Promise<UIImage | null>
+    /**
      * Dismiss the WebView, if the WebView is not presented, do nothing. You can presented the WebView again before it was disposed.
      */
     dismiss(): void
@@ -2738,6 +2782,83 @@ declare global {
      * Dispose the WebView controller. If the WebView is presented, it will be dismissed. You must call this method manually to avoid memory leaks.
      */
     dispose(): void
+  }
+
+  /**
+   * A lightweight scraper service.
+   */
+  namespace WebScraper {
+
+    type WaitOptions =
+      | "domComplete"
+      | "networkIdle"
+      | {
+        mode: "domComplete"
+      }
+      | {
+        mode: "networkIdle"
+        idleSeconds?: number
+      }
+      | {
+        mode: "selector"
+        selector: string
+      }
+
+    type Error = {
+      code: string
+      message: string
+    }
+
+    type Timing = {
+      totalMs: number
+    }
+
+    type Result<T = any> = {
+      ok: boolean
+      taskId: string
+      url?: string
+      html?: string
+      data?: T
+      error?: Error
+      timing?: Timing
+    }
+
+    /**
+     * Load a URL and return the final HTML.
+     */
+    function load(options: {
+      url: string
+      wait?: WaitOptions
+      timeout?: number
+      taskId?: string
+    }): Promise<Result<string>>
+
+    /**
+     * Load a URL, optionally run extractScript in page context, and return html + extracted data.
+     */
+    function scrape<T = any>(options: {
+      url: string
+      wait?: WaitOptions
+      timeout?: number
+      extractScript?: string
+      taskId?: string
+    }): Promise<Result<T>>
+
+    /**
+     * Evaluate JavaScript and return the result.
+     */
+    function eval<T = any>(options: {
+      url: string
+      script: string
+      wait?: WaitOptions
+      timeout?: number
+      taskId?: string
+    }): Promise<Result<T>>
+
+    /**
+     * Cancel a running task by taskId.
+     */
+    function cancel(taskId: string): Promise<boolean>
   }
 
   /**
@@ -3142,6 +3263,10 @@ declare global {
      */
     save(): Promise<void>
     /**
+     * Get a reminder by its identifier.
+     */
+    static get(identifier: string): Promise<Reminder | null>
+    /**
      * Get all reminders. 
      */
     static getAll(calenders?: Calendar[]): Promise<Reminder[]>
@@ -3394,8 +3519,6 @@ If the eventâ€™s calendar does not support availability settings, this propertyâ
      */
     readonly hasRecurrenceRules: boolean
 
-    new(): CalendarEvent
-
     addAlarm(alarm: EventAlarm): void
 
     removAlarm(alarm: EventAlarm): void
@@ -3420,6 +3543,10 @@ If the eventâ€™s calendar does not support availability settings, this propertyâ
      */
     presentEditView(): Promise<EventEditViewAction>
     /**
+     * Get a calendar event by its identifier.
+     */
+    static get(identifier: string): Promise<CalendarEvent | null>
+    /**
      * To identify events that occur within a given date range and calendars.
      * @param startDate The start date of the range of events fetched.
      * @param endDate The end date of the range of events fetched.
@@ -3439,7 +3566,7 @@ If the eventâ€™s calendar does not support availability settings, this propertyâ
     /**
      * The WebSocket() constructor returns a new WebSocket object and immediately attempts to establish a connection to the specified WebSocket URL.
      */
-    new(url: string): WebSocket
+    constructor(url: string)
     readonly url: string
     onopen?: () => void
     onerror?: (error: Error) => void
@@ -4279,6 +4406,101 @@ If the eventâ€™s calendar does not support availability settings, this propertyâ
       | ((command: "enableLanguageOption" | "disableLanguageOption", event: MediaPlayerChangeLanguageOptionCommandEvent) => void)
       | undefined
       | null
+  }
+
+  namespace SystemMusicPlayer {
+    type PlaybackState =
+      | "stopped"
+      | "playing"
+      | "paused"
+      | "interrupted"
+      | "seekingForward"
+      | "seekingBackward"
+
+    type RepeatMode =
+      | "none"
+      | "one"
+      | "all"
+      | "default"
+
+    type ShuffleMode =
+      | "off"
+      | "songs"
+      | "albums"
+      | "default"
+
+    type EventType =
+      | "playbackStateDidChange"
+      | "nowPlayingItemDidChange"
+      | "volumeDidChange"
+
+    type EventPayloadMap = {
+      playbackStateDidChange: PlaybackState
+      nowPlayingItemDidChange: NowPlayingItem | null
+      volumeDidChange: null
+    }
+
+    type SetQueueByStoreIDsOptions = {
+      storeIDs: string[]
+      startItemID?: string
+      startTime?: number
+    }
+
+    type SetQueueByPersistentIDsOptions = {
+      persistentIDs: string[]
+      startItemID?: string
+      startTime?: number
+    }
+
+    type NowPlayingItem = {
+      persistentID: string
+      title: string
+      playbackDuration: number
+      playbackStoreID?: string
+      artist?: string
+      albumTitle?: string
+      albumArtist?: string
+      genre?: string
+      composer?: string
+    }
+
+    function setQueueByStoreIDs(
+      options: SetQueueByStoreIDsOptions
+    ): Promise<void>
+
+    function setQueueByPersistentIDs(
+      options: SetQueueByPersistentIDsOptions
+    ): Promise<void>
+
+    function prepare(): Promise<void>
+    function play(): Promise<void>
+    function pause(): Promise<void>
+    function stop(): Promise<void>
+    function skipToNextItem(): Promise<void>
+    function skipToPreviousItem(): Promise<void>
+    function seek(to: number): Promise<void>
+    function setCurrentPlaybackTime(seconds: number): Promise<void>
+    function setCurrentPlaybackRate(rate: number): Promise<void>
+    function setRepeatMode(mode: RepeatMode): Promise<void>
+    function setShuffleMode(mode: ShuffleMode): Promise<void>
+
+    function indexOfNowPlayingItem(): number
+    function getNowPlayingItem(): NowPlayingItem | null
+    function getPlaybackState(): PlaybackState
+    function getCurrentPlaybackTime(): number
+    function getCurrentPlaybackRate(): number
+    function getRepeatMode(): RepeatMode
+    function getShuffleMode(): ShuffleMode
+
+    function addEventListener<T extends EventType>(
+      type: T,
+      listener: (payload: EventPayloadMap[T]) => void
+    ): void
+
+    function removeEventListener<T extends EventType>(
+      type: T,
+      listener: (payload: EventPayloadMap[T]) => void
+    ): void
   }
 
   enum TimeControlStatus {
@@ -5561,6 +5783,160 @@ If the eventâ€™s calendar does not support availability settings, this propertyâ
   }
 
   /**
+   * JWT signing and verification algorithm names.
+   */
+  type JWTAlgorithm =
+    | "HS256" | "HS384" | "HS512"
+    | "RS256" | "RS384" | "RS512"
+    | "PS256" | "PS384" | "PS512"
+    | "ES256" | "ES384" | "ES512"
+    | "EdDSA"
+
+  type JWTAudience = string | string[]
+
+  type JWTKeyInput = string | Data
+
+  type JWTHeader = {
+    alg: JWTAlgorithm
+    typ?: "JWT"
+    kid?: string
+    [key: string]: any
+  }
+
+  type JWTPayload = Record<string, any> & {
+    iss?: string
+    sub?: string
+    aud?: JWTAudience
+    exp?: number
+    nbf?: number
+    iat?: number
+    jti?: string
+  }
+
+  /**
+   * Optional values to inject standard claims and custom header fields when signing.
+   * Time-related values use **seconds**.
+   */
+  type JWTSignOptions = {
+    algorithm?: JWTAlgorithm
+    header?: Partial<JWTHeader>
+    issuer?: string
+    subject?: string
+    audience?: JWTAudience
+    expiresIn?: number
+    notBefore?: number
+    issuedAt?: number
+    jwtID?: string
+  }
+
+  /**
+   * Verification options for claim validation.
+   * Time-related values use **seconds**.
+   */
+  type JWTVerifyOptions = {
+    algorithm?: JWTAlgorithm | JWTAlgorithm[]
+    issuer?: string
+    subject?: string
+    audience?: JWTAudience
+    clockTolerance?: number
+    now?: number
+  }
+
+  type JWTDecodedResult = {
+    header: JWTHeader
+    payload: JWTPayload
+    signature: string
+    signingInput: string
+  }
+
+  type JWTVerifiedResult = {
+    header: JWTHeader
+    payload: JWTPayload
+  }
+
+  /**
+   * JSON Web Token helper for signing, verifying, and decoding JWT strings.
+   *
+   * Supported algorithms:
+   * - HMAC: `HS256`, `HS384`, `HS512`
+   * - RSA PKCS#1 v1.5: `RS256`, `RS384`, `RS512`
+   * - RSA-PSS: `PS256`, `PS384`, `PS512`
+   * - ECDSA: `ES256`, `ES384`, `ES512`
+   * - EdDSA: `EdDSA`
+   *
+   * For RSA/ECDSA, `privateKey` and `publicKey` are usually PEM strings.
+   * For EdDSA, both raw/base64url and PEM are supported.
+   *
+   * @example
+   * ```ts
+   * const jwt = new JWT({
+   *   algorithm: "HS256",
+   *   secret: "my-secret"
+   * })
+   *
+   * const token = jwt.sign({ userId: "u_123" }, {
+   *   issuer: "Scripting",
+   *   audience: ["app", "web"],
+   *   expiresIn: 3600
+   * })
+   *
+   * const verified = jwt.verify(token, {
+   *   issuer: "Scripting",
+   *   audience: "app",
+   *   clockTolerance: 5
+   * })
+   *
+   * console.log(verified.header.alg)   // HS256
+   * console.log(verified.payload.userId)
+   * ```
+   *
+   * @example
+   * ```ts
+   * // Decode only (no signature verification)
+   * const decoded = jwt.decode(token)
+   * console.log(decoded.header)
+   * console.log(decoded.payload)
+   * ```
+   */
+  class JWT {
+    /**
+     * Create a JWT helper instance.
+     * @param options.algorithm Default algorithm used by `sign` when omitted from sign options.
+     * @param options.secret Secret key for `HS*` algorithms.
+     * @param options.privateKey Private key for signing with `RS*`, `PS*`, `ES*`, `EdDSA`.
+     * @param options.publicKey Public key for verifying with `RS*`, `PS*`, `ES*`, `EdDSA`.
+     * @param options.passphrase Optional passphrase field reserved for encrypted-key workflows.
+     * @param options.kid Optional key id written into JWT header as `kid`.
+     */
+    constructor(options?: {
+      algorithm?: JWTAlgorithm
+      secret?: JWTKeyInput
+      privateKey?: JWTKeyInput
+      publicKey?: JWTKeyInput
+      passphrase?: string
+      kid?: string
+    })
+
+    /**
+     * Sign payload and return a JWT string.
+     * @throws Error when key/algorithm/options are invalid.
+     */
+    sign(payload: JWTPayload, options?: JWTSignOptions): string
+
+    /**
+     * Verify JWT and return decoded header/payload.
+     * @throws Error when signature or claims are invalid.
+     */
+    verify(token: string, options?: JWTVerifyOptions): JWTVerifiedResult
+
+    /**
+     * Decode JWT without verifying signature.
+     * @throws Error when token format is invalid.
+     */
+    decode(token: string): JWTDecodedResult
+  }
+
+  /**
    * This interface represents an OAuth2 credential object that contains the necessary tokens and metadata for OAuth2 authentication.
    * It is used to store the OAuth tokens and other related information after a successful authorization.
    */
@@ -6427,6 +6803,17 @@ If the eventâ€™s calendar does not support availability settings, this propertyâ
     }
 
     /**
+     * An image content output from the assistant.
+     */
+    type StreamImageContent = {
+      type: 'image'
+      content: {
+        data: string
+        mediaType: string
+      }
+    }
+
+    /**
      * A chunk of reasoning output from the assistant.
      */
     type StreamReasoningChunk = {
@@ -6463,7 +6850,7 @@ If the eventâ€™s calendar does not support availability settings, this propertyâ
       }
     }
 
-    type StreamChunk = StreamTextChunk | StreamReasoningChunk | StreamUsageChunk
+    type StreamChunk = StreamTextChunk | StreamReasoningChunk | StreamImageContent | StreamUsageChunk
 
     /**
      * The text content of a message.
@@ -6819,6 +7206,52 @@ If the eventâ€™s calendar does not support availability settings, this propertyâ
     secondaryConfirmed: boolean
   }
 
+  type AssistantToolOutputTextPart = {
+    type: "text"
+    text: string
+  }
+
+  type AssistantToolOutputImagePart = {
+    type: "image"
+    base64: string
+    mimeType?: string
+  }
+
+  type AssistantToolOutputPart = string | AssistantToolOutputTextPart | AssistantToolOutputImagePart
+
+  type AssistantToolDeprecatedExecutionResult = {
+    /**
+     * Indicates whether the tool execution was successful.
+     */
+    success: boolean
+    /**
+     * The response message to be returned to the assistant.
+     */
+    message: string
+  }
+
+  type AssistantToolResponseResult = {
+    /**
+     * Indicates whether the tool execution was successful.
+     */
+    success: boolean
+    /**
+     * Structured output parts returned by the tool.
+     */
+    output: {
+      /**
+       * The parts of the response to be displayed to the user.
+       */
+      userParts?: AssistantToolOutputPart[]
+      /**
+       * The parts of the response to be sent to the assistant.
+       */
+      assistantParts?: AssistantToolOutputPart[]
+    }
+  }
+
+  type AssistantToolExecutionResult = AssistantToolDeprecatedExecutionResult | AssistantToolResponseResult
+
   /**
    * Function to execute the tool after receiving user approval.
    */
@@ -6836,16 +7269,7 @@ If the eventâ€™s calendar does not support availability settings, this propertyâ
      * to allow communication with the editor.
      */
     scriptEditorProvider?: ScriptEditorProvider
-  ) => Promise<{
-    /**
-     * Indicates whether the tool execution was successful.
-     */
-    success: boolean
-    /**
-     * The response message to be returned to the assistant.
-     */
-    message: string
-  }>
+  ) => Promise<AssistantToolExecutionResult>
 
   /**
    * Test function for executing the tool with approval.
@@ -6874,16 +7298,7 @@ If the eventâ€™s calendar does not support availability settings, this propertyâ
      * to allow communication with the editor.
      */
     scriptEditorProvider?: ScriptEditorProvider
-  ) => Promise<{
-    /**
-     * Indicates whether the tool execution was successful.
-     */
-    success: boolean
-    /**
-     * The response message to be returned to the assistant.
-     */
-    message: string
-  }>
+  ) => Promise<AssistantToolExecutionResult>
 
   /**
    * Test function for executing the tool.
@@ -6893,6 +7308,42 @@ If the eventâ€™s calendar does not support availability settings, this propertyâ
   namespace AssistantTool {
 
     type OnCancel = () => string | null | undefined
+
+    type UIRenderResponse = (result: AssistantToolResponseResult) => void
+
+    type UIProps<P> = {
+      params: P
+      response: UIRenderResponse
+      /**
+       * Indicates whether the current tool call is auto-approved.
+       */
+      isAutoApprove: boolean
+      scriptEditorProvider?: ScriptEditorProvider
+    }
+
+    type UIRenderTestOptions = {
+      /**
+       * Simulate tool call auto-approval behavior in test mode.
+       */
+      isAutoApprove?: boolean
+      /**
+       * Initial storage state used during test.
+       */
+      initialState?: Record<string, any>
+      /**
+       * Whether to capture screenshot in test mode.
+       */
+      screenshot?: boolean
+    }
+
+    type UIRenderTestFn<P> = (params: P, options?: UIRenderTestOptions) => void
+
+    /**
+     * Registers the function that renders the interactive UI for the tool.
+     * @param view - The function component that renders the UI.
+     * @returns A test function for the UI rendering.
+     */
+    function registerUIView<P>(view: FunctionComponent<UIProps<P>>): UIRenderTestFn<P>
 
     /**
      * The function to be called when the tool is cancelled by the user.
@@ -6937,6 +7388,22 @@ If the eventâ€™s calendar does not support availability settings, this propertyâ
      * @param id - The id of the report message, you can replace the message with the same id. It is useful when you want to update the message.
      */
     function report(message: string, id?: string): void
+    /**
+     * Gets a stored state value by key.
+     */
+    function getState<T = any>(key: string): T | null
+    /**
+     * Stores a state value by key.
+     */
+    function setState(key: string, value: any): void
+    /**
+     * Removes a stored state value by key.
+     */
+    function removeState(key: string): void
+    /**
+     * Clears all stored state values for this tool call.
+     */
+    function clearState(): void
   }
 
   /**
@@ -7752,7 +8219,6 @@ If the eventâ€™s calendar does not support availability settings, this propertyâ
   type TimeZoneIdentifier = "current" | "autoupdatingCurrent" | "gmt" | string
 
   class DateFormatter {
-    new(): DateFormatter
 
     static localizedString(date: Date, options: {
       dateStyle: DateFormatterStyle
@@ -9819,6 +10285,39 @@ If the eventâ€™s calendar does not support availability settings, this propertyâ
      */
     function present(node: VirtualNode): void
 
+  }
+
+  /**
+   * Access the current Translation UI Provider session and present a scripted UI.
+   * @available iOS 18.4+
+   */
+  namespace TranslationUIProvider {
+
+    /**
+     * The source text selected by the host app, or null when unavailable.
+     */
+    const inputText: string | null
+
+    /**
+     * Indicates whether the host app allows replacing the original text with a translation.
+     */
+    const allowsReplacement: boolean
+
+    /**
+     * Requests the system sheet to expand.
+     */
+    function expandSheet(): void
+
+    /**
+     * Finishes the current translation session and optionally returns translated text to the host.
+     * Pass `null` or omit the parameter to close without replacement.
+     */
+    function finish(translation?: string | null): void
+
+    /**
+     * Presents the scripted translation UI.
+     */
+    function present(node: VirtualNode): void
   }
 
   type BluetoothCharacteristicProperty =
@@ -12029,6 +12528,245 @@ If the length of the value parameter exceeds the length of the `maximumUpdateVal
      * Releases resources associated with the language model session.
      */
     dispose(): void
+  }
+
+  namespace AlarmManager {
+    type AlarmState = "scheduled" | "countdown" | "paused" | "alerting"
+    type SecondaryButtonBehavior = "countdown" | "custom"
+    type AlarmAppIntent = AppIntent<any, AppIntentProtocol.LiveActivityIntent>
+    type AlarmUpdateListener = (alarms: Alarm[]) => void
+
+    class Alarm {
+      readonly id: string
+      readonly state: AlarmState
+      readonly schedule?: Schedule | null
+      readonly countdownDuration?: Countdown | null
+    }
+
+    class Schedule {
+      readonly type: "fixed" | "relative"
+      readonly date?: Date | null
+      readonly hour?: number | null
+      readonly minute?: number | null
+      readonly weekdays?: number[] | null
+
+      static fixed(date: Date): Schedule
+      static relative(hour: number, minute: number): Schedule
+      static weekly(hour: number, minute: number, weekdays: number[]): Schedule
+    }
+
+    class Countdown {
+      readonly preAlert?: number | null
+      readonly postAlert?: number | null
+
+      static create(options?: {
+        preAlert?: DurationInSeconds | null
+        postAlert?: DurationInSeconds | null
+      }): Countdown
+    }
+
+    class Button {
+      static create(options: {
+        title?: string
+        textColor?: Color
+        systemImageName?: string
+      }): Button
+    }
+
+    class Sound {
+      static default(): Sound
+      static named(name: string): Sound
+    }
+
+    class AlertPresentation {
+      static create(options: {
+        title: string
+        /**
+         * @deprecated The stop button on the alarm's alert UI is now
+         * managed by the system as a slider (iOS 26.1+). Custom buttons
+         * passed here are ignored on iOS 26.1 and later, and are only
+         * used as a fallback on iOS 26.0. Prefer omitting this field.
+         */
+        stopButton?: Button | null
+        secondaryButton?: Button | null
+        secondaryBehavior?: SecondaryButtonBehavior | null
+      }): AlertPresentation
+    }
+
+    class CountdownPresentation {
+      static create(title?: string | null, pauseButton?: Button | null): CountdownPresentation
+    }
+
+    class PausedPresentation {
+      static create(title?: string | null, resumeButton?: Button | null): PausedPresentation | null
+    }
+
+    class Attributes {
+      static create(options: {
+        alert: AlertPresentation
+        countdown?: CountdownPresentation | null
+        paused?: PausedPresentation | null
+        tintColor?: Color
+        metadata?: Record<string, string>
+      }): Attributes | null
+    }
+    class Configuration {
+      static alarm(options: {
+        schedule?: Schedule | null
+        attributes: Attributes
+        sound?: Sound | null
+        stopIntent?: AlarmAppIntent | null
+        secondaryIntent?: AlarmAppIntent | null
+      }): Configuration | null
+
+      static timer(options: {
+        duration: DurationInSeconds
+        attributes: Attributes
+        sound?: Sound | null
+        stopIntent?: AlarmAppIntent | null
+        secondaryIntent?: AlarmAppIntent | null
+      }): Configuration | null
+
+      static countdown(options: {
+        countdown?: Countdown | null
+        schedule?: Schedule | null
+        attributes: Attributes
+        sound?: Sound | null
+        stopIntent?: AlarmAppIntent | null
+        secondaryIntent?: AlarmAppIntent | null
+      }): Configuration | null
+    }
+
+    const isAvailable: boolean
+
+    function alarms(): Promise<Alarm[]>
+    function schedule(id: string, configuration: Configuration): Promise<Alarm>
+    function cancel(id: string): Promise<boolean>
+    function stop(id: string): Promise<boolean>
+    function pause(id: string): Promise<boolean>
+    function resume(id: string): Promise<boolean>
+    function startCountdown(id: string): Promise<boolean>
+    function addAlarmUpdateListener(listener: AlarmUpdateListener): void
+    function removeAlarmUpdateListener(listener?: AlarmUpdateListener): void
+  }
+
+  namespace MediaLibrary {
+    type Item = {
+      title: string
+      persistentID: string
+      artist?: string
+      albumTitle?: string
+      albumArtist?: string
+      genre?: string
+      composer?: string
+      albumTrackNumber?: number
+      albumTrackCount?: number
+      discNumber?: number
+      discCount?: number
+      playbackDuration?: number
+      playbackStoreID?: string
+      isCloudItem?: boolean
+      hasProtectedAsset?: boolean
+    }
+
+    type Playlist = {
+      persistentID: string
+      name: string
+      trackCount: number
+    }
+
+    type Album = {
+      title: string
+      artist?: string
+      persistentID?: string
+      trackCount?: number
+    }
+
+    type SongQueryOptions = {
+      limit?: number
+      sortBy?:
+      | "title"
+      | "artist"
+      | "albumTitle"
+      | "playbackDuration"
+      | "albumTrackNumber"
+      ascending?: boolean
+    }
+
+    type AlbumQueryOptions = {
+      limit?: number
+      sortBy?:
+      | "title"
+      | "artist"
+      | "trackCount"
+      ascending?: boolean
+    }
+
+    type PlaylistQueryOptions = {
+      limit?: number
+      sortBy?:
+      | "name"
+      | "trackCount"
+      ascending?: boolean
+    }
+
+    type ArtistQueryOptions = {
+      limit?: number
+      ascending?: boolean
+    }
+
+    type SongFilter = {
+      title?: string
+      artist?: string
+      albumTitle?: string
+      genre?: string
+      composer?: string
+      persistentID?: string
+    }
+
+    function getSongs(
+      filter?: SongFilter,
+      options?: SongQueryOptions
+    ): Promise<Item[]>
+
+    function getSongByPersistentID(
+      persistentID: string
+    ): Promise<Item | null>
+
+    function getAlbums(
+      options?: AlbumQueryOptions
+    ): Promise<Album[]>
+
+    function getAlbumSongs(
+      albumTitle: string,
+      options?: SongQueryOptions
+    ): Promise<Item[]>
+
+    function getArtists(
+      options?: ArtistQueryOptions
+    ): Promise<string[]>
+
+    function getArtistSongs(
+      artist: string,
+      options?: SongQueryOptions
+    ): Promise<Item[]>
+
+    function getPlaylists(
+      options?: PlaylistQueryOptions
+    ): Promise<Playlist[]>
+
+    function getPlaylistSongs(
+      playlistPersistentID: string,
+      options?: SongQueryOptions
+    ): Promise<Item[]>
+
+    function getArtwork(
+      persistentID: string,
+      size?: {
+        width: number
+        height: number
+      }
+    ): Promise<UIImage | null>
   }
 }
 

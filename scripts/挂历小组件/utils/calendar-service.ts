@@ -1,3 +1,4 @@
+import { Script } from 'scripting'
 import type { Color } from 'scripting'
 import scriptConfig from '../script.json'
 import { createStorageManager } from './storage'
@@ -7,8 +8,20 @@ export interface VersionInfo {
   name: string
   desc: string
   version: string
-  changelog: string[]
-  bannerImage?: string
+  changelog: string
+}
+
+const getChangelogPath = (): string => {
+  return `${Script.directory}/changelog.md`
+}
+
+const readChangelog = (): string => {
+  try {
+    return FileManager.readAsStringSync(getChangelogPath()).trim()
+  } catch (error) {
+    console.error('读取更新日志失败:', error)
+    return ''
+  }
 }
 
 // 储存键名 - 统一管理所有持久化数据
@@ -46,7 +59,6 @@ export type CalendarEventWithStatus = CalendarEventData & {
  * 默认设置
  */
 const DEFAULT_SETTINGS = {
-  bgPath: '', // 透明背景图片路径
   lightModeColor: '#000000', // 浅色模式字体颜色
   darkModeColor: '#FFFFFF', // 深色模式字体颜色
   workColor: '#999999', // 工作状态颜色
@@ -417,33 +429,16 @@ export const VersionManager = {
     name: scriptConfig.name,
     desc: scriptConfig.description,
     version: scriptConfig.version,
-    changelog: scriptConfig.changelog || []
+    changelog: readChangelog()
   }),
 
   /** 获取更新日志 */
-  getChangelog: (): string[] => scriptConfig.changelog || [],
-
-  /** 获取远程横幅图片URL */
-  fetchBannerImage: async (): Promise<string | null> => {
-    try {
-      const response = await fetch('https://joiner.i95.me/scripting/joiner.json')
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
-      }
-
-      const data = (await response.json()) as any
-      return data.bannerImage || null
-    } catch (error) {
-      console.error('获取横幅图片失败:', error)
-      return null
-    }
-  }
+  getChangelog: (): string => readChangelog()
 }
 
 // 保持向后兼容的导出
 export const getCurrentVersion = VersionManager.getCurrentVersion
 export const getLocalVersionInfo = VersionManager.getLocalVersionInfo
-export const fetchBannerImage = VersionManager.fetchBannerImage
 
 /**
  * 更新日志管理工具

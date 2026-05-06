@@ -1,4 +1,20 @@
-import { Button, HStack, List, Navigation, NavigationLink, NavigationStack, Script, Section, Spacer, Text, Toggle, VStack, useState } from 'scripting'
+import {
+  Button,
+  HStack,
+  Image,
+  List,
+  Navigation,
+  NavigationLink,
+  NavigationStack,
+  Path,
+  Script,
+  Section,
+  Spacer,
+  Text,
+  Toggle,
+  VStack,
+  useState
+} from 'scripting'
 import { HistoryService } from '../services/history'
 import { SettingsService } from '../services/settings'
 import { ChangelogScreen } from './ChangelogScreen'
@@ -7,6 +23,7 @@ import type { CloudSnapshot } from '../types'
 
 const AppStorage = Storage
 const ICLOUD_SYNC_KEY = 'script_flix_icloud_sync_enabled'
+const BANNER_IMAGE_FILE_PATH = Path.join(Script.directory, 'assets', 'banner.webp')
 
 const getScriptFolderRelativePath = () => {
   const scriptDir = Script.directory || ''
@@ -147,10 +164,9 @@ export const SettingsScreen = () => {
               <Text font="footnote" foregroundStyle="secondaryLabel">
                 ScriptFlix {'v' + Script.metadata?.version || '1.0.0'}
                 {'\n'}
-                淮城一只猫© - Power by Scripting
-                {'\n'}
-                更多脚本/小组件请关注微信公众号「组件派」
+                淮城一只猫© - 更多脚本/小组件请关注微信公众号「栈空间」
               </Text>
+              <Image filePath={BANNER_IMAGE_FILE_PATH} resizable scaleToFit />
             </VStack>
           }
         >

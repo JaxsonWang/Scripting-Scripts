@@ -1,16 +1,10 @@
-import { Button, HStack, Image, Link, List, Navigation, NavigationStack, Script, Section, Spacer, Text, VStack, Widget } from 'scripting'
+import { Button, HStack, Image, Link, List, Navigation, NavigationStack, Path, Script, Section, Spacer, Text, VStack, Widget } from 'scripting'
 import { useEffect, useState } from 'scripting'
 import type { NewsData } from './utils/news-service'
-import {
-  fetchBannerImage,
-  fetchCNRNews,
-  getChangelog,
-  getCurrentVersion,
-  getLocalVersionInfo,
-  markUpdateLogDismissed,
-  shouldShowUpdateLog
-} from './utils/news-service'
+import { fetchCNRNews, getChangelog, getCurrentVersion, getLocalVersionInfo, markUpdateLogDismissed, shouldShowUpdateLog } from './utils/news-service'
 import { SettingsPage } from './components/settings-page'
+
+const BANNER_IMAGE_FILE_PATH = Path.join(Script.directory, 'assets', 'banner.webp')
 
 /**
  * 央广头条详情页面
@@ -24,8 +18,6 @@ const CNRNewsDetail = () => {
   const [showChangelogSheet, setShowChangelogSheet] = useState(false)
   const [changelogContent, setChangelogContent] = useState<string>('')
   const [updateTitle, setUpdateTitle] = useState<string>('')
-  const [bannerImageUrl, setBannerImageUrl] = useState<string>('')
-
   // 加载数据
   const loadData = async () => {
     setLoading(true)
@@ -56,19 +48,6 @@ const CNRNewsDetail = () => {
     }
   }
 
-  // 加载横幅图片
-  const loadBannerImage = async () => {
-    try {
-      const bannerUrl = await fetchBannerImage()
-      if (bannerUrl) {
-        setBannerImageUrl(bannerUrl)
-        // console.log('获取到的横幅图片:', bannerUrl)
-      }
-    } catch (error) {
-      console.error('加载横幅图片失败:', error)
-    }
-  }
-
   // 检查并显示更新提醒
   const checkAndShowUpdateAlert = async () => {
     try {
@@ -82,10 +61,7 @@ const CNRNewsDetail = () => {
         const changelog = getChangelog()
         const currentVersion = getCurrentVersion()
 
-        let changelogText = '暂无更新内容'
-        if (Array.isArray(changelog) && changelog.length > 0) {
-          changelogText = changelog.map((item: string, index: number) => `${index + 1}. ${item}`).join('\n')
-        }
+        const changelogText = changelog.trim() || '暂无更新内容'
 
         setChangelogContent(changelogText)
         setUpdateTitle(`脚本更新 - ${currentVersion}`)
@@ -126,8 +102,7 @@ const CNRNewsDetail = () => {
 
       console.log('准备显示更新日志:', targetVersionInfo.changelog)
 
-      // 格式化更新日志内容
-      const changelogText = targetVersionInfo.changelog.map((item: string, index: number) => `${index + 1}. ${item}`).join('\n')
+      const changelogText = targetVersionInfo.changelog.trim()
 
       setChangelogContent(changelogText || '暂无更新日志')
       setUpdateTitle(`更新日志 - ${targetVersionInfo.version || '未知版本'}`)
@@ -145,7 +120,6 @@ const CNRNewsDetail = () => {
     const initializeApp = async () => {
       await loadData()
       loadVersionInfo()
-      await loadBannerImage() // 加载横幅图片
 
       // 延迟检查更新，确保组件已完全渲染
       setTimeout(() => {
@@ -240,7 +214,6 @@ const CNRNewsDetail = () => {
         <Section
           footer={
             <VStack spacing={10} alignment="leading">
-              {bannerImageUrl ? <Image imageUrl={bannerImageUrl} resizable scaleToFit /> : null}
               <Text font="footnote" foregroundStyle="secondaryLabel">
                 央广头条小组件 v{getCurrentVersion()}
                 {'\n'}
@@ -248,8 +221,9 @@ const CNRNewsDetail = () => {
                 {'\n'}
                 数据来源：央广 (www.cnr.cn)
                 {'\n'}
-                淮城一只猫© - 更多小组件请关注微信公众号「组件派」
+                淮城一只猫© - 更多小组件请关注微信公众号「栈空间」
               </Text>
+              <Image filePath={BANNER_IMAGE_FILE_PATH} resizable scaleToFit />
             </VStack>
           }
         >

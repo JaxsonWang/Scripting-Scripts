@@ -1,3 +1,4 @@
+import { Script } from 'scripting'
 import scriptConfig from '../script.json'
 import { createStorageManager } from './storage'
 
@@ -18,7 +19,20 @@ export interface VersionInfo {
   name: string
   desc: string
   version: string
-  changelog: string[]
+  changelog: string
+}
+
+const getChangelogPath = (): string => {
+  return `${Script.directory}/changelog.md`
+}
+
+const readChangelog = (): string => {
+  try {
+    return FileManager.readAsStringSync(getChangelogPath()).trim()
+  } catch (error) {
+    console.error('读取更新日志失败:', error)
+    return ''
+  }
 }
 
 /**
@@ -33,11 +47,11 @@ export const VersionManager = {
     name: scriptConfig.name,
     desc: scriptConfig.description,
     version: scriptConfig.version,
-    changelog: scriptConfig.changelog || []
+    changelog: readChangelog()
   }),
 
   /** 获取更新日志 */
-  getChangelog: (): string[] => scriptConfig.changelog || []
+  getChangelog: (): string => readChangelog()
 }
 
 /**

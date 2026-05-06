@@ -1,6 +1,5 @@
-import { Button, HStack, Image, List, Navigation, NavigationStack, Script, Section, Spacer, Text, VStack, Widget } from 'scripting'
+import { Button, HStack, Image, List, Navigation, NavigationStack, Path, Script, Section, Spacer, Text, VStack, Widget } from 'scripting'
 import { useEffect, useState } from 'scripting'
-import { fetch } from 'scripting'
 import { GlobalSettingsPage, getCurrentGlobalSettings } from './components/global-settings-page'
 import { SmallWidgetSettingsPage, getCurrentSmallWidgetSettings } from './components/small-widget-settings-page'
 import { MediumWidgetSettingsPage, getCurrentMediumWidgetSettings } from './components/medium-widget-settings-page'
@@ -8,23 +7,7 @@ import { LargeWidgetSettingsPage, getCurrentLargeWidgetSettings } from './compon
 import pkg from './script.json'
 import { getChangelog, getCurrentVersion, getLocalVersionInfo, markUpdateLogDismissed, shouldShowUpdateLog } from './utils/car-service'
 
-/**
- * 获取远程横幅图片URL
- */
-const fetchBannerImage = async (): Promise<string | null> => {
-  try {
-    const response = await fetch('https://joiner.i95.me/scripting/joiner.json')
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`)
-    }
-
-    const data = (await response.json()) as any
-    return data.bannerImage || null
-  } catch (error) {
-    console.error('获取横幅图片失败:', error)
-    return null
-  }
-}
+const BANNER_IMAGE_FILE_PATH = Path.join(Script.directory, 'assets', 'banner.webp')
 
 /**
  * 主页面组件
@@ -40,20 +23,6 @@ const MainPage = () => {
   const [showChangelogSheet, setShowChangelogSheet] = useState(false)
   const [changelogContent, setChangelogContent] = useState<string>('')
   const [updateTitle, setUpdateTitle] = useState<string>('')
-  const [bannerImageUrl, setBannerImageUrl] = useState<string>('')
-
-  // 加载 Banner 图片
-  const loadBannerImage = async () => {
-    try {
-      const bannerUrl = await fetchBannerImage()
-      if (bannerUrl) {
-        setBannerImageUrl(bannerUrl)
-        // console.log('获取到的横幅图片:', bannerUrl)
-      }
-    } catch (error) {
-      console.error('加载横幅图片失败:', error)
-    }
-  }
 
   // 检查并显示更新提醒
   const checkAndShowUpdateAlert = async () => {
@@ -68,10 +37,7 @@ const MainPage = () => {
         const changelog = getChangelog()
         const currentVersion = getCurrentVersion()
 
-        let changelogText = '暂无更新内容'
-        if (Array.isArray(changelog) && changelog.length > 0) {
-          changelogText = changelog.map((item: string, index: number) => `${index + 1}. ${item}`).join('\n')
-        }
+        const changelogText = changelog.trim() || '暂无更新内容'
 
         setChangelogContent(changelogText)
         setUpdateTitle(`脚本更新 - ${currentVersion}`)
@@ -112,8 +78,7 @@ const MainPage = () => {
 
       console.log('准备显示更新日志:', targetVersionInfo.changelog)
 
-      // 格式化更新日志内容
-      const changelogText = targetVersionInfo.changelog.map((item: string, index: number) => `${index + 1}. ${item}`).join('\n')
+      const changelogText = targetVersionInfo.changelog.trim()
 
       setChangelogContent(changelogText || '暂无更新日志')
       setUpdateTitle(`更新日志 - ${targetVersionInfo.version || '未知版本'}`)
@@ -132,7 +97,6 @@ const MainPage = () => {
     setSmallSettings(getCurrentSmallWidgetSettings())
     setMediumSettings(getCurrentMediumWidgetSettings())
     setLargeSettings(getCurrentLargeWidgetSettings())
-    await loadBannerImage()
     Widget.reloadAll()
   }
 
@@ -150,8 +114,6 @@ const MainPage = () => {
   // 组件挂载时加载数据
   useEffect(() => {
     const initializeApp = async () => {
-      await loadBannerImage()
-
       // 延迟检查更新，确保组件已完全渲染
       setTimeout(() => {
         checkAndShowUpdateAlert()
@@ -269,14 +231,14 @@ const MainPage = () => {
           header={<Text font="headline">操作</Text>}
           footer={
             <VStack spacing={10} alignment="leading">
-              {bannerImageUrl ? <Image imageUrl={bannerImageUrl} resizable scaleToFit /> : null}
               <Text font="footnote" foregroundStyle="secondaryLabel">
                 汽车小组件 v{pkg.version}
                 {'\n'}
-                显示车辆信息的静态小组件，支持自定义车辆图片、状态文本和透明背景
+                显示车辆信息的静态小组件，支持自定义车辆图片、状态文本和颜色背景
                 {'\n'}
-                ScriptPie© - 更多小组件请关注微信公众号「组件派」
+                淮城一只猫© - 更多小组件请关注微信公众号「栈空间」
               </Text>
+              <Image filePath={BANNER_IMAGE_FILE_PATH} resizable scaleToFit />
             </VStack>
           }
         >

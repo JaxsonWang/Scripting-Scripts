@@ -1,4 +1,4 @@
-import { Circle, Grid, GridRow, HStack, Image, Path, RoundedRectangle, Spacer, Text, VStack, Widget } from 'scripting'
+import { Circle, Grid, GridRow, HStack, Image, RoundedRectangle, Spacer, Text, VStack, Widget } from 'scripting'
 import {
   formatEventTime,
   generateCalendarGrid,
@@ -11,12 +11,20 @@ import {
 import { getDaysLeftInYear, solarToLunar } from './utils/lunar-calendar'
 import { getActualColor, getCurrentSettings } from './components/settings-page'
 
-/**
- * 获取背景图片路径
- */
-const getWidgetBackgroundImagePath = (settings: any) => {
-  return settings.bgPath && Widget.parameter ? Path.join(settings.bgPath, Widget.parameter) : undefined
-}
+import {
+  calculateWeeksToShow,
+  formatDaysLeftText,
+  formatEventsForDisplay,
+  formatLunarDisplay,
+  formatMonthDisplay,
+  formatYiJiDisplay,
+  generateCalendarRows,
+  getCellStyle
+} from './utils/widget-helpers'
+
+import type { CalendarData } from './utils/calendar-service'
+import type { LunarData } from './utils/lunar-calendar'
+import type { SettingsData } from './components/settings-page'
 
 /**
  * 生成背景样式
@@ -44,20 +52,6 @@ const generateWidgetBackground = (settings: any) => {
 
   return undefined
 }
-import {
-  calculateWeeksToShow,
-  formatDaysLeftText,
-  formatEventsForDisplay,
-  formatLunarDisplay,
-  formatMonthDisplay,
-  formatYiJiDisplay,
-  generateCalendarRows,
-  getCellStyle
-} from './utils/widget-helpers'
-
-import type { CalendarData } from './utils/calendar-service'
-import type { LunarData } from './utils/lunar-calendar'
-import type { SettingsData } from './components/settings-page'
 
 /**
  * 组件数据类型
@@ -125,15 +119,10 @@ const SmallWidget = ({ data }: { data: WidgetData }) => {
   const calendarSettings = getCalendarSettings()
 
   // 获取背景图片路径和背景样式
-  const getWidgetBg = getWidgetBackgroundImagePath(calendarSettings)
   const widgetBackground = generateWidgetBackground(calendarSettings)
 
   return (
-    <VStack
-      padding={{ horizontal: 10, vertical: 5 }}
-      background={!calendarSettings.enableColorBackground && getWidgetBg ? <Image filePath={getWidgetBg} resizable={true} scaleToFill={true} /> : undefined}
-      widgetBackground={widgetBackground}
-    >
+    <VStack padding={{ horizontal: 10, vertical: 5 }} widgetBackground={widgetBackground}>
       {/* 月份标题 - 包含农历信息 */}
       <VStack padding={{ bottom: 2 }}>
         <HStack spacing={2}>
@@ -206,17 +195,11 @@ const MediumWidget = ({ data }: { data: WidgetData }) => {
   const calendarSettings = getCalendarSettings()
 
   // 获取背景图片路径和背景样式
-  const getWidgetBg = getWidgetBackgroundImagePath(calendarSettings)
   const widgetBackground = generateWidgetBackground(calendarSettings)
   const lunarDisplay = formatLunarDisplay(lunar)
 
   return (
-    <HStack
-      spacing={0}
-      padding={{ horizontal: 8, vertical: 10 }}
-      background={!calendarSettings.enableColorBackground && getWidgetBg ? <Image filePath={getWidgetBg} resizable={true} scaleToFill={true} /> : undefined}
-      widgetBackground={widgetBackground}
-    >
+    <HStack spacing={0} padding={{ horizontal: 8, vertical: 10 }} widgetBackground={widgetBackground}>
       {/* 左侧 - 日历网格 (4/6 宽度) */}
       <VStack spacing={0} frame={{ maxWidth: 'infinity', maxHeight: 'infinity', alignment: 'leading' }}>
         {/* 星期标题 - Grid 布局 */}
@@ -348,15 +331,10 @@ const LargeWidget = ({ data }: { data: WidgetData }) => {
   const calendarSettings = getCalendarSettings()
 
   // 获取背景图片路径和背景样式
-  const getWidgetBg = getWidgetBackgroundImagePath(calendarSettings)
   const widgetBackground = generateWidgetBackground(calendarSettings)
 
   return (
-    <VStack
-      padding={16}
-      background={!calendarSettings.enableColorBackground && getWidgetBg ? <Image filePath={getWidgetBg} resizable={true} scaleToFill={true} /> : undefined}
-      widgetBackground={widgetBackground}
-    >
+    <VStack padding={16} widgetBackground={widgetBackground}>
       {/* 标题栏 */}
       <HStack alignment="center">
         <VStack alignment="leading" spacing={2}>

@@ -1,4 +1,4 @@
-import { fetch } from 'scripting'
+import { Script, fetch } from 'scripting'
 import scriptConfig from '../script.json'
 import { createStorageManager } from './storage'
 
@@ -90,7 +90,6 @@ const STORAGE_KEYS = {
  * 默认设置
  */
 const DEFAULT_SETTINGS = {
-  bgPath: '', // 透明背景图片路径
   lightModeColor: '#000000', // 浅色模式字体颜色
   darkModeColor: '#FFFFFF', // 深色模式字体颜色
   enableColorBackground: false, // 开启颜色背景
@@ -548,25 +547,6 @@ export const getTrendSymbol = (priceDirection: string) => {
 }
 
 /**
- * 获取远程横幅图片URL
- * @returns 横幅图片URL Promise
- */
-export const fetchBannerImage = async (): Promise<string | null> => {
-  try {
-    const response = await fetch('https://joiner.i95.me/scripting/joiner.json')
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`)
-    }
-
-    const data = await response.json()
-    return data.bannerImage || null
-  } catch (error) {
-    console.error('获取横幅图片失败:', error)
-    return null
-  }
-}
-
-/**
  * 更新日志管理工具
  */
 export const UpdateLogManager = {
@@ -632,7 +612,20 @@ export interface VersionInfo {
   name: string
   desc: string
   version: string
-  changelog: string[]
+  changelog: string
+}
+
+const getChangelogPath = (): string => {
+  return `${Script.directory}/changelog.md`
+}
+
+const readChangelog = (): string => {
+  try {
+    return FileManager.readAsStringSync(getChangelogPath()).trim()
+  } catch (error) {
+    console.error('读取更新日志失败:', error)
+    return ''
+  }
 }
 
 /**
@@ -647,11 +640,11 @@ export const VersionManager = {
     name: scriptConfig.name,
     desc: scriptConfig.description,
     version: scriptConfig.version,
-    changelog: scriptConfig.changelog || []
+    changelog: readChangelog()
   }),
 
   /** 获取更新日志 */
-  getChangelog: (): string[] => scriptConfig.changelog || []
+  getChangelog: (): string => readChangelog()
 }
 
 // 保持向后兼容的导出

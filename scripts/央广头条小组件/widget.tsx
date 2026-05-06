@@ -1,16 +1,9 @@
-import { HStack, Image, Link, Path, Spacer, Text, VStack, Widget } from 'scripting'
+import { HStack, Image, Link, Spacer, Text, VStack, Widget } from 'scripting'
 import type { NewsData, NewsItem } from './utils/news-service'
 import { fetchCNRNews, getCurrentSettings, getDynamicTextColor } from './utils/news-service'
 
 // 全局数据变量
 let newsData: NewsData | null = null
-
-/**
- * 获取背景图片路径
- */
-const getWidgetBackgroundImagePath = (settings: any) => {
-  return settings.bgPath && Widget.parameter ? Path.join(settings.bgPath, Widget.parameter) : undefined
-}
 
 /**
  * 生成背景样式
@@ -142,8 +135,6 @@ const WidgetView = ({ data }: { data: NewsData }) => {
   const textColor = getDynamicTextColor()
   const settings = getCurrentSettings()
 
-  // 获取背景图片路径和背景样式
-  const getWidgetBg = getWidgetBackgroundImagePath(settings)
   const widgetBackground = generateWidgetBackground(settings)
 
   switch (Widget.family) {
@@ -152,11 +143,7 @@ const WidgetView = ({ data }: { data: NewsData }) => {
       const newsToShow = data.items.slice(0, 2)
 
       return (
-        <VStack
-          padding={{ horizontal: 12, vertical: 10 }}
-          background={!settings.enableColorBackground && getWidgetBg ? <Image filePath={getWidgetBg} resizable={true} scaleToFill={true} /> : undefined}
-          widgetBackground={widgetBackground}
-        >
+        <VStack padding={{ horizontal: 12, vertical: 10 }} widgetBackground={widgetBackground}>
           <HStack spacing={4}>
             <Image systemName="newspaper.fill" font={14} foregroundStyle="systemRed" />
             <Text font={14} fontWeight="bold" foregroundStyle={textColor}>
@@ -190,11 +177,7 @@ const WidgetView = ({ data }: { data: NewsData }) => {
       const newsToShow = data.items.slice(0, 4)
 
       return (
-        <VStack
-          padding={{ horizontal: 12, vertical: 12 }}
-          background={!settings.enableColorBackground && getWidgetBg ? <Image filePath={getWidgetBg} resizable={true} scaleToFill={true} /> : undefined}
-          widgetBackground={widgetBackground}
-        >
+        <VStack padding={{ horizontal: 12, vertical: 12 }} widgetBackground={widgetBackground}>
           <HStack spacing={4}>
             <Image systemName="newspaper.fill" font="body" foregroundStyle="systemRed" />
             <Text font="body" fontWeight="bold" foregroundStyle={textColor}>
@@ -229,11 +212,7 @@ const WidgetView = ({ data }: { data: NewsData }) => {
       const newsToShow = data.items.slice(0, 8)
 
       return (
-        <VStack
-          padding={{ horizontal: 12, vertical: 20 }}
-          background={!settings.enableColorBackground && getWidgetBg ? <Image filePath={getWidgetBg} resizable={true} scaleToFill={true} /> : undefined}
-          widgetBackground={widgetBackground}
-        >
+        <VStack padding={{ horizontal: 12, vertical: 20 }} widgetBackground={widgetBackground}>
           <HStack spacing={4} alignment="center">
             <Image systemName="newspaper.fill" font="body" foregroundStyle="systemRed" />
             <Text font="body" fontWeight="bold" foregroundStyle={textColor}>

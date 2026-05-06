@@ -1,4 +1,4 @@
-import { fetch } from 'scripting'
+import { Script } from 'scripting'
 import scriptConfig from '../script.json'
 import { createStorageManager } from './storage'
 
@@ -50,7 +50,6 @@ const storageManager = createStorageManager(STORAGE_NAME)
  * 默认设置
  */
 const DEFAULT_SETTINGS = {
-  bgPath: '', // 透明背景图片路径
   autoRefresh: true, // 自动刷新开关
   refreshInterval: 30, // 刷新间隔（分钟）
   lightModeColor: '#000000', // 浅色模式字体颜色
@@ -319,7 +318,20 @@ export interface VersionInfo {
   name: string
   desc: string
   version: string
-  changelog: string[]
+  changelog: string
+}
+
+const getChangelogPath = (): string => {
+  return `${Script.directory}/changelog.md`
+}
+
+const readChangelog = (): string => {
+  try {
+    return FileManager.readAsStringSync(getChangelogPath()).trim()
+  } catch (error) {
+    console.error('读取更新日志失败:', error)
+    return ''
+  }
 }
 
 /**
@@ -334,11 +346,11 @@ export const VersionManager = {
     name: scriptConfig.name,
     desc: scriptConfig.description,
     version: scriptConfig.version,
-    changelog: scriptConfig.changelog || []
+    changelog: readChangelog()
   }),
 
   /** 获取更新日志 */
-  getChangelog: (): string[] => scriptConfig.changelog || []
+  getChangelog: (): string => readChangelog()
 }
 
 /**
@@ -380,25 +392,6 @@ export const setNewsData = (rawNewsData: NewsData): void => {
     console.log(`已设置 ${processedData.items.length} 条新闻数据`)
   } catch (error) {
     console.error('设置新闻数据失败:', error)
-  }
-}
-
-/**
- * 获取远程横幅图片URL
- * @returns 横幅图片URL Promise
- */
-export const fetchBannerImage = async (): Promise<string | null> => {
-  try {
-    const response = await fetch('https://joiner.i95.me/scripting/joiner.json')
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`)
-    }
-
-    const data = (await response.json()) as any
-    return data.bannerImage || null
-  } catch (error) {
-    console.error('获取横幅图片失败:', error)
-    return null
   }
 }
 

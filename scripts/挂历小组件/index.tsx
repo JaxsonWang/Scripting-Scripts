@@ -1,7 +1,6 @@
-import { Button, HStack, Image, List, Navigation, NavigationStack, Script, Section, Spacer, Text, VStack, Widget, useEffect, useState } from 'scripting'
+import { Button, HStack, Image, List, Navigation, NavigationStack, Path, Script, Section, Spacer, Text, VStack, Widget, useEffect, useState } from 'scripting'
 import {
   type VersionInfo,
-  fetchBannerImage,
   formatEventTime,
   getCalendarData,
   getChangelog,
@@ -11,11 +10,12 @@ import {
   shouldShowUpdateLog
 } from './utils/calendar-service'
 import { getDaysLeftInYear, solarToLunar } from './utils/lunar-calendar'
-import { SettingsPage, getCurrentSettings } from './components/settings-page'
-import { getActualColor } from './components/settings-page'
+import { SettingsPage, getActualColor, getCurrentSettings } from './components/settings-page'
 import type { CalendarData } from './utils/calendar-service'
 import type { LunarData } from './utils/lunar-calendar'
 import type { SettingsData } from './components/settings-page'
+
+const BANNER_IMAGE_FILE_PATH = Path.join(Script.directory, 'assets', 'banner.webp')
 
 /**
  * 挂历详情页面
@@ -34,8 +34,6 @@ const CalendarDetail = () => {
   const [showChangelogSheet, setShowChangelogSheet] = useState(false)
   const [changelogContent, setChangelogContent] = useState<string>('')
   const [updateTitle, setUpdateTitle] = useState<string>('')
-  const [bannerImageUrl, setBannerImageUrl] = useState<string>('')
-
   // 加载数据
   const loadData = async () => {
     setLoading(true)
@@ -73,19 +71,6 @@ const CalendarDetail = () => {
     }
   }
 
-  // 加载横幅图片
-  const loadBannerImage = async () => {
-    try {
-      const bannerUrl = await fetchBannerImage()
-      if (bannerUrl) {
-        setBannerImageUrl(bannerUrl)
-        console.log('获取到的横幅图片:', bannerUrl)
-      }
-    } catch (error) {
-      console.error('加载横幅图片失败:', error)
-    }
-  }
-
   // 检查并显示更新提醒
   const checkAndShowUpdateAlert = async () => {
     try {
@@ -99,10 +84,7 @@ const CalendarDetail = () => {
         const changelog = getChangelog()
         const currentVersion = getCurrentVersion()
 
-        let changelogText = '暂无更新内容'
-        if (Array.isArray(changelog) && changelog.length > 0) {
-          changelogText = changelog.map((item: string, index: number) => `${index + 1}. ${item}`).join('\n')
-        }
+        const changelogText = changelog.trim() || '暂无更新内容'
 
         setChangelogContent(changelogText)
         setUpdateTitle(`脚本更新 - ${currentVersion}`)
@@ -127,7 +109,6 @@ const CalendarDetail = () => {
     const initializeApp = async () => {
       await loadData()
       loadVersionInfo() // 现在是同步函数，不需要 await
-      await loadBannerImage() // 加载横幅图片
 
       // 延迟检查更新，确保组件已完全渲染
       setTimeout(() => {
@@ -270,14 +251,14 @@ const CalendarDetail = () => {
         <Section
           footer={
             <VStack spacing={10} alignment="leading">
-              {bannerImageUrl ? <Image imageUrl={bannerImageUrl} resizable scaleToFit /> : null}
               <Text font="footnote" foregroundStyle="secondaryLabel">
                 挂历小组件 v{getCurrentVersion()}
                 {'\n'}
                 显示日历、农历、宜忌和事件信息
                 {'\n'}
-                淮城一只猫© - 更多小组件请关注微信公众号「组件派」
+                淮城一只猫© - 更多小组件请关注微信公众号「栈空间」
               </Text>
+              <Image filePath={BANNER_IMAGE_FILE_PATH} resizable scaleToFit />
             </VStack>
           }
         >
@@ -303,8 +284,7 @@ const CalendarDetail = () => {
 
                 console.log('准备显示更新日志:', targetVersionInfo.changelog)
 
-                // 格式化更新日志内容
-                const changelogText = targetVersionInfo.changelog.map((item: string, index: number) => `${index + 1}. ${item}`).join('\n')
+                const changelogText = targetVersionInfo.changelog.trim()
 
                 setChangelogContent(changelogText || '暂无更新日志')
                 setUpdateTitle(`更新日志 - ${targetVersionInfo.version || '未知版本'}`)

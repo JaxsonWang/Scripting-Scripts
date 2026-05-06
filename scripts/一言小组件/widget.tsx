@@ -1,15 +1,8 @@
-import { HStack, Image, Path, Spacer, Text, VStack, Widget } from 'scripting'
+import { HStack, Image, Spacer, Text, VStack, Widget } from 'scripting'
 import type { HitokotoData } from './utils/hitokoto-service'
 import { fetchHitokoto, getCurrentSettings, getDynamicTextColor } from './utils/hitokoto-service'
 
 // 无需全局缓存变量，每次都获取新数据
-
-/**
- * 获取背景图片路径
- */
-const getWidgetBackgroundImagePath = (settings: any) => {
-  return settings.bgPath && Widget.parameter ? Path.join(settings.bgPath, Widget.parameter) : undefined
-}
 
 /**
  * 生成背景样式
@@ -72,8 +65,6 @@ const loadHitokotoData = async (): Promise<HitokotoData> => {
 const WidgetView = ({ data }: { data: HitokotoData }) => {
   const settings = getCurrentSettings()
 
-  // 获取背景图片路径和背景样式
-  const getWidgetBg = getWidgetBackgroundImagePath(settings)
   const widgetBackground = generateWidgetBackground(settings)
 
   // 获取动态字体颜色（会自动适配系统的浅色/深色模式）
@@ -83,13 +74,7 @@ const WidgetView = ({ data }: { data: HitokotoData }) => {
     case 'systemSmall': {
       // 小尺寸小组件 - 显示一言内容和来源
       return (
-        <VStack
-          spacing={6}
-          padding={16}
-          alignment="center"
-          background={!settings.enableColorBackground && getWidgetBg ? <Image filePath={getWidgetBg} resizable={true} scaleToFill={true} /> : undefined}
-          widgetBackground={widgetBackground}
-        >
+        <VStack spacing={6} padding={16} alignment="center" widgetBackground={widgetBackground}>
           <Image systemName="quote.bubble.fill" font="title2" foregroundStyle="systemBlue" />
           <Text
             font="body"
@@ -126,12 +111,7 @@ const WidgetView = ({ data }: { data: HitokotoData }) => {
     case 'systemMedium': {
       // 中等尺寸小组件 - 显示完整信息
       return (
-        <VStack
-          spacing={10}
-          padding={{ horizontal: 16, top: 16, bottom: 12 }}
-          background={!settings.enableColorBackground && getWidgetBg ? <Image filePath={getWidgetBg} resizable={true} scaleToFill={true} /> : undefined}
-          widgetBackground={widgetBackground}
-        >
+        <VStack spacing={10} padding={{ horizontal: 16, top: 16, bottom: 12 }} widgetBackground={widgetBackground}>
           <HStack spacing={4} alignment="center">
             <Image systemName="quote.bubble.fill" font="body" foregroundStyle="systemBlue" />
             <Text font="body" fontWeight="bold" foregroundStyle={textColor}>
@@ -184,12 +164,7 @@ const WidgetView = ({ data }: { data: HitokotoData }) => {
     case 'systemExtraLarge': {
       // 大尺寸小组件 - 显示最完整信息
       return (
-        <VStack
-          spacing={16}
-          padding={20}
-          background={!settings.enableColorBackground && getWidgetBg ? <Image filePath={getWidgetBg} resizable={true} scaleToFill={true} /> : undefined}
-          widgetBackground={widgetBackground}
-        >
+        <VStack spacing={16} padding={20} widgetBackground={widgetBackground}>
           <HStack spacing={4} alignment="center">
             <Image systemName="quote.bubble.fill" font="title2" foregroundStyle="systemBlue" />
             <Text font="title2" fontWeight="bold" foregroundStyle={textColor}>

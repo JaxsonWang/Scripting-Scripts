@@ -92,7 +92,6 @@ export const SettingsPage = () => {
 
   // 获取字体颜色设置
   const calendarSettings = getCalendarSettings()
-  const [bgPath, setBgPath] = useState<string>(() => calendarSettings.bgPath ?? '')
   const [lightModeColor, setLightModeColor] = useState<Color>(() => calendarSettings.lightModeColor || '#000000')
   const [darkModeColor, setDarkModeColor] = useState<Color>(() => calendarSettings.darkModeColor || '#FFFFFF')
   const [workColor, setWorkColor] = useState<Color>(() => calendarSettings.workColor || '#999999')
@@ -124,13 +123,6 @@ export const SettingsPage = () => {
   // 更新字体颜色设置的函数
   const updateCalendarSettings = (newSettings: any) => {
     saveCalendarSettings(newSettings)
-  }
-
-  // 处理背景图片路径变化
-  const handleBgPathChange = (path: string) => {
-    setBgPath(path)
-    const newSettings = { ...calendarSettings, bgPath: path }
-    updateCalendarSettings(newSettings)
   }
 
   // 颜色选项配置
@@ -241,33 +233,12 @@ export const SettingsPage = () => {
           cancellationAction: <Button title="完成" action={dismiss} />
         }}
       >
-        {/* 透明背景图片 - 填写图片地址 */}
-        <Section
-          header={<Text font="headline">透明背景图片</Text>}
-          footer={
-            <Text font="footnote" foregroundStyle="secondaryLabel">
-              填空不开启，若要使用需要安装 "透明背景" 脚本组件。{'\n'}关注微信公众号「组件派」获取。
-            </Text>
-          }
-        >
-          <VStack>
-            <TextField
-              title="背景图片路径"
-              value={bgPath}
-              onChanged={handleBgPathChange}
-              prompt="请输入背景图路径"
-              axis="vertical"
-              lineLimit={{ min: 2, max: 4 }}
-            />
-          </VStack>
-        </Section>
-
         {/* 颜色背景设置 */}
         <Section
           header={<Text font="headline">颜色背景</Text>}
           footer={
             <Text font="footnote" foregroundStyle="secondaryLabel">
-              开启后将强制显示颜色背景，即使设置了透明背景也会被覆盖
+              开启后显示纯色或渐变背景，关闭后使用系统默认背景
             </Text>
           }
         >

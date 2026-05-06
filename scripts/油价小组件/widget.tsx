@@ -1,4 +1,4 @@
-import { HStack, Image, Path, Spacer, Text, VStack, Widget } from 'scripting'
+import { HStack, Image, Spacer, Text, VStack, Widget } from 'scripting'
 import type { CompleteOilData } from './utils/oil-price-service'
 import {
   formatForecastPrice,
@@ -14,13 +14,6 @@ import {
 
 // 全局数据变量
 let oilData: CompleteOilData | null = null
-
-/**
- * 获取背景图片路径
- */
-const getWidgetBackgroundImagePath = (settings: any) => {
-  return settings.bgPath && Widget.parameter ? Path.join(settings.bgPath, Widget.parameter) : undefined
-}
 
 /**
  * 生成背景样式
@@ -128,8 +121,6 @@ const WidgetView = ({ data }: { data: CompleteOilData }) => {
   const textColor = getDynamicTextColor()
   const oilSettings = getCurrentSettings()
 
-  // 获取背景图片路径和背景样式
-  const getWidgetBg = getWidgetBackgroundImagePath(oilSettings)
   const widgetBackground = generateWidgetBackground(oilSettings)
 
   switch (Widget.family) {
@@ -139,13 +130,7 @@ const WidgetView = ({ data }: { data: CompleteOilData }) => {
       const selectedPrice = getPriceByOilType(data, selectedOilType)
 
       return (
-        <VStack
-          spacing={6}
-          padding={16}
-          alignment="center"
-          background={!oilSettings.enableColorBackground && getWidgetBg ? <Image filePath={getWidgetBg} resizable={true} scaleToFill={true} /> : undefined}
-          widgetBackground={widgetBackground}
-        >
+        <VStack spacing={6} padding={16} alignment="center" widgetBackground={widgetBackground}>
           <Image systemName="fuelpump.fill" font="title2" foregroundStyle="systemOrange" />
           <Spacer />
           <Text font="title" fontWeight="bold" foregroundStyle={textColor}>
@@ -177,10 +162,7 @@ const WidgetView = ({ data }: { data: CompleteOilData }) => {
       }
 
       return (
-        <VStack
-          background={!oilSettings.enableColorBackground && getWidgetBg ? <Image filePath={getWidgetBg} resizable={true} scaleToFill={true} /> : undefined}
-          widgetBackground={widgetBackground}
-        >
+        <VStack widgetBackground={widgetBackground}>
           <VStack padding={{ vertical: 14 }}>
             <HStack spacing={4} alignment="bottom" padding={{ horizontal: 16 }}>
               <Image systemName="fuelpump.fill" font="body" foregroundStyle="systemOrange" />
@@ -269,12 +251,7 @@ const WidgetView = ({ data }: { data: CompleteOilData }) => {
     case 'systemLarge':
     case 'systemExtraLarge': {
       return (
-        <VStack
-          spacing={16}
-          padding={16}
-          background={!oilSettings.enableColorBackground && getWidgetBg ? <Image filePath={getWidgetBg} resizable={true} scaleToFill={true} /> : undefined}
-          widgetBackground={widgetBackground}
-        >
+        <VStack spacing={16} padding={16} widgetBackground={widgetBackground}>
           <HStack spacing={4} alignment="top">
             <Image systemName="fuelpump.fill" font="body" foregroundStyle="systemOrange" />
             <Text font="body" fontWeight="bold" foregroundStyle={textColor}>

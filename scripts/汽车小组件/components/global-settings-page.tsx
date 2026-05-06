@@ -8,7 +8,6 @@ const STORAGE_NAME = 'ScriptPie.CarWidgetSettings'
 const storageManager = createStorageManager(STORAGE_NAME)
 
 export type SettingsData = {
-  transparentBg: string
   lightFontColor: Color
   darkFontColor: Color
   carImageUrl: string
@@ -24,7 +23,6 @@ export type SettingsData = {
 
 // 存储键
 const STORAGE_KEYS = {
-  TRANSPARENT_BG: 'transparentBg',
   LIGHT_FONT_COLOR: 'lightFontColor',
   DARK_FONT_COLOR: 'darkFontColor',
   CAR_IMAGE_URL: 'carImageUrl',
@@ -40,7 +38,6 @@ const STORAGE_KEYS = {
 
 // 默认设置
 export const DEFAULT_SETTINGS = {
-  transparentBg: '',
   lightFontColor: '#000000',
   darkFontColor: '#FFFFFF',
   carImageUrl: 'https://img.alicdn.com/imgextra/i4/2038135983/O1CN01zEbwxy1u4Gkjp7IW3_!!2038135983.png',
@@ -70,7 +67,6 @@ export const getCurrentGlobalSettings = () => {
   }
 
   return {
-    transparentBg: storageManager.storage.get<string>(STORAGE_KEYS.TRANSPARENT_BG) ?? DEFAULT_SETTINGS.transparentBg,
     lightFontColor: storageManager.storage.get<string>(STORAGE_KEYS.LIGHT_FONT_COLOR) ?? DEFAULT_SETTINGS.lightFontColor,
     darkFontColor: storageManager.storage.get<string>(STORAGE_KEYS.DARK_FONT_COLOR) ?? DEFAULT_SETTINGS.darkFontColor,
     carImageUrl: normalizeStoredPath(storageManager.storage.get(STORAGE_KEYS.CAR_IMAGE_URL), DEFAULT_SETTINGS.carImageUrl),
@@ -97,7 +93,6 @@ const getRawGlobalSettings = () => {
   }
 
   return {
-    transparentBg: storageManager.storage.get<string>(STORAGE_KEYS.TRANSPARENT_BG) ?? '',
     lightFontColor: storageManager.storage.get<string>(STORAGE_KEYS.LIGHT_FONT_COLOR) ?? DEFAULT_SETTINGS.lightFontColor,
     darkFontColor: storageManager.storage.get<string>(STORAGE_KEYS.DARK_FONT_COLOR) ?? DEFAULT_SETTINGS.darkFontColor,
     carImageUrl: normalizeStoredPath(storageManager.storage.get(STORAGE_KEYS.CAR_IMAGE_URL), DEFAULT_SETTINGS.carImageUrl),
@@ -263,31 +258,12 @@ export const GlobalSettingsPage = () => {
           cancellationAction: <Button title="完成" action={dismiss} />
         }}
       >
-        {/* 透明背景图片 */}
-        <Section
-          header={<Text font="headline">透明背景图片</Text>}
-          footer={
-            <Text font="footnote" foregroundStyle="secondaryLabel">
-              填空不开启，若要使用需要安装 "透明背景" 脚本组件。{'\n'}关注微信公众号「组件派」获取。
-            </Text>
-          }
-        >
-          <TextField
-            title="背景图片路径"
-            value={settings.transparentBg}
-            onChanged={text => updateSetting(STORAGE_KEYS.TRANSPARENT_BG, text)}
-            prompt="请输入背景图路径"
-            axis="vertical"
-            lineLimit={{ min: 2, max: 4 }}
-          />
-        </Section>
-
         {/* 颜色背景设置 */}
         <Section
           header={<Text font="headline">颜色背景</Text>}
           footer={
             <Text font="footnote" foregroundStyle="secondaryLabel">
-              开启后将强制显示颜色背景，即使设置了透明背景也会被覆盖
+              开启后显示纯色或渐变背景，关闭后使用系统默认背景
             </Text>
           }
         >
