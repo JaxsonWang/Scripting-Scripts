@@ -5,7 +5,7 @@
   "intentInputTypes": [],
   "name": "油价小组件",
   "description": "在桌面随时了解油价信息",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "remoteResource": {
     "autoUpdateInterval": 86400,
     "url": "https://joiner.i95.me/scripting/油价小组件.scripting",

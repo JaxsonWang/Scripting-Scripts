@@ -1,15 +1,20 @@
 import { Button, ColorPicker, HStack, List, Navigation, NavigationStack, Picker, Section, Spacer, Text, Toggle, VStack, useEffect, useState } from 'scripting'
 import type { Color } from 'scripting'
+import type { AreaZoneOption, OilTypeValue } from '../utils/oil-price-service'
 import {
+  MAX_DISPLAY_OIL_TYPES,
   areaOptions,
-  getAreaZoneOptions,
+  getAreaMetadata,
+  getAvailableOilTypes,
   getCurrentAreaSettings,
   getCurrentSettings,
-  getSelectedOilType,
+  getSelectedOilTypes,
+  getSmallWidgetOilType,
   oilTypeOptions,
   saveSettings,
   setArea,
-  setSelectedOilType
+  setSelectedOilTypes,
+  setSmallWidgetOilType
 } from '../utils/oil-price-service'
 
 /**
@@ -25,11 +30,13 @@ export const SettingsPage = () => {
     const settings = getCurrentAreaSettings()
     return settings.areaZoneType
   })
-  const [areaZoneOptions, setAreaZoneOptions] = useState<any[]>(() => {
+  const [areaZoneOptions, setAreaZoneOptions] = useState<AreaZoneOption[]>(() => {
     const settings = getCurrentAreaSettings()
     return settings.areaZoneOptions
   })
-  const [selectedOilType, setSelectedOilTypeState] = useState<string>(() => getSelectedOilType())
+  const [availableOilTypes, setAvailableOilTypes] = useState<OilTypeValue[]>(() => getAvailableOilTypes())
+  const [selectedOilTypes, setSelectedOilTypesState] = useState<OilTypeValue[]>(() => getSelectedOilTypes(getAvailableOilTypes()))
+  const [smallWidgetOilType, setSmallWidgetOilTypeState] = useState<OilTypeValue>(() => getSmallWidgetOilType(getAvailableOilTypes()))
   const [loading, setLoading] = useState(false)
 
   // 获取字体颜色设置
@@ -43,41 +50,71 @@ export const SettingsPage = () => {
   const [showAddColorModal, setShowAddColorModal] = useState(false)
   const [newColor, setNewColor] = useState<Color>('#007AFF')
 
-  // 加载价区选项
-  const loadAreaZoneOptions = async (areaType: string) => {
+  // 加载价区和当前价区可用油标
+  const loadAreaMetadata = async (areaType: string, areaZoneType: number) => {
     setLoading(true)
     try {
-      const options = await getAreaZoneOptions(areaType)
-      setAreaZoneOptions(options)
+      const metadata = await getAreaMetadata(areaType, areaZoneType)
+      const nextSelectedOilTypes = getSelectedOilTypes(metadata.availableOilTypes)
+      const nextSmallWidgetOilType = getSmallWidgetOilType(metadata.availableOilTypes)
+
+      setAreaZoneOptions(metadata.areaZoneOptions)
+      setAvailableOilTypes(metadata.availableOilTypes)
+      setSelectedOilTypesState(nextSelectedOilTypes)
+      setSmallWidgetOilTypeState(nextSmallWidgetOilType)
     } catch (error) {
-      console.error('加载价区选项失败:', error)
+      console.error('加载地区元数据失败:', error)
       setAreaZoneOptions([])
+      setAvailableOilTypes([])
+      setSelectedOilTypesState([])
+      setSmallWidgetOilTypeState(getSmallWidgetOilType([]))
     } finally {
       setLoading(false)
     }
   }
 
-  // 初始加载当前地区的价区选项
+  // 初始加载当前地区的价区和油标选项
   useEffect(() => {
-    loadAreaZoneOptions(currentAreaType)
+    loadAreaMetadata(currentAreaType, currentAreaZoneType)
   }, [currentAreaType])
 
   const handleAreaChange = async (newAreaType: string) => {
     setCurrentAreaType(newAreaType)
     setCurrentAreaZoneType(0) // 重置价区选择
-    await loadAreaZoneOptions(newAreaType)
     setArea(newAreaType, 0)
+    await loadAreaMetadata(newAreaType, 0)
   }
 
   const handleAreaZoneChange = async (newAreaZoneType: string) => {
     const zoneIndex = parseInt(newAreaZoneType, 10)
     setCurrentAreaZoneType(zoneIndex)
     setArea(currentAreaType, zoneIndex)
+    await loadAreaMetadata(currentAreaType, zoneIndex)
   }
 
-  const handleOilTypeChange = async (newOilType: string) => {
-    setSelectedOilTypeState(newOilType)
-    setSelectedOilType(newOilType)
+  const handleOilTypeToggle = async (oilType: OilTypeValue, checked: boolean) => {
+    const nextSelectedOilTypes = checked
+      ? selectedOilTypes.includes(oilType)
+        ? selectedOilTypes
+        : [...selectedOilTypes, oilType]
+      : selectedOilTypes.filter(item => item !== oilType)
+
+    if (nextSelectedOilTypes.length === 0) {
+      await Dialog.alert({
+        title: '至少选择一个油标号',
+        message: '中号组件需要至少展示一个油标号。'
+      })
+      return
+    }
+
+    setSelectedOilTypesState(nextSelectedOilTypes)
+    setSelectedOilTypes(nextSelectedOilTypes)
+  }
+
+  const handleSmallWidgetOilTypeChange = (oilType: string) => {
+    const nextOilType = oilType as OilTypeValue
+    setSmallWidgetOilTypeState(nextOilType)
+    setSmallWidgetOilType(nextOilType)
   }
 
   // 更新字体颜色设置的函数
@@ -126,6 +163,9 @@ export const SettingsPage = () => {
     setNewColor('#007AFF')
     setShowAddColorModal(false)
   }
+
+  const availableOilTypeOptions = oilTypeOptions.filter(oil => availableOilTypes.includes(oil.value))
+  const mediumSelectionFull = selectedOilTypes.length >= MAX_DISPLAY_OIL_TYPES
 
   return (
     <NavigationStack>
@@ -252,22 +292,48 @@ export const SettingsPage = () => {
           </Section>
         ) : null}
 
-        {/* 油号选择（仅小号Widget使用） */}
-        <Section
-          header={<Text font="headline">优先展示油号</Text>}
-          footer={
+        {/* 小号组件油标选择 */}
+        <Section header={<Text font="headline">小号组件展示油标号</Text>}>
+          {availableOilTypeOptions.length > 0 ? (
+            <Picker title="小号组件油标" value={smallWidgetOilType} onChanged={handleSmallWidgetOilTypeChange}>
+              {availableOilTypeOptions.map(oil => (
+                <Text key={oil.value} tag={oil.value} font="body" lineLimit={5}>
+                  {oil.label}
+                </Text>
+              ))}
+            </Picker>
+          ) : (
             <Text font="footnote" foregroundStyle="secondaryLabel">
-              此设置仅影响优先显示的油号的规格组件
+              当前地区暂无可用油标数据，请刷新后重试。
             </Text>
-          }
-        >
-          <Picker title="显示油号" value={selectedOilType} onChanged={handleOilTypeChange}>
-            {oilTypeOptions.map(oil => (
-              <Text key={oil.value} tag={oil.value} font="body">
-                {oil.label}
-              </Text>
-            ))}
-          </Picker>
+          )}
+        </Section>
+
+        {/* 中号组件油标选择 */}
+        <Section header={<Text font="headline">中号组件展示油标号</Text>}>
+          {availableOilTypeOptions.map(oil => {
+            const checked = selectedOilTypes.includes(oil.value)
+
+            return (
+              <Toggle
+                key={oil.value}
+                title={oil.label}
+                value={checked}
+                onChanged={checked => handleOilTypeToggle(oil.value, checked)}
+                disabled={!checked && mediumSelectionFull}
+              />
+            )
+          })}
+          {loading ? (
+            <Text font="footnote" foregroundStyle="secondaryLabel">
+              正在加载可用油标...
+            </Text>
+          ) : null}
+          {!loading && availableOilTypes.length === 0 ? (
+            <Text font="footnote" foregroundStyle="secondaryLabel">
+              当前地区暂无可用油标数据，请刷新后重试。
+            </Text>
+          ) : null}
         </Section>
       </List>
     </NavigationStack>

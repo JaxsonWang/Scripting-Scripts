@@ -183,6 +183,8 @@ const GasPriceDetail = () => {
     }
   }
 
+  const oilPriceTitle = oilData.areaZoneName ? `${oilData.region}${oilData.areaZoneName}油价` : `${oilData.region}油价`
+
   return (
     <NavigationStack>
       <List
@@ -214,55 +216,36 @@ const GasPriceDetail = () => {
             <Spacer />
             <Text foregroundStyle="label">{areaOptions.find(a => a.value === currentArea)?.label || '未知地区'}</Text>
           </HStack>
+          {oilData.areaZoneName ? (
+            <HStack alignment="center">
+              <Text font="body" foregroundStyle="label">
+                当前价区
+              </Text>
+              <Spacer />
+              <Text foregroundStyle="label">{oilData.areaZoneName}</Text>
+            </HStack>
+          ) : null}
         </Section>
 
         <Section
-          header={<Text font="headline">{oilData.region}油价</Text>}
+          header={<Text font="headline">{oilPriceTitle}</Text>}
           footer={
             <Text font="footnote" foregroundStyle="secondaryLabel">
               更新时间：{oilData.lastUpdated}
             </Text>
           }
         >
-          <HStack alignment="center">
-            <Text font="body" foregroundStyle="label">
-              92#汽油
-            </Text>
-            <Spacer />
-            <Text font="title3" foregroundStyle="label">
-              {oilData.oil92}
-            </Text>
-          </HStack>
-
-          <HStack alignment="center">
-            <Text font="body" foregroundStyle="label">
-              95#汽油
-            </Text>
-            <Spacer />
-            <Text font="title3" foregroundStyle="label">
-              {oilData.oil95}
-            </Text>
-          </HStack>
-
-          <HStack alignment="center">
-            <Text font="body" foregroundStyle="label">
-              98#汽油
-            </Text>
-            <Spacer />
-            <Text font="title3" foregroundStyle="label">
-              {oilData.oil98}
-            </Text>
-          </HStack>
-
-          <HStack alignment="center">
-            <Text font="body" foregroundStyle="label">
-              0#柴油
-            </Text>
-            <Spacer />
-            <Text font="title3" foregroundStyle="label">
-              {oilData.oil0}
-            </Text>
-          </HStack>
+          {oilData.prices.map(item => (
+            <HStack key={item.type} alignment="center">
+              <Text font="body" foregroundStyle="label">
+                {item.label}
+              </Text>
+              <Spacer />
+              <Text font="title3" foregroundStyle="label">
+                {item.price}
+              </Text>
+            </HStack>
+          ))}
         </Section>
 
         {/* 预测信息 */}

@@ -1,4 +1,4 @@
-import { Color, ColorScheme, Size, VirtualNode, KeyboardType, Edge, Point, KeywordPoint, Visibility, ReadableStream, FunctionComponent, AppIntent, AppIntentProtocol } from "scripting"
+import { Color, ColorScheme, Size, VirtualNode, KeyboardType, Edge, Point, KeywordPoint, Visibility, ReadableStream, FunctionComponent, AppIntent, AppIntentProtocol, Cookie, MapCoordinate, MapRegion, MapPointsOfInterestSpec, MapStyleSpec } from "scripting"
 
 declare global {
   type Without<T, U> = {
@@ -306,6 +306,7 @@ declare global {
    * It is used to represent the data in a more convenient way, such as converting to base64 or hex string, or reading from a file.
    */
   class Data {
+    private constructor()
     /**
      * The length of the data in bytes.
      */
@@ -628,6 +629,7 @@ declare global {
    * These instances can be used to configure the appearance of a symbol image.
    */
   class UIImageSymbolConfiguration {
+    private constructor()
     static preferringMonochrome(): UIImageSymbolConfiguration
     static preferringMulticolor(): UIImageSymbolConfiguration
     static scale(value: "default" | "large" | "medium" | "small" | "unspecified"): UIImageSymbolConfiguration
@@ -644,6 +646,7 @@ declare global {
    * UIImage instance for displaying or saving an Image.
    */
   class UIImage {
+    private constructor()
     /**
      * The width of the image.
      */
@@ -824,6 +827,80 @@ declare global {
      * @throws An error if the URL is invalid or cannot be fetched.
      */
     static fromURL(url: string): Promise<UIImage | null>
+  }
+
+  /**
+   * The encoded container format for `ImageIO.writeImage(...)`.
+   */
+  type ImageFormat = 'jpeg' | 'png' | 'heic' | 'tiff' | 'gif'
+
+  /**
+   * Container-level image metadata, as read from / written to an encoded image file.
+   *
+   * The well-known dictionaries (`exif` / `gps` / `tiff` / `iptc`) use Apple's CGImageProperties
+   * key names (e.g. `gps.Latitude`, `exif.DateTimeOriginal`). Top-level scalars describe the
+   * image itself. All fields are optional; only what the source provides is returned.
+   */
+  type ImageMetadata = {
+    pixelWidth?: number
+    pixelHeight?: number
+    dpiWidth?: number
+    dpiHeight?: number
+    depth?: number
+    colorModel?: string
+    /** EXIF/TIFF orientation value (1–8). */
+    orientation?: number
+    hasAlpha?: boolean
+    profileName?: string
+    exif?: Record<string, any>
+    gps?: Record<string, any>
+    tiff?: Record<string, any>
+    iptc?: Record<string, any>
+  }
+
+  /**
+   * Options for `ImageIO.writeImage(...)`. Provide exactly one of `image` or `source`.
+   */
+  type ImageWriteOptions = {
+    /**
+     * Re-encode from a decoded `UIImage`. NOTE: a `UIImage` is a decoded bitmap, so the
+     * original file's metadata is NOT preserved — only `metadata` you pass here is written.
+     */
+    image?: UIImage
+    /**
+     * Copy from an original encoded image (file path or `Data`), preserving its existing
+     * metadata, then overlay the `metadata` you pass. Use this to e.g. tag a photo with GPS
+     * while keeping its original EXIF.
+     */
+    source?: string | Data
+    /** Destination file path. An existing file is overwritten. */
+    to: string
+    /** Output format. Required when writing from `image`; defaults to the source's format when using `source`. */
+    format?: ImageFormat
+    /** Lossy compression quality 0..1 (jpeg / heic only). */
+    quality?: number
+    /** Metadata to write. Merged on top of the source's metadata when using `source`. */
+    metadata?: ImageMetadata
+  }
+
+  /**
+   * Low-level image container I/O backed by iOS ImageIO (CGImageSource / CGImageDestination).
+   *
+   * Use this when you need to read EXIF/GPS/TIFF/IPTC metadata, or write formats / metadata
+   * that `UIImage.toPNGData` / `toJPEGData` cannot (HEIC, TIFF, GIF, embedded metadata).
+   */
+  namespace ImageIO {
+    /**
+     * Reads container-level metadata from an image file path or `Data`.
+     * Rejects if the source cannot be decoded as an image.
+     */
+    function readMetadata(source: string | Data): Promise<ImageMetadata>
+
+    /**
+     * Encodes and writes an image to a file, optionally with metadata.
+     * See `ImageWriteOptions` for the `image` vs `source` distinction.
+     */
+    function writeImage(options: ImageWriteOptions): Promise<void>
   }
 
   /**
@@ -1144,7 +1221,9 @@ declare global {
      */
     function set(key: string, value: string, options?: {
       /**
-       * A key with a value that indicates when the keychain item is accessible. Defaults to 'unlocked'.
+       * A key with a value that indicates when the keychain item is accessible.
+       * Defaults to 'first_unlock_this_device', or 'first_unlock' when synchronizable is true.
+       * ThisDeviceOnly values cannot be used with synchronizable items.
        */
       accessibility?: KeychainAccessibility
       /**
@@ -1155,7 +1234,9 @@ declare global {
 
     function setBool(key: string, value: boolean, options?: {
       /**
-       * A key with a value that indicates when the keychain item is accessible. Defaults to 'unlocked'.
+       * A key with a value that indicates when the keychain item is accessible.
+       * Defaults to 'first_unlock_this_device', or 'first_unlock' when synchronizable is true.
+       * ThisDeviceOnly values cannot be used with synchronizable items.
        */
       accessibility?: KeychainAccessibility
       /**
@@ -1165,7 +1246,9 @@ declare global {
     }): boolean
     function setData(key: string, value: Data, options?: {
       /**
-       * A key with a value that indicates when the keychain item is accessible. Defaults to 'unlocked'.
+       * A key with a value that indicates when the keychain item is accessible.
+       * Defaults to 'first_unlock_this_device', or 'first_unlock' when synchronizable is true.
+       * ThisDeviceOnly values cannot be used with synchronizable items.
        */
       accessibility?: KeychainAccessibility
       /**
@@ -1231,6 +1314,8 @@ declare global {
   type KeychainOptions = {
     /**
      * A key with a value that indicates when the keychain item is accessible.
+     * Defaults to 'first_unlock_this_device', or 'first_unlock' when synchronizable is true.
+     * ThisDeviceOnly values cannot be used with synchronizable items.
      */
     accessibility?: KeychainAccessibility
     /**
@@ -1291,6 +1376,160 @@ declare global {
      * A notification feedback type that indicates a task has produced a warning.
      */
     function notificationWarning(): void
+  }
+
+  type HapticEventType =
+    | 'hapticTransient'
+    | 'hapticContinuous'
+    | 'audioContinuous'
+    | 'audioCustom'
+
+  type HapticEventParameterID =
+    | 'hapticIntensity'
+    | 'hapticSharpness'
+    | 'attackTime'
+    | 'decayTime'
+    | 'releaseTime'
+    | 'sustained'
+    | 'audioVolume'
+    | 'audioPitch'
+    | 'audioPan'
+    | 'audioBrightness'
+
+  type HapticDynamicParameterID =
+    | 'hapticIntensityControl'
+    | 'hapticSharpnessControl'
+    | 'hapticAttackTimeControl'
+    | 'hapticDecayTimeControl'
+    | 'hapticReleaseTimeControl'
+    | 'audioVolumeControl'
+    | 'audioPanControl'
+    | 'audioBrightnessControl'
+    | 'audioPitchControl'
+    | 'audioAttackTimeControl'
+    | 'audioDecayTimeControl'
+    | 'audioReleaseTimeControl'
+
+  type HapticEngineStoppedReason =
+    | 'audioSessionInterrupt'
+    | 'applicationSuspended'
+    | 'idleTimeout'
+    | 'notifyWhenFinished'
+    | 'engineDestroyed'
+    | 'gameControllerDisconnect'
+    | 'systemError'
+    | 'unknown'
+
+  type HapticEngineFinishedAction = 'stopEngine' | 'leaveEngineRunning'
+
+  class HapticEventParameter {
+    constructor(parameterID: HapticEventParameterID, value: number)
+    readonly parameterID: HapticEventParameterID
+    value: number
+  }
+
+  class HapticDynamicParameter {
+    constructor(parameterID: HapticDynamicParameterID, value: number, relativeTime: number)
+    readonly parameterID: HapticDynamicParameterID
+    value: number
+    relativeTime: number
+  }
+
+  class HapticParameterCurveControlPoint {
+    constructor(relativeTime: number, value: number)
+    relativeTime: number
+    value: number
+  }
+
+  class HapticParameterCurve {
+    constructor(
+      parameterID: HapticDynamicParameterID,
+      controlPoints: HapticParameterCurveControlPoint[],
+      relativeTime: number
+    )
+    readonly parameterID: HapticDynamicParameterID
+    readonly controlPoints: HapticParameterCurveControlPoint[]
+    relativeTime: number
+  }
+
+  class HapticEvent {
+    constructor(
+      eventType: HapticEventType,
+      parameters: HapticEventParameter[],
+      relativeTime: number,
+      duration?: number
+    )
+    readonly type: HapticEventType
+    readonly eventParameters: HapticEventParameter[]
+    relativeTime: number
+    duration: number
+  }
+
+  class HapticPattern {
+    constructor(
+      events: HapticEvent[],
+      parametersOrCurves?: Array<HapticDynamicParameter | HapticParameterCurve>
+    )
+    readonly duration: number
+    exportDictionary(): Record<string, any>
+    static fromDictionary(dictionary: Record<string, any>): HapticPattern
+    static fromFile(filePath: string): HapticPattern
+    static fromData(data: Data): HapticPattern
+  }
+
+  class HapticPatternPlayer {
+    isMuted: boolean
+    start(atTime?: number): void
+    stop(atTime?: number): void
+    sendParameters(parameters: HapticDynamicParameter[], atTime?: number): void
+    scheduleParameterCurve(parameterCurve: HapticParameterCurve, atTime?: number): void
+    cancel(): void
+  }
+
+  class HapticAdvancedPatternPlayer extends HapticPatternPlayer {
+    loopEnabled: boolean
+    loopEnd: number
+    playbackRate: number
+    completionHandler?: (error: Error | null) => void
+    pause(atTime?: number): void
+    resume(atTime?: number): void
+    seek(toOffset: number): void
+  }
+
+  class HapticEngine {
+    constructor(audioSession?: typeof SharedAudioSession | null)
+    static readonly supportsHaptics: boolean
+    static readonly supportsAudio: boolean
+    readonly currentTime: number
+    readonly isRunning: boolean
+    playsHapticsOnly: boolean
+    playsAudioOnly: boolean
+    isMutedForAudio: boolean
+    isMutedForHaptics: boolean
+    autoShutdownEnabled: boolean
+    onStopped?: (reason: HapticEngineStoppedReason) => void
+    onReset?: () => void
+    start(): void
+    startAsync(): Promise<void>
+    stop(): Promise<void>
+    notifyWhenPlayersFinished(handler: (error: Error | null) => HapticEngineFinishedAction): void
+    makePlayer(pattern: HapticPattern): HapticPatternPlayer
+    makeAdvancedPlayer(pattern: HapticPattern): HapticAdvancedPatternPlayer
+    playPatternFromFile(filePath: string): void
+    playPatternFromData(data: Data): void
+    registerAudioResource(filePath: string, options?: {
+      useVolumeEnvelope?: boolean
+      loopEnabled?: boolean
+    }): number
+    unregisterAudioResource(resourceID: number): void
+    dispose(): void
+  }
+
+  namespace Haptics {
+    const supportsHaptics: boolean
+    const supportsAudio: boolean
+    function transient(intensity?: number, sharpness?: number): Promise<void>
+    function continuous(duration: number, intensity?: number, sharpness?: number): Promise<void>
   }
 
   /**
@@ -1409,6 +1648,22 @@ declare global {
     }
 
     /**
+     * The activity type that the location manager uses to optimize power consumption and accuracy.
+     *
+     * - `other`: General use, not related to a specific activity.
+     * - `automotiveNavigation`: Vehicle navigation.
+     * - `fitness`: Walking, running or cycling.
+     * - `otherNavigation`: Other vehicular navigation that is not automotive.
+     * - `airborne`: Airborne activities.
+     */
+    type ActivityType =
+      | "other"
+      | "automotiveNavigation"
+      | "fitness"
+      | "otherNavigation"
+      | "airborne"
+
+    /**
      * A Boolean value that indicates whether a widget is eligible to receive location updates.
      */
     const isAuthorizedForWidgetUpdates: boolean
@@ -1419,9 +1674,72 @@ declare global {
     const accuracy: LocationAccuracy
 
     /**
+     * A Boolean value indicating whether the app receives location updates while in the background.
+     */
+    const allowsBackgroundLocationUpdates: boolean
+
+    /**
+     * A Boolean value indicating whether the location manager pauses location updates automatically
+     * when the location data is unlikely to change.
+     */
+    const pausesLocationUpdatesAutomatically: boolean
+
+    /**
+     * A Boolean value indicating whether the status bar background indicator is shown
+     * when the app is using location services in the background with `authorizedAlways`.
+     */
+    const showsBackgroundLocationIndicator: boolean
+
+    /**
+     * The minimum distance (in meters) the device must move horizontally before an update event is
+     * generated. `-1` means every movement is reported.
+     */
+    const distanceFilter: number
+
+    /**
+     * The minimum angular change (in degrees) required to trigger heading updates.
+     * `-1` means every change is reported.
+     */
+    const headingFilter: number
+
+    /**
+     * The type of activity the location manager should expect.
+     * iOS uses this hint to optimize power consumption and accuracy.
+     */
+    const activityType: ActivityType
+
+    /**
      * Set the accuracy of the location data that your script wants to receive.
      */
     function setAccuracy(accuracy: LocationAccuracy): Promise<void>
+    /**
+     * Enable or disable receiving location updates while the app is in the background.
+     */
+    function setAllowsBackgroundLocationUpdates(value: boolean): void
+    /**
+     * Set whether the system automatically pauses location updates when location data is
+     * unlikely to change.
+     */
+    function setPausesLocationUpdatesAutomatically(value: boolean): void
+    /**
+     * Set whether the status bar background indicator is shown when the app uses location
+     * services in the background under `authorizedAlways`.
+     */
+    function setShowsBackgroundLocationIndicator(value: boolean): void
+    /**
+     * Set the minimum horizontal distance (in meters) between location updates.
+     * Use `-1` to receive every movement.
+     */
+    function setDistanceFilter(meters: number): void
+    /**
+     * Set the minimum angular change (in degrees) required to trigger heading updates.
+     * Use `-1` to receive every change.
+     */
+    function setHeadingFilter(degrees: number): void
+    /**
+     * Set the activity type hint used by iOS to optimize power consumption and accuracy.
+     */
+    function setActivityType(value: ActivityType): void
     /**
      * Requests the current location.
      * 
@@ -1465,13 +1783,45 @@ declare global {
 
 
     /**
+     * The authorization mode currently granted to the app at the time the streaming API resolved.
+     *
+     * - `"always"`: the app may receive updates while in the background.
+     * - `"whenInUse"`: the app may only receive updates while in the foreground.
+     */
+    type AuthorizationMode = "always" | "whenInUse"
+
+    /**
+     * The result returned by `startUpdatingHeading` / `startUpdatingLocation` when they
+     * resolve successfully.
+     */
+    type StartUpdatingResult = {
+      /**
+       * The authorization mode actually granted by the system.
+       *
+       * If you passed `requestAlwaysAuthorization: true` but the resolved `mode` is
+       * `"whenInUse"`, iOS did not (or could not) prompt for "Always" upgrade — typically
+       * because the user has already declined the upgrade once, and the system permits
+       * only a single programmatic upgrade attempt. Direct the user to **Settings →
+       * Privacy & Security → Location Services → Scripting → Always** to grant it manually.
+       */
+      mode: AuthorizationMode
+    }
+
+    /**
      * Requests the most recently reported heading. The value of this property is null if heading updates have never been initiated.
      */
     function requestHeading(): Promise<Heading | null>
     /**
      * Starts updating the heading.
+     *
+     * @param options.requestAlwaysAuthorization When `true`, requests "Always" authorization
+     * instead of the default "When In Use".
+     * @returns Resolves with the authorization mode actually granted. Inspect `mode` to
+     * detect the case where you requested "Always" but the system kept "When In Use".
      */
-    function startUpdatingHeading(): Promise<void>
+    function startUpdatingHeading(options?: {
+      requestAlwaysAuthorization?: boolean
+    }): Promise<StartUpdatingResult>
     /**
      * Stops updating the heading.
      */
@@ -1486,6 +1836,703 @@ declare global {
      * @param listener The listener is called when the heading changes.
      */
     function removeHeadingListener(listener?: (heading: Heading) => void): void
+
+    /**
+     * Starts continuous location updates. Subsequent updates are delivered to listeners
+     * registered via `addLocationListener`.
+     *
+     * @param options.requestAlwaysAuthorization When `true`, requests "Always" authorization,
+     * which is required if you intend to keep receiving updates while the app is backgrounded.
+     * @returns Resolves with the authorization mode actually granted. Inspect `mode` to
+     * detect the case where you requested "Always" but the system kept "When In Use".
+     */
+    function startUpdatingLocation(options?: {
+      requestAlwaysAuthorization?: boolean
+    }): Promise<StartUpdatingResult>
+    /**
+     * Stops continuous location updates and releases related system resources.
+     * This does not affect one-shot calls such as `requestCurrent`.
+     */
+    function stopUpdatingLocation(): void
+    /**
+     * Add a listener to be notified when a new location is reported.
+     * @param listener The listener is called when a new location is reported.
+     */
+    function addLocationListener(listener: (location: LocationInfo) => void): void
+    /**
+     * Remove a location listener. If no listener is provided, all location listeners are
+     * removed and continuous updates stop.
+     * @param listener The listener previously registered via `addLocationListener`.
+     */
+    function removeLocationListener(listener?: (location: LocationInfo) => void): void
+  }
+
+  /**
+   * SwiftUI MapKit `MapCamera`. An eye-style camera positioned a given
+   * `distance` (meters) from a center coordinate, with optional `heading` and
+   * `pitch`. Construct via `MapCamera.make({...})`. Pass to
+   * `MapCameraPosition.camera(...)` to frame the map.
+   */
+  class MapCamera {
+    private constructor()
+    /** The point the camera is looking at. */
+    readonly centerCoordinate: MapCoordinate
+    /** Distance from `centerCoordinate` to the camera, in meters. */
+    readonly distance: number
+    /** Compass heading of the camera in degrees clockwise from north. */
+    readonly heading: number
+    /** Pitch (tilt) of the camera in degrees. 0 = top-down, 60 = tilted. */
+    readonly pitch: number
+
+    /**
+     * Construct a `MapCamera`. `heading` and `pitch` default to `0`.
+     */
+    static make(opts: {
+      centerCoordinate: MapCoordinate
+      distance: number
+      heading?: number
+      pitch?: number
+    }): MapCamera
+  }
+
+  /**
+   * SwiftUI MapKit `MapCameraPosition`. Describes how the map frames its
+   * content — by region, rect, eye-style camera, focused on a single map
+   * item, tracking the user's location, or letting the system pick
+   * automatically.
+   *
+   * Construct via the static factory methods on the `MapCameraPosition`
+   * namespace. Treat instances as opaque values — pass them around to
+   * `<Map cameraPosition={...} />` / `<Map initialCameraPosition={...} />`
+   * or store them in an `Observable<MapCameraPosition>`. The readonly
+   * accessors below let you inspect what's currently being framed.
+   *
+   * Example:
+   * ```ts
+   * const pos = useObservable<MapCameraPosition>(
+   *   MapCameraPosition.region({
+   *     center: { latitude: 31.23, longitude: 121.47 },
+   *     span:   { latitudeDelta: 0.05, longitudeDelta: 0.05 },
+   *   })
+   * )
+   *
+   * // Re-frame:
+   * pos.setValue(MapCameraPosition.camera(
+   *   MapCamera.make({
+   *     centerCoordinate: { latitude: 31.24, longitude: 121.50 },
+   *     distance: 1500,
+   *     pitch: 45,
+   *   })
+   * ))
+   * ```
+   */
+  class MapCameraPosition {
+    private constructor()
+    /** The region being framed, if any. `null` for other forms. */
+    readonly region: MapRegion | null
+    /**
+     * The rect being framed, if any. Reported in `{ center, size }` form
+     * (size in meters), matching the input shape of `MapCameraPosition.rect`.
+     * `null` for other forms.
+     */
+    readonly rect: {
+      center: MapCoordinate
+      size: { width: number; height: number }
+    } | null
+    /** The eye-style camera being used, if any. `null` for other forms. */
+    readonly camera: MapCamera | null
+    /** The map item being framed, if any. `null` for other forms. */
+    readonly item: { coordinate: MapCoordinate; name?: string } | null
+    /** The fallback used when `.userLocation` cannot resolve. */
+    readonly fallbackPosition: MapCameraPosition | null
+    /**
+     * Whether automatic pitch is allowed — only meaningful when framing a
+     * map item via `MapCameraPosition.item(item, { allowsAutomaticPitch })`.
+     */
+    readonly allowsAutomaticPitch: boolean
+    /**
+     * `true` if this position came from a user gesture (pan / zoom / rotate),
+     * rather than from a programmatic update.
+     */
+    readonly positionedByUser: boolean
+
+    /** Frame the given coordinate region. */
+    static region(region: MapRegion): MapCameraPosition
+    /**
+     * Frame the given map rect, expressed as a center coordinate plus a
+     * metric size (width/height in meters).
+     */
+    static rect(rect: {
+      center: MapCoordinate
+      size: { width: number; height: number }
+    }): MapCameraPosition
+    /**
+     * Use the given eye-style camera. Accepts either a `MapCamera` instance
+     * or the same options dict used by `MapCamera.make`.
+     */
+    static camera(
+      camera: MapCamera | {
+        centerCoordinate: MapCoordinate
+        distance: number
+        heading?: number
+        pitch?: number
+      }
+    ): MapCameraPosition
+    /**
+     * Frame the given map item (a coordinate plus an optional name). Pass
+     * `{ allowsAutomaticPitch: true }` to let MapKit pick a 3D pitch
+     * automatically when appropriate.
+     */
+    static item(
+      item: { coordinate: MapCoordinate; name?: string },
+      options?: { allowsAutomaticPitch?: boolean }
+    ): MapCameraPosition
+    /**
+     * Track the user's current location. If location is not authorized /
+     * resolvable, MapKit falls back to `options.fallback` (default `.automatic`).
+     */
+    static userLocation(options?: { fallback?: MapCameraPosition }): MapCameraPosition
+    /** Let the framework choose an appropriate camera based on content. */
+    static automatic(): MapCameraPosition
+  }
+
+  /**
+   * SwiftUI MapKit `MapCameraBounds`. Constrains how the user can pan and
+   * zoom an interactive map — either by clamping the center to a region
+   * (`centerCoordinateBounds`) or by limiting the camera-to-center distance
+   * (`minimumDistance` / `maximumDistance`, in meters). Pass to
+   * `<Map cameraBounds={...}>` to apply.
+   *
+   * Treat instances as opaque — construct via the static factories.
+   *
+   * Example:
+   * ```ts
+   * // Lock the center inside Shanghai's downtown bounds, and limit zoom
+   * // (the camera cannot pull farther than 8 km or push closer than 200 m).
+   * const bounds = MapCameraBounds.centerCoordinateBounds(
+   *   {
+   *     center: { latitude: 31.2304, longitude: 121.4737 },
+   *     span:   { latitudeDelta: 0.1, longitudeDelta: 0.1 },
+   *   },
+   *   { minimumDistance: 200, maximumDistance: 8000 }
+   * )
+   *
+   * return <Map cameraPosition={cam} cameraBounds={bounds}>...</Map>
+   * ```
+   */
+  class MapCameraBounds {
+    private constructor()
+
+    /**
+     * Constrain the camera so its center stays inside the given region.
+     * Optionally also restrict the zoom range with `minimumDistance` /
+     * `maximumDistance` (meters from camera to center).
+     */
+    static centerCoordinateBounds(
+      region: MapRegion,
+      options?: {
+        minimumDistance?: number
+        maximumDistance?: number
+      }
+    ): MapCameraBounds
+
+    /**
+     * Restrict only the zoom range (camera-to-center distance, in meters);
+     * the camera center is free to move anywhere on the map.
+     */
+    static distance(options: {
+      minimumDistance?: number
+      maximumDistance?: number
+    }): MapCameraBounds
+  }
+
+  /**
+   * Search the on-device map database for points of interest and addresses. Pure query
+   * APIs — no system permissions required. Coordinates come back as `MapCoordinate`,
+   * suitable for direct use with `<Marker>` / `<Map>` from the views layer.
+   *
+   * Companion namespace: `MapUtils` for distance / bearing / region geometry helpers.
+   * Forward / reverse geocoding lives on the existing `Location` namespace
+   * (`Location.geocodeAddress`, `Location.reverseGeocode`).
+   */
+  /**
+   * A single place / point-of-interest. Opaque wrapper around Apple's `MKMapItem`.
+   * Returned by `MapSearch.locate` / `MapSearchCompleter.resolve` and carried on
+   * `MapDirections.DirectionsResponse` / `ETAResponse`. Plug `item.coordinate`
+   * directly into `<Marker>` / `<Map>`.
+   *
+   * **Not a plain object.** `JSON.stringify(item)` and `Object.keys(item)` will
+   * not return the field dictionary — read fields by name (`item.name`,
+   * `item.coordinate`, etc.). Spread the fields manually if a serializable
+   * snapshot is needed.
+   */
+  class MapItem {
+    private constructor()
+
+    readonly coordinate: MapCoordinate
+    /** Display name of the place (e.g. "Apple Park Visitor Center"). */
+    readonly name: string | null
+    /** Single-line address formatted from the placemark components. */
+    readonly formattedAddress: string | null
+    readonly placemark: LocationPlacemark
+    readonly phoneNumber: string | null
+    readonly url: string | null
+    /**
+     * Normalized POI category such as `"restaurant"` / `"cafe"`. May be a category
+     * outside the documented set of `MapPointOfInterestCategory` values — MapKit
+     * occasionally returns categories beyond the documented enumeration.
+     */
+    readonly pointOfInterestCategory: string | null
+    /** IANA timezone identifier, e.g. `"Asia/Shanghai"`. */
+    readonly timeZone: string | null
+    /**
+     * True when the item represents the device's current location (returned only
+     * by APIs that supply such an item — typical search / directions results are
+     * `false`).
+     */
+    readonly isCurrentLocation: boolean
+
+    /**
+     * Open this item in the Apple Maps app. The current app moves to the
+     * background. Resolves with the boolean returned by the system — `true` when
+     * the launch request was accepted, `false` if the system refused (rare).
+     */
+    openInMaps(options?: MapItemOpenOptions): Promise<boolean>
+
+    /**
+     * Great-circle distance from this item to another coordinate or `MapItem`,
+     * in meters. Equivalent to `MapUtils.distance(this.coordinate, to)` when `to`
+     * is a coordinate, or `MapUtils.distance(this.coordinate, to.coordinate)`
+     * when `to` is a `MapItem`.
+     */
+    distance(to: MapCoordinate | MapItem): number
+
+    /**
+     * Initial bearing from this item to another coordinate or `MapItem`, in
+     * degrees normalized to `[0, 360)`. `0` = north, `90` = east, etc.
+     */
+    bearing(to: MapCoordinate | MapItem): number
+
+    /**
+     * Placeholder `MapItem` representing the device's current location. The
+     * Apple Maps app interprets this specially when handed off via
+     * `openInMaps()` — no permission required, the coordinate is not read
+     * locally. Returned items have `isCurrentLocation === true`.
+     *
+     * @example
+     * await MapItem.forCurrentLocation().openInMaps({ directionsMode: "walking" })
+     */
+    static forCurrentLocation(): MapItem
+  }
+
+  type MapItemOpenOptions = {
+    /**
+     * Show directions on the opened map. `"default"` lets Apple Maps pick the
+     * mode based on the user's preferences.
+     */
+    directionsMode?: "driving" | "walking" | "transit" | "default"
+    /** Show live traffic overlay on the opened map. */
+    showsTraffic?: boolean
+    /** Map type to apply. */
+    mapType?: "standard" | "satellite" | "hybrid"
+  }
+
+  namespace MapSearch {
+    /**
+     * Categories of search results returned by `locate`. `physicalFeature` is
+     * iOS 18+ — silently ignored on older systems.
+     */
+    type MapItemResultType = "pointOfInterest" | "address" | "physicalFeature"
+
+    type LocateOptions = {
+      /** Search keyword. Required and non-empty. */
+      query: string
+      /**
+       * Restrict the search to a region. Without it MapKit uses a default area
+       * based on the device's last-known coarse location.
+       */
+      region?: MapRegion
+      /** Filter by result categories. Defaults to `["pointOfInterest", "address"]`. */
+      resultTypes?: MapItemResultType[]
+      /**
+       * Filter by point-of-interest categories. Shares the same union as the
+       * `<Map mapStyle={{ pointsOfInterest }}>` filter, so you can pass the same
+       * spec to both surfaces.
+       */
+      pointOfInterestFilter?: MapPointsOfInterestSpec
+    }
+
+    /**
+     * One autocomplete suggestion produced by a `MapSearchCompleter`. Pass the
+     * whole object back to `completer.resolve(...)` to look up the underlying
+     * `MapItem[]`.
+     *
+     * `id` is an opaque token managed by the completer. It is only valid until
+     * the completer issues its next batch of suggestions; tapping a stale
+     * suggestion will reject with `"unknown completion id"`.
+     */
+    type MapSearchCompletion = {
+      title: string
+      subtitle: string
+      id: string
+    }
+
+    type CompleterOptions = {
+      region?: MapRegion
+      /**
+       * Filter by result categories. Note: `physicalFeature` is not valid here
+       * (it is only meaningful for `locate`); `query` is supported as well.
+       */
+      resultTypes?: (MapItemResultType | "query")[]
+    }
+
+    /**
+     * Stateful autocomplete completer. One instance per input field — sharing
+     * a completer between unrelated text fields will cross-contaminate results
+     * because the underlying `queryFragment` is single-valued.
+     *
+     * Always call `dispose()` when the input is removed.
+     */
+    interface MapSearchCompleter {
+      /** Update the search fragment. Triggers a delegate-driven update. */
+      setQuery(query: string): void
+      /** Update the search region. */
+      setRegion(region: MapRegion): void
+      /** Subscribe to autocomplete results. Each update replaces the previous batch. */
+      addListener(listener: (completions: MapSearchCompletion[]) => void): void
+      /** Remove a single listener, or all listeners when called without arguments. */
+      removeListener(listener?: (completions: MapSearchCompletion[]) => void): void
+      /** Resolve a suggestion (typically the one the user tapped) to full `MapItem[]`. */
+      resolve(completion: MapSearchCompletion): Promise<MapItem[]>
+      /** Stop the underlying completer and release listeners. Idempotent. */
+      dispose(): void
+    }
+
+    /**
+     * Run a one-shot keyword search.
+     *
+     * High-frequency input (e.g. typing in a search bar) should use
+     * `createCompleter` instead — repeated `locate` calls do not deduplicate
+     * stale responses.
+     */
+    function locate(options: LocateOptions): Promise<MapItem[]>
+
+    /**
+     * Create a stateful autocomplete completer bound to one input field.
+     * Returns immediately; suggestions arrive asynchronously via the registered
+     * listeners after every `setQuery` change.
+     */
+    function createCompleter(options?: CompleterOptions): MapSearchCompleter
+  }
+
+  /**
+   * Geometry helpers for the `MapKit` types from the views layer (`MapCoordinate`,
+   * `MapRegion`). All functions are pure and synchronous — safe to call during
+   * render or in tight loops.
+   */
+  namespace MapUtils {
+    /**
+     * Great-circle distance between two coordinates, in meters. Computed via the
+     * Haversine formula using mean Earth radius (6 371 008.8 m).
+     */
+    function distance(a: MapCoordinate, b: MapCoordinate): number
+
+    /**
+     * Initial bearing (forward azimuth) from `a` to `b`, in degrees normalized
+     * to `[0, 360)`. `0` = north, `90` = east, `180` = south, `270` = west.
+     */
+    function bearing(a: MapCoordinate, b: MapCoordinate): number
+
+    /**
+     * Whether `coordinate` lies inside `region`. Does not handle regions that
+     * straddle the antimeridian (±180° longitude).
+     */
+    function regionContains(region: MapRegion, coordinate: MapCoordinate): boolean
+
+    /**
+     * Smallest `MapRegion` enclosing all `coordinates`. Returns `null` for an
+     * empty array.
+     *
+     * @param paddingFactor Fraction to expand the bounding span outward,
+     * default `0.1` (10%). Pass `0` for a tight fit.
+     */
+    function regionFromCoordinates(
+      coordinates: MapCoordinate[],
+      paddingFactor?: number
+    ): MapRegion | null
+
+    type FormatDistanceOptions = {
+      /**
+       * Unit system. `"default"` (default) follows the device locale. `"metric"`
+       * forces km/m; `"imperial"` forces miles/feet.
+       */
+      units?: "metric" | "imperial" | "default"
+      /**
+       * Visual style of the unit suffix:
+       * - `"default"` — locale default (e.g. `"5 km"`)
+       * - `"abbreviated"` — short form (e.g. `"5 km"`)
+       * - `"full"` — long form (e.g. `"5 kilometers"`)
+       */
+      unitStyle?: "abbreviated" | "default" | "full"
+    }
+
+    /**
+     * Format a distance in meters into a localized human-readable string using
+     * `MKDistanceFormatter`. Negative values clamp to 0.
+     *
+     * Output is locale-aware; do not assert on exact strings.
+     *
+     * @example
+     * MapUtils.formatDistance(1230)                            // "1.2 km"
+     * MapUtils.formatDistance(1230, { units: "imperial" })     // "0.8 mi"
+     * MapUtils.formatDistance(1230, { unitStyle: "full" })     // "1.2 kilometers"
+     */
+    function formatDistance(meters: number, options?: FormatDistanceOptions): string
+
+    type FormatDurationOptions = {
+      /**
+       * Visual style. Defaults to `"abbreviated"` (e.g. `"1h 23m"`).
+       *
+       * - `"positional"` — `"1:23"`
+       * - `"abbreviated"` — `"1h 23m"`
+       * - `"short"` — `"1 hr, 23 min"`
+       * - `"full"` — `"1 hour, 23 minutes"`
+       * - `"brief"` — `"1hr 23min"`
+       * - `"spellOut"` — `"one hour, twenty-three minutes"`
+       */
+      unitsStyle?: "positional" | "abbreviated" | "short" | "full" | "brief" | "spellOut"
+      /**
+       * Which units the formatter is allowed to emit. Defaults to
+       * `["day", "hour", "minute"]`. Add `"second"` for sub-minute precision.
+       */
+      allowedUnits?: ("day" | "hour" | "minute" | "second")[]
+      /**
+       * Limit how many unit segments appear. e.g. `1` collapses `3661s` to
+       * just `"1 hr"` instead of `"1 hr, 1 min, 1 sec"`.
+       */
+      maximumUnitCount?: number
+    }
+
+    /**
+     * Format a duration in seconds using `DateComponentsFormatter`. Negative
+     * values return an empty string. Output is locale-aware.
+     *
+     * @example
+     * MapUtils.formatDuration(3725)                              // "1h 2m"
+     * MapUtils.formatDuration(3725, { unitsStyle: "full" })       // "1 hour, 2 minutes"
+     * MapUtils.formatDuration(3725, { unitsStyle: "positional" }) // "1:02:05"
+     */
+    function formatDuration(seconds: number, options?: FormatDurationOptions): string
+  }
+
+  /**
+   * Plan a route between two endpoints. Returns ready-to-render polyline coordinates
+   * suitable for `<MapPolyline coordinates={route.coordinates}>` and turn-by-turn
+   * steps for in-app directions UI.
+   *
+   * Companion namespace: `MapSearch` (look up endpoints), `MapUtils` (geometry helpers).
+   *
+   * No system permissions required. The result data comes from Apple's directions
+   * servers and arrives as plain objects — no opaque references to dispose.
+   *
+   * Transit (`transportType: "transit"`) is supported in a limited set of regions.
+   * Apple's iOS Maps app traditionally falls back to launching the Maps UI for
+   * transit; this API does not — unsupported transit queries reject with
+   * `directionsNotFound`. For broad coverage prefer `"automobile"` or `"walking"`.
+   */
+  namespace MapDirections {
+    type TransportType = "automobile" | "walking" | "transit" | "any"
+
+    /**
+     * Preference for tolls or highways. `"any"` (default) lets MapKit decide,
+     * `"avoid"` asks it to route around them when possible.
+     */
+    type RoutePreference = "any" | "avoid"
+
+    /**
+     * Source or destination of a route. Accepts either:
+     * - A bare `MapCoordinate` (wrapped internally in an unnamed map item).
+     * - An object carrying `coordinate` + optional `name` (typically a value picked
+     *   from a `MapItem` — pass `{ coordinate, name }`).
+     */
+    type DirectionsEndpoint =
+      | MapCoordinate
+      | { coordinate: MapCoordinate; name?: string }
+
+    type DirectionsOptions = {
+      source: DirectionsEndpoint
+      destination: DirectionsEndpoint
+      /** Default `"automobile"`. */
+      transportType?: TransportType
+      /**
+       * Request up to 3 alternate routes (driving + highway routes only typically
+       * return multiple). Default `false`.
+       */
+      requestsAlternateRoutes?: boolean
+      /**
+       * Plan a route departing at this time. Mutually exclusive with `arrivalDate`;
+       * if both are supplied, `departureDate` wins.
+       */
+      departureDate?: Date
+      /** Plan a route arriving by this time. */
+      arrivalDate?: Date
+      /** Toll preference. Default `"any"`. */
+      tollPreference?: RoutePreference
+      /** Highway preference. Default `"any"`. */
+      highwayPreference?: RoutePreference
+    }
+
+    type DirectionsRouteStep = {
+      /** Turn-by-turn instructions, e.g. `"Turn right onto Main St."`. */
+      instructions: string
+      /** Optional advisory ("HOV lane", "Toll road", etc.). */
+      notice?: string
+      /** Step distance in meters. */
+      distance: number
+      /** Polyline coordinates for this step. */
+      coordinates: MapCoordinate[]
+      transportType: TransportType
+    }
+
+    type DirectionsRoute = {
+      name: string
+      /** Total route distance in meters. */
+      distance: number
+      /** Expected travel time in seconds. */
+      expectedTravelTime: number
+      transportType: TransportType
+      /**
+       * Ready-to-render polyline coordinates. Feed straight into
+       * `<MapPolyline coordinates={...}>` — no extra conversion needed.
+       */
+      coordinates: MapCoordinate[]
+      steps: DirectionsRouteStep[]
+      hasTolls: boolean
+      hasHighways: boolean
+      advisoryNotices: string[]
+    }
+
+    type DirectionsResponse = {
+      source: MapItem
+      destination: MapItem
+      /** At least 1 route. `requestsAlternateRoutes: true` may include up to 3. */
+      routes: DirectionsRoute[]
+    }
+
+    type ETAResponse = {
+      source: MapItem
+      destination: MapItem
+      /** Expected travel time in seconds. */
+      expectedTravelTime: number
+      /** Total route distance in meters. */
+      distance: number
+      expectedArrivalDate: Date
+      expectedDepartureDate: Date
+      transportType: TransportType
+    }
+
+    /**
+     * Calculate one or more routes between `source` and `destination`. Each
+     * `DirectionsRoute` carries a ready-to-render `coordinates` polyline plus
+     * turn-by-turn `steps`.
+     */
+    function calculate(options: DirectionsOptions): Promise<DirectionsResponse>
+
+    /**
+     * Compute the expected travel time / distance / arrival window without
+     * downloading the full route geometry. Cheaper and faster than `calculate`
+     * for ETA-only UI.
+     */
+    function calculateETA(options: DirectionsOptions): Promise<ETAResponse>
+  }
+
+  /**
+   * Render a static map image offscreen via MapKit's snapshotter. Useful when
+   * you need a map picture without a live `<Map>` view — widget previews,
+   * share-sheet thumbnails, exported reports, and so on.
+   *
+   * Returns a `MapSnapshot` opaque handle exposing `pngBase64`, `size`, and
+   * `pointForCoordinate(...)`. Feed the base64 string into an `<Image>` view
+   * via `data:image/png;base64,${snap.pngBase64}`.
+   */
+  namespace MapSnapshotter {
+    type Options = {
+      /** Region to capture. Mutually exclusive with `camera`. */
+      region?: MapRegion
+      /** Eye-style camera framing. Mutually exclusive with `region`; wins when both are provided. */
+      camera?: MapCamera
+      /** Output size in points. Both dimensions must be > 0. */
+      size: { width: number; height: number }
+      /**
+       * Pixel scale factor. `1` = points = pixels, `2` = retina, `3` = super-retina.
+       * Defaults to the device's main screen scale.
+       */
+      scale?: number
+      /**
+       * Map style. Same shape as `<Map mapStyle>` from Phase 1.
+       * Defaults to `{ style: "standard" }`.
+       */
+      mapStyle?: MapStyleSpec
+      /** `"light"` (default) or `"dark"`. Adjusts the rendered map's color tinting. */
+      appearance?: "light" | "dark"
+    }
+
+    function take(options: Options): Promise<MapSnapshot>
+  }
+
+  /**
+   * Opaque handle to a rendered map snapshot. Instances come from
+   * `MapSnapshotter.take(...)` — there is no public constructor.
+   */
+  class MapSnapshot {
+    private constructor()
+    /** Snapshot dimensions in points (matches `options.size`). */
+    readonly size: { width: number; height: number }
+    /**
+     * Rendered map as a `UIImage`. Drop into `<Image image={snap.image}>`
+     * for display, or use the rich `UIImage` API
+     * (`toPNGBase64String()` / `toPNGData()` / `preparingThumbnail(size)` / ...)
+     * for further processing.
+     */
+    readonly image: UIImage
+    /**
+     * Convert a geographic coordinate to a point inside the snapshot
+     * (in points, matching `size`). Values can fall outside the snapshot
+     * bounds — callers should bounds-check if they need to gate overlay
+     * rendering.
+     */
+    point(coordinate: MapCoordinate): { x: number; y: number }
+  }
+
+  /**
+   * Query MapKit for the LookAround (street-level) scene available at a
+   * coordinate. Resolves to `null` when the location has no imagery — most
+   * non-urban and unsupported regions.
+   *
+   * Combine with `<LookAroundPreview scene={...} />` from the views layer to
+   * render the scene interactively.
+   */
+  namespace MapLookAround {
+    function request(coordinate: MapCoordinate): Promise<MapLookAroundScene | null>
+  }
+
+  /**
+   * Optional badge position inside `<LookAroundPreview>`. Mirrors Apple's
+   * `MKLookAroundBadgePosition` (three cases only — no `bottomLeading`).
+   * Default `"topLeading"`.
+   */
+  type MapLookAroundBadgePosition =
+    | "topLeading" | "topTrailing" | "bottomTrailing"
+
+  /**
+   * Opaque LookAround scene reference. Backed by an Apple `MKLookAroundScene`
+   * — instances come from `MapLookAround.request(...)`; there's no public
+   * constructor. Passes through to the `<LookAroundPreview>` view directly.
+   */
+  class MapLookAroundScene {
+    private constructor()
+    /** Anchor coordinate the scene was requested at. */
+    readonly coordinate: MapCoordinate
   }
 
   /**
@@ -1536,6 +2583,25 @@ declare global {
      * Returns the path to WebDAV's `Documents` directory, you should check `isWebDAVAvailable` first.
      */
     const webDAVDocumentsDirectory: string
+    /**
+     * Returns the path to Safari browser userscript data root directory.
+     * This directory follows the Safari Browser Data storage location configured in Settings.
+     */
+    const safariBrowserDirectory: string
+    /**
+     * Returns the path to Safari browser userscript GM storage directory.
+     * This directory contains the JSON files used by GM.getValue / GM.setValue.
+     */
+    const safariBrowserStorageDirectory: string
+    /**
+     * Returns the path to the directory where Safari browser userscripts save files through `GM.download`.
+     * This directory follows the Safari Browser Data storage location configured in Settings.
+     */
+    const safariBrowserDownloadsDirectory: string
+    /**
+     * Returns the path to the directory where Safari browser userscripts installed from the extension popup are stored.
+     */
+    const safariBrowserUserscriptsDirectory: string
     /**
      * Returns a boolean value indicating whether the file is targeted for storage in iCloud.
      * @param filePath The path of the file
@@ -1862,6 +2928,7 @@ declare global {
   }
 
   class LivePhoto {
+    private constructor()
     /**
      * The size of the live photo
      */
@@ -2128,7 +3195,7 @@ declare global {
      * @param shouldMoveFile If true, the file will be moved to the Photos app, otherwise it will be copied. Defaults to false.
      * @returns Returns a promise that resolves when the operation is complete, or rejects with an error if the operation fails.
      */
-    function saveLivePhoto(imagePath: string, videoPath: string, shouldMoveFile?: boolean): Promise<void>
+    function saveLivePhoto(options: { imagePath: string, videoPath: string, shouldMoveFile?: boolean }): Promise<void>
   }
 
   /**
@@ -2158,6 +3225,7 @@ declare global {
    * The ItemProvider class is used to provide data for a file or file system item.
    */
   class ItemProvider {
+    constructor()
 
     /**
      * The types that the item provider can provide.
@@ -2256,6 +3324,50 @@ declare global {
      * Defaults to false.
      */
     allowsMultipleSelection?: boolean
+  }
+
+  type PickFileBookmarkOptions = {
+    /**
+     * The preferred bookmark name. If omitted, the selected file name is used.
+     * When the name already exists, the user will be asked to choose another name.
+     */
+    preferredName?: string
+    /**
+     * The initial directory that the document picker displays.
+     */
+    initialDirectory?: string
+    /**
+     * An array of uniform type identifiers for the document picker to display.
+     * For more information, see [Uniform Type Identifiers.](https://developer.apple.com/documentation/uniformtypeidentifiers/uttype-swift.struct)
+     */
+    types?: UTType[]
+    /**
+     * Defaults to true.
+     */
+    shouldShowFileExtensions?: boolean
+  }
+
+  type PickDirectoryBookmarkOptions = {
+    /**
+     * The preferred bookmark name. If omitted, the selected directory name is used.
+     * When the name already exists, the user will be asked to choose another name.
+     */
+    preferredName?: string
+    /**
+     * The initial directory that the document picker displays.
+     */
+    initialDirectory?: string
+  }
+
+  type DocumentPickerBookmarkResult = {
+    /**
+     * The selected file or directory path.
+     */
+    path: string
+    /**
+     * The bookmark name that was saved. This may differ from the preferred name.
+     */
+    bookmarkName: string
   }
 
   type ExportFilesOptions = {
@@ -2503,6 +3615,22 @@ declare global {
      */
     function pickDirectory(initialDirectory?: string): Promise<string | null>
     /**
+     * Pick a file and save it as a persistent security-scoped bookmark.
+     *
+     * Unlike `pickFiles`, this method stores a bookmark that can be used by
+     * later script runs with `FileManager.bookmarkedPath(bookmarkName)`.
+     * If the preferred name already exists, the user will be asked to rename it.
+     */
+    function pickFileBookmark(options?: PickFileBookmarkOptions): Promise<DocumentPickerBookmarkResult | null>
+    /**
+     * Pick a directory and save it as a persistent security-scoped bookmark.
+     *
+     * Unlike `pickDirectory`, this method stores a bookmark that can be used by
+     * later script runs with `FileManager.bookmarkedPath(bookmarkName)`.
+     * If the preferred name already exists, the user will be asked to rename it.
+     */
+    function pickDirectoryBookmark(options?: PickDirectoryBookmarkOptions): Promise<DocumentPickerBookmarkResult | null>
+    /**
      * Exports files.
      * @example
      * ```ts
@@ -2619,7 +3747,12 @@ declare global {
    */
   class WebViewController {
     /**
-     * When the web view performs a request to load a resource, the function can determine whether or not to allow the request. 
+     * Create a new WebViewController.
+     * @param options.ephemeral When true, the WebView uses a non-persistent data store so cookies and website data are isolated from the default container and discarded when the controller is released. Useful for sandboxed login flows or clean-slate scraping.
+     */
+    constructor(options?: { ephemeral?: boolean })
+    /**
+     * When the web view performs a request to load a resource, the function can determine whether or not to allow the request.
      */
     shouldAllowRequest?: (request: {
       /**
@@ -2775,6 +3908,45 @@ declare global {
       afterScreenUpdates?: boolean
     }): Promise<UIImage | null>
     /**
+     * Get all cookies currently stored in the WebView's data store, including `HttpOnly` cookies that are not exposed to `document.cookie`.
+     */
+    getAllCookies(): Promise<Cookie[]>
+    /**
+     * Get cookies that would be sent with a request to the given URL. Matching follows the standard domain + path rules used by `WKWebView`.
+     * @param url The URL used to match cookies by domain and path.
+     */
+    getCookies(url: string): Promise<Cookie[]>
+    /**
+     * Set (or overwrite) a cookie in the WebView's data store. You can call this before `loadURL` to pre-seed a session cookie for authenticated pages.
+     * @param cookie The cookie to store. `name`, `value` and `domain` are required; `path` defaults to `"/"`. When `isSessionOnly` is true or `expiresDate` is omitted, the cookie is treated as a session cookie.
+     * @returns A Promise that resolves with `true` when the cookie is accepted, or `false` if the input is invalid.
+     * @example
+     * ```ts
+     * const webView = new WebViewController()
+     * await webView.setCookie({
+     *   name: "session",
+     *   value: "abc123",
+     *   domain: "example.com",
+     *   path: "/",
+     *   isSecure: true,
+     *   isHTTPOnly: true,
+     *   isSessionOnly: false,
+     *   expiresDate: new Date(Date.now() + 86400_000),
+     * })
+     * await webView.loadURL("https://example.com/dashboard")
+     * ```
+     */
+    setCookie(cookie: Cookie): Promise<boolean>
+    /**
+     * Delete cookies matched by `name`, and optionally scoped by `domain` and `path`. You can pass a full `Cookie` object returned by `getAllCookies` / `getCookies` to delete that exact cookie, or pass a partial descriptor to delete every cookie that matches.
+     * @returns A Promise that resolves with `true` when one or more cookies are removed, or `false` when nothing matched.
+     */
+    deleteCookie(cookie: { name: string, domain?: string, path?: string }): Promise<boolean>
+    /**
+     * Remove every cookie from the WebView's cookie store. Other website data (cache, local storage, etc.) is left untouched.
+     */
+    clearAllCookies(): Promise<void>
+    /**
      * Dismiss the WebView, if the WebView is not presented, do nothing. You can presented the WebView again before it was disposed.
      */
     dismiss(): void
@@ -2891,6 +4063,7 @@ declare global {
    * A class that defines the end of a recurrence rule.
    */
   class RecurrenceEnd {
+    private constructor()
     /**
      *  The date when the recurrence ends. If the recurrence ends by count, this value is `null`.
      */
@@ -2913,6 +4086,7 @@ declare global {
    * A class that describes the pattern for a recurring event.
    */
   class RecurrenceRule {
+    private constructor()
     /**
      * The identifier for the recurrence rule’s calendar.
      */
@@ -3046,6 +4220,7 @@ declare global {
     | "reminder"
 
   class CalendarSource {
+    private constructor()
     /**
      * The source type representing the account to which this calendar belongs.
      */
@@ -3069,6 +4244,7 @@ declare global {
    * The `Calendar` API allows you to interact with iOS calendars, enabling operations like retrieving default calendars, creating custom calendars, and managing calendar settings and events.
    */
   class Calendar {
+    private constructor()
     /**
      * A unique identifier for the calendar.
      */
@@ -3171,6 +4347,7 @@ declare global {
    * The `Reminder` API allows you to create, edit, and manage reminders in a calendar. This includes setting titles, due dates, priorities, and recurrence rules.
    */
   class Reminder {
+    constructor()
     /**
      * A unique identifier for the reminder.
      */
@@ -3400,6 +4577,7 @@ declare global {
   }
 
   class EventAlarm {
+    private constructor()
     /**
      * Creates and returns an alarm with an absolute date.
      */
@@ -3434,6 +4612,7 @@ declare global {
    * The `CalendarEvent` API enables you to create and manage events in iOS calendars, with properties like title, location, dates, attendees, and recurrence.
    */
   class CalendarEvent {
+    constructor()
     /**
      * A unique identifier for the event.
      */
@@ -3703,6 +4882,67 @@ If the event’s calendar does not support availability settings, this property�
      * @param listener The listener is called when the output volume changes.
      */
     function removeOutputVolumeListener(listener: AudioSessionOutputVolumeListener): void
+
+    /**
+     * The audio input ports that are currently available for use with the audio session.
+     * Bluetooth/USB/headset microphones only appear when the active category options allow them
+     * (e.g. `allowBluetoothHFP`).
+     */
+    const availableInputs: Promise<AudioSessionPort[]>
+    /**
+     * The current audio route, including selected input and output ports.
+     */
+    const currentRoute: Promise<AudioRouteDescription>
+    /**
+     * Whether the in-process "prefer built-in mic" switch is currently enabled.
+     * See `setPrefersBuiltInMicWhenAvailable` for details.
+     */
+    const prefersBuiltInMicWhenAvailable: Promise<boolean>
+    /**
+     * Sets the preferred input port for the audio session. Pass `null` to clear the preference.
+     *
+     * Must be called after `setActive(true)`. Calling it on an inactive session rejects with
+     * `Cannot setPreferredInput before setActive(true).`.
+     *
+     * The argument is matched against `availableInputs` first by `uid`, then by `portType`.
+     * If the port is not currently in `availableInputs`, the call rejects.
+     *
+     * @param input An audio port previously obtained from `availableInputs`, or `null` to clear.
+     */
+    function setPreferredInput(input: AudioSessionPort | null): Promise<void>
+    /**
+     * Forces the audio session to route its output to the device speaker, or removes that override.
+     * Independent from input selection; use together with `setPreferredInput` to fully separate I/O.
+     *
+     * @param port `'speaker'` to force the device speaker, `'none'` to drop the override.
+     */
+    function overrideOutputAudioPort(port: 'speaker' | 'none'): Promise<void>
+    /**
+     * Enables or disables the in-process "prefer built-in mic" switch. When enabled, the SDK
+     * monitors audio route changes and steers the input back to `builtInMic` whenever it becomes
+     * available, regardless of whether a Bluetooth, headset, USB, or other microphone is also
+     * connected. The output route is left untouched, which lets you keep wireless headphones for
+     * playback while using the device microphone for input.
+     *
+     * The switch lives in the current process only and is not persisted across launches. It
+     * affects every script running in the host app while the host process is alive. Manual
+     * `setPreferredInput` calls (route change reason `override`) are not overwritten by the switch.
+     *
+     * Enabling the switch immediately attempts to apply the preference once, without waiting for
+     * the next route change.
+     *
+     * @param enabled `true` to enable the switch, `false` to disable it.
+     */
+    function setPrefersBuiltInMicWhenAvailable(enabled: boolean): Promise<void>
+    /**
+     * Adds a listener that is called when the audio route changes.
+     * @param listener The listener is called with the change reason and the new route.
+     */
+    function addRouteChangeListener(listener: AudioRouteChangeListener): void
+    /**
+     * Removes a previously registered route change listener.
+     */
+    function removeRouteChangeListener(listener: AudioRouteChangeListener): void
   }
   /**
   * The type of an audio interruption.
@@ -3748,6 +4988,87 @@ If the event’s calendar does not support availability settings, this property�
   type AudioSessionCategory = 'ambient' | 'multiRoute' | 'playAndRecord' | 'playback' | 'record' | 'soloAmbient'
 
   /**
+   * Audio session port types, matching the values reported by `AVAudioSessionPortDescription.portType`.
+   * Newer iOS-only port types (e.g. `continuityMicrophone`) may also be returned as their raw string.
+   */
+  type AudioSessionPortType =
+    | 'builtInMic' | 'headsetMic' | 'lineIn' | 'usbAudio'
+    | 'bluetoothHFP' | 'bluetoothLE'
+    | 'builtInReceiver' | 'builtInSpeaker' | 'headphones' | 'lineOut'
+    | 'bluetoothA2DP' | 'airPlay' | 'hdmi' | 'carAudio'
+    | string
+
+  /**
+   * Orientation of an input data source (typically a microphone) on the device.
+   */
+  type AudioSessionDataSourceOrientation = 'top' | 'bottom' | 'front' | 'back' | 'left' | 'right' | 'unknown'
+
+  /**
+   * Physical location of an input data source on the device.
+   */
+  type AudioSessionDataSourceLocation = 'upper' | 'lower' | 'unknown'
+
+  /**
+   * Currently selected polar pattern for an input data source.
+   */
+  type AudioSessionPolarPattern = 'omnidirectional' | 'cardioid' | 'subcardioid' | 'stereo' | 'unknown'
+
+  type AudioSessionDataSource = {
+    /** Stable identifier of the data source within the parent port. */
+    id: number
+    /** Display name of the data source. */
+    name: string
+    orientation?: AudioSessionDataSourceOrientation
+    location?: AudioSessionDataSourceLocation
+    selectedPolarPattern?: AudioSessionPolarPattern
+  }
+
+  /**
+   * A description of an audio input or output port, matching `AVAudioSessionPortDescription`.
+   */
+  type AudioSessionPort = {
+    portType: AudioSessionPortType
+    /** A human-readable name suitable for display. */
+    portName: string
+    /** A stable, opaque identifier for the port. */
+    uid: string
+    /** Number of audio channels exposed by this port. */
+    channels?: number
+    /** Indicates whether this port has built-in voice-call audio processing. */
+    hasHardwareVoiceCallProcessing?: boolean
+    /** Available data sources on this port (e.g. front/back/bottom built-in mics). */
+    dataSources?: AudioSessionDataSource[]
+    /** ID of the currently selected data source, if any. */
+    selectedDataSourceId?: number
+  }
+
+  /**
+   * Snapshot of the active audio route, with separately-listed input and output ports.
+   */
+  type AudioRouteDescription = {
+    inputs: AudioSessionPort[]
+    outputs: AudioSessionPort[]
+  }
+
+  /**
+   * Reason an audio route change was triggered, mirroring `AVAudioSession.RouteChangeReason`.
+   */
+  type AudioRouteChangeReason =
+    | 'unknown'
+    | 'newDeviceAvailable'
+    | 'oldDeviceUnavailable'
+    | 'categoryChange'
+    | 'override'
+    | 'wakeFromSleep'
+    | 'noSuitableRouteForCategory'
+    | 'routeConfigurationChange'
+
+  type AudioRouteChangeListener = (
+    reason: AudioRouteChangeReason,
+    current: AudioRouteDescription,
+  ) => void
+
+  /**
    * Specifies when to pause or stop speech.
    */
   type SpeechBoundary = 'immediate' | 'word'
@@ -3787,8 +5108,23 @@ If the event’s calendar does not support availability settings, this property�
   type SpeechSynthesisOptions = {
     /**
      * A boolean value indicates whether the text is a markdown string.
+     * Mutually exclusive with `isSSML` — passing both as `true` will reject the promise.
      */
     isMarkdown?: boolean
+    /**
+     * A boolean value indicates whether the text is an SSML (Speech Synthesis Markup Language)
+     * string. The text must be wrapped in a `<speak>...</speak>` root element. Available on iOS 16+.
+     *
+     * Mutually exclusive with `isMarkdown` — passing both as `true` will reject the promise.
+     * If the SSML cannot be parsed, the promise rejects with `"Failed to parse SSML representation."`.
+     *
+     * Inline SSML tags (e.g. `<prosody>`, `<voice>`, `<break>`) take precedence; the utterance-level
+     * `voice` / `rate` / `pitch` / `volume` options still apply as fallbacks for any text that is not
+     * overridden by inline tags.
+     *
+     * See: https://developer.apple.com/documentation/avfaudio/avspeechutterance/init(ssmlrepresentation:)
+     */
+    isSSML?: boolean
     /**
      * Set this property to a value within the range of 0.5 for lower pitch to 2.0 for higher pitch. The default value is 1.0.
      * This property will override the `Speech.pitch`.
@@ -3985,6 +5321,19 @@ If the event’s calendar does not support availability settings, this property�
        */
       useDefaultAudioSessionSettings?: boolean
       /**
+       * Preferred audio input port to use for this recognition session.
+       *
+       * - `'auto'` (default): use whatever input the system selects (typically the most-recently-connected
+       *   Bluetooth/headset mic if present).
+       * - `'builtInMic'`: force the device's built-in microphone, even when a Bluetooth headset is
+       *   connected. Combined with the default audio session settings, this lets you keep wireless
+       *   headphones for playback while recording from the built-in mic for better input quality.
+       *
+       * The preference is applied after the audio session is activated. If `builtInMic` is not
+       * available on the device, the call still succeeds but the input falls back to the system default.
+       */
+      preferredInput?: 'auto' | 'builtInMic'
+      /**
        * The function to call when partial or final results are available, or when an error occurs. If the `partialResults` property is true, this function may be called multiple times to deliver the partial and final results.
        *
        * @param result A `SpeechRecognitionResult` containing the partial or final transcriptions of the audio content.
@@ -4046,9 +5395,90 @@ If the event’s calendar does not support availability settings, this property�
      */
     isFinal: boolean
     /**
-     * The entire transcription of utterances, formatted into a single, user-displayable string,  with the highest confidence level.
+     * Convenience alias for `bestTranscription.formattedString`. Kept for backward compatibility.
      */
     text: string
+    /**
+     * The transcription with the highest confidence level.
+     */
+    bestTranscription: SpeechTranscription
+    /**
+     * Alternative transcriptions of the audio, sorted in descending order of confidence.
+     */
+    transcriptions: SpeechTranscription[]
+    /**
+     * Additional speech metrics. Only available on final results (iOS 14.5+).
+     */
+    metadata?: SpeechRecognitionMetadata
+  }
+
+  /**
+   * A transcription of recognized speech.
+   */
+  type SpeechTranscription = {
+    /**
+     * The entire transcription of utterances, formatted into a single, user-displayable string.
+     */
+    formattedString: string
+    /**
+     * The individual word/utterance segments that compose this transcription.
+     */
+    segments: SpeechTranscriptionSegment[]
+  }
+
+  /**
+   * A single segment within a `SpeechTranscription`, typically corresponding to a word.
+   */
+  type SpeechTranscriptionSegment = {
+    /**
+     * The text content of this segment.
+     */
+    substring: string
+    /**
+     * The UTF-16 character range of `substring` within the parent transcription's `formattedString`.
+     */
+    substringRange: {
+      location: number
+      length: number
+    }
+    /**
+     * The seconds offset, relative to the audio start, at which this segment was spoken.
+     */
+    timestamp: number
+    /**
+     * The duration in seconds of this segment within the audio.
+     */
+    duration: number
+    /**
+     * Confidence in the accuracy of this segment, in the range [0.0, 1.0]. Only meaningful on final results; partial results typically report 0.
+     */
+    confidence: number
+    /**
+     * Alternative substrings the recognizer also considered for this segment.
+     */
+    alternativeSubstrings: string[]
+  }
+
+  /**
+   * Aggregate speech metrics for a final recognition result.
+   */
+  type SpeechRecognitionMetadata = {
+    /**
+     * Speaking rate in words per minute.
+     */
+    speakingRate: number
+    /**
+     * Average pause duration in seconds between words.
+     */
+    averagePauseDuration: number
+    /**
+     * Seconds offset within the audio at which the user started speaking.
+     */
+    speechStartTimestamp: number
+    /**
+     * Duration in seconds of the spoken speech.
+     */
+    speechDuration: number
   }
 
   type MediaItem = {
@@ -4179,6 +5609,12 @@ If the event’s calendar does not support availability settings, this property�
      * Defaults to 0.
      */
     playbackDuration?: DurationInSeconds
+    /**
+     * Defaults to `false`. Set to `true` for live streams (e.g., radio
+     * broadcasts) so the system hides the progress bar in the Lock Screen
+     * and Control Center Now Playing UI.
+     */
+    isLiveStream?: boolean
   }
 
   type MediaPlayerRemoteCommandEvent = {
@@ -4376,6 +5812,162 @@ If the event’s calendar does not support availability settings, this property�
   }
 
   /**
+   * Identifies which earbud (or aggregate source) produced a `HeadphoneDeviceMotion` sample.
+   */
+  type HeadphoneSensorLocation = 'default' | 'leftHeadphone' | 'rightHeadphone'
+
+  /**
+   * Calibration accuracy of the magnetic field reading for a `HeadphoneDeviceMotion` sample.
+   */
+  type HeadphoneMagneticFieldAccuracy = 'uncalibrated' | 'low' | 'medium' | 'high'
+
+  /**
+   * A 3D vector value used by `HeadphoneDeviceMotion`.
+   */
+  type HeadphoneVector3 = {
+    x: number
+    y: number
+    z: number
+  }
+
+  /**
+   * Device attitude (orientation) for a `HeadphoneDeviceMotion` sample, in radians for Euler angles.
+   */
+  type HeadphoneAttitude = {
+    /**
+     * Pitch (in radians).
+     */
+    pitch: number
+    /**
+     * Roll (in radians).
+     */
+    roll: number
+    /**
+     * Yaw (in radians).
+     */
+    yaw: number
+    /**
+     * Quaternion representation of the same orientation.
+     */
+    quaternion: {
+      x: number
+      y: number
+      z: number
+      w: number
+    }
+  }
+
+  /**
+   * A single device motion sample streamed from a connected pair of headphones.
+   *
+   * `userAcceleration` is in G's, `rotationRate` is in radians per second, and `gravity` is in G's.
+   * `attitude` describes the orientation of the headphones relative to a reference frame.
+   */
+  type HeadphoneDeviceMotion = {
+    /**
+     * The time, in seconds, at which the motion data was generated. Monotonic and relative to device boot.
+     */
+    timestamp: number
+    /**
+     * The orientation of the headphones at the moment the sample was captured.
+     */
+    attitude: HeadphoneAttitude
+    /**
+     * The rotation rate, in radians per second, around each axis.
+     */
+    rotationRate: HeadphoneVector3
+    /**
+     * The acceleration that the user is giving to the device, in G's.
+     */
+    userAcceleration: HeadphoneVector3
+    /**
+     * The gravity acceleration vector expressed in the headphones' reference frame, in G's.
+     */
+    gravity: HeadphoneVector3
+    /**
+     * Which earbud produced the sample (or `default` if unspecified).
+     */
+    sensorLocation: HeadphoneSensorLocation
+    /**
+     * Heading angle, in degrees, in the range [0, 360). Omitted when not available.
+     */
+    heading?: number
+    /**
+     * Calibrated magnetic field. Omitted when calibration is not yet available.
+     */
+    magneticField?: {
+      field: HeadphoneVector3
+      accuracy: HeadphoneMagneticFieldAccuracy
+    }
+  }
+
+  /**
+   * Streams device motion data from headphones that support spatial audio with dynamic head tracking
+   * (such as AirPods Pro, AirPods Max, and AirPods 3).
+   *
+   * Requires iOS 14.0+, the `NSMotionUsageDescription` key in Info.plist, and Scripting Pro.
+   *
+   * @example
+   * ```ts
+   * if (HeadphoneMotionManager.isAvailable) {
+   *   HeadphoneMotionManager.addListener('connect', () => console.log('connected'))
+   *   await HeadphoneMotionManager.startDeviceMotionUpdates({
+   *     onUpdate: motion => console.log(motion.attitude.yaw),
+   *   })
+   * }
+   * ```
+   */
+  namespace HeadphoneMotionManager {
+    /**
+     * Whether the current device supports headphone motion data and a compatible pair of headphones is reachable.
+     */
+    const isAvailable: boolean
+    /**
+     * Whether headphone motion updates are currently being delivered.
+     */
+    const isActive: boolean
+
+    /**
+     * Start streaming device motion updates from connected headphones.
+     *
+     * Resolves with `true` once the stream has been started. Authorization is handled internally:
+     * the first call automatically triggers the system Motion & Fitness permission prompt, and
+     * the promise is rejected with a clear error if motion access has been denied or restricted.
+     *
+     * Only one active subscription is supported at a time — calling `startDeviceMotionUpdates` while
+     * another stream is active replaces the previous handler.
+     */
+    function startDeviceMotionUpdates(options: {
+      /**
+       * Called for every motion sample produced by the headphones.
+       */
+      onUpdate: (motion: HeadphoneDeviceMotion) => void
+      /**
+       * Optional handler invoked when CoreMotion reports an error during streaming.
+       */
+      onError?: (error: Error) => void
+    }): Promise<boolean>
+
+    /**
+     * Stop the current motion stream. Safe to call when no stream is active.
+     */
+    function stopDeviceMotionUpdates(): void
+
+    /**
+     * Subscribe to a connection event. `connect` fires when supported headphones become reachable;
+     * `disconnect` fires when they go away.
+     */
+    function addListener(event: 'connect', listener: () => void): void
+    function addListener(event: 'disconnect', listener: () => void): void
+
+    /**
+     * Remove a previously registered listener for the given event.
+     */
+    function removeListener(event: 'connect', listener: () => void): void
+    function removeListener(event: 'disconnect', listener: () => void): void
+  }
+
+  /**
    * This interface is used to interact with NowPlayingCenter, display NowPlayingInfo and register commands and related handlers.
    */
   namespace MediaPlayer {
@@ -4513,6 +6105,7 @@ If the event’s calendar does not support availability settings, this property�
    * Represents a single metadata item.
    */
   class AVMetadataItem {
+    private constructor()
     /**
      * The key of the metadata item.
      */
@@ -4590,7 +6183,7 @@ If the event’s calendar does not support availability settings, this property�
   class MediaTime {
     private constructor()
 
-    readonly secondes: number
+    readonly seconds: number
     readonly isValid: boolean
     readonly isPositiveInfinity: boolean
     readonly isNegativeInfinity: boolean
@@ -4635,6 +6228,476 @@ If the event’s calendar does not support availability settings, this property�
     static indefinite(): MediaTime
     static positiveInfinity(): MediaTime
     static negativeInfinity(): MediaTime
+  }
+
+  /**
+   * The media type of an `AVAssetTrack`.
+   */
+  type AVMediaType = 'video' | 'audio' | 'subtitle' | 'text' | 'closedCaption' | 'metadata' | 'muxed' | 'timecode'
+
+  /**
+   * Options for generating still images from an `AVAsset`.
+   */
+  type AVAssetImageGenerateOptions = {
+    /**
+     * Maximum size in pixels for the generated image. The aspect ratio of the source is preserved.
+     * If omitted, images are generated at the natural size of the asset.
+     */
+    maximumSize?: Size
+    /**
+     * The maximum amount of time before the requested time the image generator may use to find a frame.
+     * Defaults to `MediaTime.zero()` (exact frame match).
+     */
+    toleranceBefore?: MediaTime
+    /**
+     * The maximum amount of time after the requested time the image generator may use to find a frame.
+     * Defaults to `MediaTime.zero()` (exact frame match).
+     */
+    toleranceAfter?: MediaTime
+    /**
+     * Whether the generated image should respect the asset's preferred track transform
+     * (rotation/mirroring). Defaults to `true`.
+     */
+    appliesPreferredTrackTransform?: boolean
+  }
+
+  /**
+   * Represents a single track inside an `AVAsset`. Most properties are loaded asynchronously,
+   * because they may require parsing the underlying media container.
+   *
+   * Instances are created via `AVAsset.loadTracks(...)`; do not construct directly.
+   */
+  class AVAssetTrack {
+    private constructor()
+    /** A persistent identifier for the track within the asset. */
+    readonly trackID: number
+    /** The media type of the track (video / audio / subtitle / ...). */
+    readonly mediaType: AVMediaType
+    /** The natural dimensions of the visual portion of the track, in pixels. */
+    loadNaturalSize(): Promise<Size>
+    /** The natural timescale of the track. */
+    loadNaturalTimeScale(): Promise<number>
+    /** The frame rate of the track, in frames per second. */
+    loadNominalFrameRate(): Promise<number>
+    /** The estimated data rate of the track, in bits per second. */
+    loadEstimatedDataRate(): Promise<number>
+    /** The time range of the track within the asset's overall timeline. */
+    loadTimeRange(): Promise<{ start: MediaTime; duration: MediaTime }>
+    /** ISO 639-2/T language code of the track, or `null` if unspecified. */
+    loadLanguageCode(): Promise<string | null>
+  }
+
+  /**
+   * Represents a media asset (audio / video) backed by an iOS `AVURLAsset`.
+   *
+   * `AVAsset` is a heavyweight handle. Call `dispose()` when you are done, or rely on the
+   * automatic cleanup that fires when the script finishes.
+   *
+   * Validation:
+   *  - The constructor does not verify file existence or URL reachability.
+   *  - For remote URLs, only obviously malformed strings (where `URL(string:)` returns nil)
+   *    throw immediately. 404 / network errors / missing local files surface as Promise
+   *    rejections on the first `loadXxx()` call.
+   */
+  class AVAsset {
+    /**
+     * @param filePathOrURL Local file path or `http(s)://` URL.
+     * @param options.headers HTTP headers used when `filePathOrURL` is remote.
+     * @param options.preferPreciseDuration Whether iOS should scan the file to get a precise
+     *   duration. Defaults to `true`. Required for VBR formats like mp3 — without it,
+     *   `loadDuration()` may return a `MediaTime` whose `seconds` is `NaN`. Setting `false`
+     *   speeds up remote asset loading at the cost of accuracy for those formats.
+     *
+     * Note on remote VBR audio (mp3): even with `preferPreciseDuration: true`, iOS computes
+     * mp3 duration by scanning frames via byte-range HTTP requests. If the remote server
+     * does not advertise `Accept-Ranges: bytes` and respond `206 Partial Content` to
+     * `Range:` requests, `loadDuration()` will resolve with an indefinite `MediaTime`
+     * (`seconds === NaN`, `isIndefinite === true`). Either host the file on a range-capable
+     * CDN, or download it locally first (e.g. via `fetch()` + `FileManager.writeAsBytes()`)
+     * before constructing the asset.
+     */
+    constructor(filePathOrURL: string, options?: {
+      headers?: Record<string, string>
+      preferPreciseDuration?: boolean
+    })
+
+    /** The original file path or URL string used to construct this asset. */
+    readonly source: string
+
+    /** Loads the duration of the asset. */
+    loadDuration(): Promise<MediaTime>
+    /** Whether the asset can be played back. */
+    loadIsPlayable(): Promise<boolean>
+    /** Whether the asset can be exported with `AVAssetExportSession`. */
+    loadIsExportable(): Promise<boolean>
+    /** Whether the asset's media data can be read. */
+    loadIsReadable(): Promise<boolean>
+    /** Whether the asset has DRM-protected content. */
+    loadHasProtectedContent(): Promise<boolean>
+    /**
+     * The preferred affine transform (rotation/scale/translation) for the asset's video.
+     * Returned as the 6 components of a `CGAffineTransform`.
+     */
+    loadPreferredTransform(): Promise<{ a: number; b: number; c: number; d: number; tx: number; ty: number }>
+
+    /**
+     * Loads the asset's metadata (all formats).
+     * @returns A promise that resolves to an array of `AVMetadataItem`, or `null` if unavailable.
+     */
+    loadMetadata(): Promise<AVMetadataItem[] | null>
+    /**
+     * Loads the asset's common metadata. Each returned `AVMetadataItem` provides a `commonKey`.
+     */
+    loadCommonMetadata(): Promise<AVMetadataItem[] | null>
+
+    /**
+     * Loads the asset's tracks, optionally filtered by media type.
+     * @param mediaType If provided, only tracks of that media type are returned. Otherwise all tracks are returned.
+     */
+    loadTracks(mediaType?: AVMediaType): Promise<AVAssetTrack[]>
+
+    /**
+     * Generates a still image at the given time.
+     * @param time The requested presentation time.
+     * @param options Optional generation parameters.
+     * @returns A promise resolving to the generated image and the actual time of the chosen frame,
+     *          or rejecting with the underlying generator error.
+     */
+    generateImage(
+      time: MediaTime,
+      options?: AVAssetImageGenerateOptions
+    ): Promise<{ image: UIImage; actualTime: MediaTime }>
+
+    /**
+     * Generates still images for an array of times. Each time is reported independently:
+     * successful entries carry `image` and `actualTime`; failed entries carry `error`.
+     */
+    generateImages(
+      times: MediaTime[],
+      options?: AVAssetImageGenerateOptions
+    ): Promise<Array<
+      | { requestedTime: MediaTime; actualTime: MediaTime; image: UIImage }
+      | { requestedTime: MediaTime; error: string }
+    >>
+
+    /**
+     * Releases the underlying `AVURLAsset`. Subsequent `loadXxx()` calls will reject.
+     * Auto-called when the script finishes.
+     */
+    dispose(): void
+  }
+
+  /**
+   * Result for a single requested time in `AVAssetImageGenerator.generate(...)`.
+   * Each requested time is reported independently with its own status.
+   */
+  type AVAssetImageGenerationResult =
+    | { requestedTime: MediaTime; actualTime: MediaTime; image: UIImage; status: 'succeeded' }
+    | { requestedTime: MediaTime; status: 'failed'; error: string }
+    | { requestedTime: MediaTime; status: 'cancelled' }
+
+  /**
+   * Extracts still images from an `AVAsset`'s video track.
+   *
+   * Compared to the one-shot `AVAsset.generateImage(...)`, this is a reusable generator that
+   * keeps its configuration across calls, can stream results frame-by-frame as they decode,
+   * and can be cancelled mid-flight. Prefer it for cover/thumbnail extraction at scale or
+   * per-frame ML / OCR pipelines.
+   *
+   * Local files only, like the other low-level AVAsset companions — download remote assets first.
+   */
+  class AVAssetImageGenerator {
+    /**
+     * @param asset A non-disposed `AVAsset`. Throws if the asset is invalid or disposed.
+     */
+    constructor(asset: AVAsset)
+
+    /**
+     * Maximum size in pixels for generated images; aspect ratio is preserved.
+     * If omitted, images are generated at the asset's natural size.
+     */
+    maximumSize?: Size
+    /** Tolerance before the requested time the generator may use to find a frame. */
+    requestedTimeToleranceBefore?: MediaTime
+    /** Tolerance after the requested time the generator may use to find a frame. */
+    requestedTimeToleranceAfter?: MediaTime
+    /** Whether to respect the asset's preferred track transform (rotation/mirroring). Defaults to `true`. */
+    appliesPreferredTrackTransform: boolean
+    /** The aperture mode used when generating images. */
+    apertureMode?: 'cleanAperture' | 'productionAperture' | 'encodedPixels'
+
+    /**
+     * Generates a single image at the given time.
+     * @returns The generated image plus the actual time of the chosen frame, or rejects on error.
+     */
+    copyImage(time: MediaTime): Promise<{ image: UIImage; actualTime: MediaTime }>
+
+    /**
+     * Generates images for an array of times, invoking `onFrame` as each one resolves
+     * (succeeded / failed / cancelled). The returned promise resolves once every requested
+     * time has been reported.
+     */
+    generate(
+      times: MediaTime[],
+      onFrame: (frame: AVAssetImageGenerationResult) => void
+    ): Promise<void>
+
+    /** Cancels any in-flight generation. Pending entries report `status: 'cancelled'`. */
+    cancel(): void
+
+    /** Cancels and releases the underlying generator. Auto-called when the script finishes. */
+    dispose(): void
+  }
+
+  /**
+   * The export preset for `AVAssetExportSession`. Most presets correspond directly to the
+   * AVAssetExportPreset* constants from AVFoundation.
+   */
+  type AVAssetExportPreset =
+    | '640x480' | '960x540' | '1280x720' | '1920x1080' | '3840x2160'
+    | 'AppleM4A'
+    | 'LowQuality' | 'MediumQuality' | 'HighestQuality'
+    | 'HEVC1920x1080' | 'HEVC3840x2160' | 'HEVCHighestQuality'
+    | 'AppleProRes422LPCM' | 'AppleProRes4444LPCM'
+
+  /** Output container file type for `AVAssetExportSession`. */
+  type AVAssetExportFileType = 'mp4' | 'mov' | 'm4a' | 'm4v'
+
+  /** Status of an `AVAssetExportSession`. */
+  type AVAssetExportStatus = 'unknown' | 'exporting' | 'completed' | 'failed' | 'cancelled'
+
+  /**
+   * High-level transcode / re-encode of an existing `AVAsset`. Wraps iOS `AVAssetExportSession`.
+   *
+   * Typical usage:
+   * ```ts
+   * const asset = new AVAsset("input.mov")
+   * const session = new AVAssetExportSession(asset, "HEVCHighestQuality")
+   * session.outputFileType = "mp4"
+   * session.onProgress = p => console.log(`${(p * 100).toFixed(0)}%`)
+   * await session.exportTo("/tmp/output.mp4")
+   * ```
+   */
+  class AVAssetExportSession {
+    constructor(asset: AVAsset, presetName: AVAssetExportPreset)
+
+    /**
+     * Output container type. If unset, the system picks a default based on the preset
+     * (e.g. `'mp4'` for HEVC/H.264 video presets, `'m4a'` for `'AppleM4A'`).
+     */
+    outputFileType?: AVAssetExportFileType
+
+    /** Whether to optimize MOV/MP4 atoms for streaming. Defaults to `true`. */
+    shouldOptimizeForNetworkUse: boolean
+
+    /** Current export status, sampled synchronously. */
+    readonly status: AVAssetExportStatus
+
+    /** Progress callback fired periodically while exporting. The argument is in the range 0..1. */
+    onProgress?: (progress: number) => void
+
+    /** Restrict the export to this time range. By default the whole asset is exported. */
+    setTimeRange(range: { start: MediaTime; duration: MediaTime } | null): void
+
+    /**
+     * Starts the export to `outputPath`. Resolves on success.
+     * Rejects with an `Error('Export cancelled.')` if `cancel()` is called,
+     * or with the underlying error otherwise.
+     */
+    exportTo(outputPath: string): Promise<void>
+
+    /** Cancels an in-flight export. The pending `exportTo` Promise rejects. */
+    cancel(): void
+
+    /** Releases the underlying export session. Auto-called on script end. */
+    dispose(): void
+  }
+
+  /** Status of an `AVAssetReader`. */
+  type AVAssetReaderStatus = 'unknown' | 'reading' | 'completed' | 'failed' | 'cancelled'
+
+  /**
+   * Pull-style media reader. Add one or more outputs (video / audio) before calling
+   * `startReading()`, then pull samples from each output via `copyNextX()`.
+   *
+   * ```ts
+   * const asset = new AVAsset(path)
+   * const tracks = await asset.loadTracks("audio")
+   * const reader = new AVAssetReader(asset)
+   * const out = new AVAssetReaderAudioOutput(tracks)
+   * reader.add(out)
+   * reader.startReading()
+   *
+   * while (true) {
+   *   const chunk = await out.copyNextSamples()
+   *   if (!chunk) break
+   *   // process chunk.samples (Float32Array, interleaved)
+   * }
+   * ```
+   */
+  class AVAssetReader {
+    constructor(asset: AVAsset)
+
+    /**
+     * Adds an output before `startReading()`. Returns `false` if the underlying reader
+     * cannot accept the output (already started, output already added, etc).
+     */
+    add(output: AVAssetReaderVideoOutput | AVAssetReaderAudioOutput): boolean
+
+    /** Begins reading. Must be called after `add()` and before any `output.copyNextX()`. */
+    startReading(): boolean
+
+    /** Cancels reading. Pending `copyNextX()` calls will yield `null` or rejected promises. */
+    cancelReading(): void
+
+    readonly status: AVAssetReaderStatus
+    readonly error: string | null
+
+    dispose(): void
+  }
+
+  /** Pull video frames as decoded `UIImage`s with presentation times. */
+  class AVAssetReaderVideoOutput {
+    /**
+     * @param track A video track from `asset.loadTracks('video')`.
+     * @param options.pixelFormat Output pixel format. Defaults to `'bgra'`. Both values
+     *        currently decode to a UIImage; the option is reserved for future expansion.
+     */
+    constructor(track: AVAssetTrack, options?: { pixelFormat?: 'bgra' | 'rgba' })
+
+    /**
+     * Returns the next decoded video frame, or `null` when the stream is exhausted.
+     * Rejects if the sample buffer can't be decoded.
+     */
+    copyNextFrame(): Promise<{ image: UIImage; presentationTime: MediaTime } | null>
+  }
+
+  /** Pull audio samples as interleaved Float32 PCM. */
+  class AVAssetReaderAudioOutput {
+    /**
+     * @param tracks One or more audio tracks; multiple tracks are mixed together.
+     * @param options.sampleRate Resample to this rate. Defaults to source rate.
+     * @param options.channels Down/up-mix to this many channels. Defaults to source.
+     */
+    constructor(tracks: AVAssetTrack[], options?: {
+      sampleRate?: number
+      channels?: number
+    })
+
+    /**
+     * Returns the next chunk of decoded PCM (interleaved Float32), or `null` at end-of-stream.
+     * The frame count varies per call — typical is hundreds to thousands of frames.
+     */
+    copyNextSamples(): Promise<{
+      samples: Float32Array       // length === frameCount * channels
+      frameCount: number
+      sampleRate: number
+      channels: number
+      presentationTime: MediaTime
+    } | null>
+  }
+
+  /** Status of an `AVAssetWriter`. */
+  type AVAssetWriterStatus = 'unknown' | 'writing' | 'completed' | 'failed' | 'cancelled'
+
+  /**
+   * Push-style media writer. Add one or more inputs (video / audio), call `startWriting()`
+   * + `startSession(...)`, append samples on each input via `appendVideoFrame` /
+   * `appendPCMSamples`, then `markAsFinished()` on each input and `await finishWriting()`.
+   *
+   * ```ts
+   * const writer = new AVAssetWriter("/tmp/out.m4a", "m4a")
+   * const input = AVAssetWriterInput.audio({ sampleRate: 44100, channels: 1 })
+   * writer.add(input)
+   * writer.startWriting()
+   * writer.startSession(MediaTime.zero())
+   * input.appendPCMSamples(samples, 44100, 1, MediaTime.make({ seconds: 0, preferredTimescale: 44100 }))
+   * input.markAsFinished()
+   * await writer.finishWriting()
+   * ```
+   */
+  class AVAssetWriter {
+    constructor(outputPath: string, fileType: AVAssetExportFileType)
+
+    /** Adds an input before `startWriting()`. Returns `false` if writer can't accept it. */
+    add(input: AVAssetWriterInput): boolean
+
+    startWriting(): boolean
+    /** Marks the timeline origin; usually `MediaTime.zero()`. */
+    startSession(atSourceTime: MediaTime): void
+
+    /** Resolves when the file is fully flushed; rejects on failure / cancel. */
+    finishWriting(): Promise<void>
+    cancelWriting(): void
+
+    readonly status: AVAssetWriterStatus
+    readonly error: string | null
+
+    dispose(): void
+  }
+
+  /**
+   * A single track input in an `AVAssetWriter`. Created via the static factories
+   * `AVAssetWriterInput.video(...)` and `.audio(...)`.
+   */
+  class AVAssetWriterInput {
+    private constructor()
+
+    /**
+     * Creates a video input. Caller pushes UIImage frames via `appendVideoFrame`.
+     * @param options.width  Frame width in pixels.
+     * @param options.height Frame height in pixels.
+     * @param options.codec  `'h264'` (default) or `'hevc'`.
+     * @param options.bitRate Optional, in bits per second.
+     * @param options.frameRate Optional hint for the encoder.
+     */
+    static video(options: {
+      width: number
+      height: number
+      codec?: 'h264' | 'hevc'
+      bitRate?: number
+      frameRate?: number
+    }): AVAssetWriterInput
+
+    /**
+     * Creates an audio input. Caller pushes interleaved Float32 PCM via `appendPCMSamples`.
+     * @param options.sampleRate Defaults to 44100.
+     * @param options.channels   Defaults to 1.
+     * @param options.codec      `'aac'` (default) or `'pcm'`.
+     * @param options.bitRate    Only meaningful for AAC.
+     */
+    static audio(options?: {
+      sampleRate?: number
+      channels?: number
+      codec?: 'aac' | 'pcm'
+      bitRate?: number
+    }): AVAssetWriterInput
+
+    /** True if the encoder is ready to accept more samples without blocking. */
+    readonly isReadyForMoreMediaData: boolean
+
+    /** No more samples will be appended. Call before `AVAssetWriter.finishWriting()`. */
+    markAsFinished(): void
+
+    /**
+     * Appends a single video frame. Returns `false` if the input is full or finished —
+     * caller should `await whenReady()` and retry.
+     */
+    appendVideoFrame(image: UIImage, presentationTime: MediaTime): boolean
+
+    /**
+     * Appends one chunk of interleaved Float32 PCM. `samples.length` must be
+     * `frameCount * channels`.
+     */
+    appendPCMSamples(
+      samples: Float32Array,
+      sampleRate: number,
+      channels: number,
+      presentationTime: MediaTime
+    ): boolean
+
+    /** Resolves when `isReadyForMoreMediaData` becomes `true` again. */
+    whenReady(): Promise<void>
   }
 
   namespace MediaComposer {
@@ -4851,6 +6914,7 @@ If the event’s calendar does not support availability settings, this property�
    * Use for playing audio or video.
    */
   class AVPlayer {
+    constructor()
     /**
      * Controls the volume of the AVPlayer.
      * Value ranges from `0.0` (muted) to `1.0` (full volume).
@@ -4886,10 +6950,21 @@ If the event’s calendar does not support availability settings, this property�
     numberOfLoops: number
     /**
      * Sets the media source for playback.
-     * @param filePathOrURL he file path or URL to the media resource. This can be either a local file path or a remote URL.
+     * @param filePathOrURL The file path or URL to the media resource. This can be either a local file path or a remote URL.
+     * @param options The options for the media source.
+     * @param options.headers The headers to use when fetching the media source.
      * @returns `true` if the media source is set successfully, otherwise `false`.
      */
-    setSource(filePathOrURL: string): boolean
+    setSource(filePathOrURL: string, options?: {
+      headers?: Record<string, string>
+    }): boolean
+    /**
+     * Sets the media source for playback from an existing `AVAsset` instance, sharing the underlying
+     * media so any metadata / track info already loaded on the asset is reused.
+     * @param asset An `AVAsset` instance constructed beforehand.
+     * @returns `true` if the media source is set successfully, otherwise `false`.
+     */
+    setSource(asset: AVAsset): boolean
     /**
      * Plays the current media.
      * @param atRate The playback rate at which to play the media.
@@ -4965,6 +7040,7 @@ If the event’s calendar does not support availability settings, this property�
    *  - Pause and resume a recording
    */
   class AudioRecorder {
+    private constructor()
     /**
      * Creates an audio recorder with settings, it will fail and throw an error if you don't have permission.
      * @param filePath The file system location to record to.
@@ -4984,6 +7060,16 @@ If the event’s calendar does not support availability settings, this property�
        */
       numberOfChannels?: number
       encoderAudioQuality?: AVAudioQuality
+      /**
+       * Enables level metering so `averagePower`, `peakPower`, and `onLevelUpdate`
+       * report values while recording. Default: `false`.
+       */
+      meteringEnabled?: boolean
+      /**
+       * Sampling interval in milliseconds for `onLevelUpdate`. Clamped to `[16, 1000]`.
+       * Default: `50`.
+       */
+      levelUpdateInterval?: number
     }): Promise<AudioRecorder>
 
     /**
@@ -5055,13 +7141,959 @@ If the event’s calendar does not support availability settings, this property�
      * Callback that is called when ecorder encode error occured.
      */
     onError?: (message: string) => void
+
+    /**
+     * Whether level metering is enabled. Toggle this before `record()` (or
+     * pass `meteringEnabled: true` in `create`) so that `averagePower`,
+     * `peakPower`, and `onLevelUpdate` report values while recording.
+     */
+    meteringEnabled: boolean
+
+    /**
+     * Sampling interval in milliseconds used by `onLevelUpdate`.
+     * Clamped to `[16, 1000]`. Default: `50`.
+     */
+    levelUpdateInterval: number
+
+    /**
+     * Refreshes the meter values. Call before reading `averagePower` /
+     * `peakPower` if you do not use `onLevelUpdate`.
+     */
+    updateMeters(): void
+
+    /**
+     * Average power in dBFS for the given channel. Range roughly `[-160, 0]`.
+     * Returns `0` when metering is disabled or the recorder is not running.
+     * @param channel Zero-based channel index. Defaults to `0`.
+     */
+    averagePower(channel?: number): number
+
+    /**
+     * Peak hold power in dBFS for the given channel.
+     * @param channel Zero-based channel index. Defaults to `0`.
+     */
+    peakPower(channel?: number): number
+
+    /**
+     * Fires while recording at `levelUpdateInterval` cadence when
+     * `meteringEnabled` is `true`. Stops automatically on `pause()` /
+     * `stop()` / `dispose()` and resumes on the next `record()`.
+     */
+    onLevelUpdate?: (level: {
+      /** Average power in dBFS, averaged across channels. */
+      averagePower: number
+      /** Peak hold power in dBFS, averaged across channels. */
+      peakPower: number
+      /** Per-channel power values. */
+      channels: { average: number; peak: number }[]
+      /** `deviceCurrentTime` when the sample was taken, in seconds. */
+      timestamp: DurationInSeconds
+    }) => void
+  }
+
+  namespace AudioCapture {
+    /**
+     * Sample format used by `onBuffer`.
+     * - `float32`: each sample is in `[-1.0, 1.0]`, exposed as a `Float32Array`.
+     * - `int16`: each sample is in `[-32768, 32767]`, exposed as an `Int16Array`.
+     */
+    type Format = 'float32' | 'int16'
+
+    interface Configuration {
+      /**
+       * Hint for the desired sample rate. v1 does not resample — the actual
+       * value is decided by the audio hardware and exposed via the
+       * `sampleRate` property after `start()`. Default: `44100`.
+       */
+      sampleRate?: number
+      /**
+       * Hint for the desired channel count (`1` mono, `2` stereo). Same caveat
+       * as `sampleRate` — the hardware decides. Default: `1`.
+       */
+      channels?: 1 | 2
+      /**
+       * Frames per audio tap. Smaller buffers mean more frequent callbacks at
+       * lower latency. Range `[256, 8192]`. Default: `1024`
+       * (≈ 23 ms at 44.1 kHz).
+       */
+      bufferSize?: number
+      /**
+       * Sample format for the `onBuffer.samples` payload. Default: `float32`.
+       */
+      format?: Format
+      /**
+       * Optional file system path. When set, raw PCM is written to this file
+       * as a 32-bit float WAV (matches the hardware format to avoid
+       * conversion). Omit to discard captured audio after analysis.
+       *
+       * For final-quality encoded recordings (m4a / aac / mp3 / flac / opus),
+       * use `AudioRecorder` instead.
+       */
+      saveTo?: string
+    }
+
+    interface BufferFrame {
+      /**
+       * Interleaved samples. Channels are packed: `[L, R, L, R, ...]` for
+       * stereo. Length equals `frames * channels`.
+       */
+      samples: Float32Array | Int16Array
+      /** Sample rate, in Hz. */
+      sampleRate: number
+      /** Channel count of `samples` (interleaved). */
+      channels: number
+      /** Number of audio frames in this buffer. */
+      frames: number
+      /** Capture timestamp in seconds (host time). */
+      timestamp: DurationInSeconds
+      /** RMS / peak level of this buffer in dBFS. */
+      level: { averagePower: number; peakPower: number }
+    }
+
+    interface PitchFrame {
+      /**
+       * Estimated fundamental frequency in Hz. `0` means the analyzer could
+       * not lock onto a periodic signal (silence, noise, polyphonic input).
+       */
+      frequency: number
+      /** YIN aperiodicity inverted to a `[0, 1]` confidence score. */
+      confidence: number
+      /** Note name like `"A4"`, only present when `frequency > 0`. */
+      note?: string
+      /**
+       * Cents offset from the nearest equal-tempered semitone, range
+       * `[-50, 50]`. Useful for tuners.
+       */
+      cents?: number
+      /** Capture timestamp in seconds (host time). */
+      timestamp: DurationInSeconds
+      /** RMS / peak level of the analysis window. */
+      level: { averagePower: number; peakPower: number }
+    }
+
+    interface LevelFrame {
+      /** Average power (dBFS). */
+      averagePower: number
+      /** Peak hold power (dBFS). */
+      peakPower: number
+      /** Capture timestamp in seconds (host time). */
+      timestamp: DurationInSeconds
+    }
+
+    interface PitchConfig {
+      /** Lower bound of the pitch search, in Hz. Default `70`. */
+      minFrequency?: number
+      /** Upper bound of the pitch search, in Hz. Default `1000`. */
+      maxFrequency?: number
+      /**
+       * YIN aperiodicity threshold. Lower = stricter (fewer false positives,
+       * more silent frames). Range `(0, 0.5]`. Default `0.15`.
+       */
+      threshold?: number
+      /** How often `onPitch` fires, in Hz. Range `[1, 120]`. Default `30`. */
+      emitRate?: number
+    }
   }
 
   /**
-   * A class that represents a capture session.
+   * Real-time microphone capture for waveform / pitch analysis. Unlike
+   * `AudioRecorder` (which writes encoded files and only exposes power
+   * meters), `AudioCapture` taps the input node and streams raw PCM
+   * samples, RMS / peak levels, and YIN-based pitch estimates.
+   *
+   * Setup the audio session first, e.g.:
+   * ```ts
+   * await SharedAudioSession.setActive(true)
+   * await SharedAudioSession.setCategory("playAndRecord", ["defaultToSpeaker"])
+   * ```
+   *
+   * `AudioCapture` is a superset of `AudioRecorder`'s capabilities for
+   * uncompressed audio (it can also write a wav file via `saveTo`), but
+   * `AudioRecorder` is still the right choice for compressed final-quality
+   * recordings such as `.m4a`. Using both at the same time is **not
+   * supported** — they would compete for the same input bus.
+   */
+  class AudioCapture {
+    private constructor()
+
+    /**
+     * Requests microphone permission and prepares the engine.
+     */
+    static create(config?: AudioCapture.Configuration): Promise<AudioCapture>
+
+    /** Whether the engine is currently running. */
+    readonly isRunning: boolean
+
+    /** Actual sample rate after `start()` (decided by the hardware). */
+    readonly sampleRate: number
+
+    /** Actual channel count after `start()`. */
+    readonly channels: number
+
+    /**
+     * Starts the audio engine and opens the optional `saveTo` wav file.
+     * Returns `false` if no input is available, an error occurs, or
+     * permission was not granted.
+     */
+    start(): boolean
+
+    /** Stops the engine and closes the wav file (if any). */
+    stop(): void
+
+    /** Releases all resources. After calling this, the instance is unusable. */
+    dispose(): void
+
+    /**
+     * Fires with raw PCM frames. Set to `undefined` (or never assign) to
+     * disable PCM emission. The samples are a copy — safe to retain.
+     */
+    onBuffer?: (frame: AudioCapture.BufferFrame) => void
+
+    /**
+     * Fires at `bufferEmitRate` Hz. `0` means follow the hardware tap
+     * rate (≈ 43 Hz at 1024-frame / 44.1 kHz). Default `0`.
+     */
+    bufferEmitRate: number
+
+    /**
+     * Fires with YIN pitch estimates. Tune via `pitchConfig`.
+     */
+    onPitch?: (frame: AudioCapture.PitchFrame) => void
+
+    /**
+     * Pitch detection parameters. Assigning a partial object merges with
+     * the current configuration (default `{ minFrequency: 70,
+     * maxFrequency: 1000, threshold: 0.15, emitRate: 30 }`).
+     */
+    pitchConfig?: AudioCapture.PitchConfig
+
+    /**
+     * Lightweight RMS / peak level callback. Cheaper than `onBuffer` when
+     * you only need a meter.
+     */
+    onLevel?: (frame: AudioCapture.LevelFrame) => void
+
+    /** Fires `onLevel` at this rate, in Hz. Default `30`. */
+    levelEmitRate: number
+
+    /** Fires when the engine fails to start or encounters a runtime error. */
+    onError?: (message: string) => void
+  }
+
+  /**
+   * The session preset for an `AVCaptureSession`.
+   */
+  type AVCaptureSessionPreset =
+    | "high" | "medium" | "low" | "photo" | "inputPriority"
+    | "cif352x288" | "vga640x480"
+    | "iFrame960x540" | "iFrame1280x720"
+    | "hd1280x720" | "hd1920x1080" | "hd4K3840x2160"
+
+  /**
+   * Camera position. `unspecified` is rare and only returned for some
+   * external/continuity devices.
+   */
+  type AVCaptureDevicePosition = "unspecified" | "back" | "front"
+
+  /**
+   * Built-in capture device types. Not every device exposes every type;
+   * use `AVCaptureDevice.discoverySession({...})` to enumerate what is
+   * actually available on the current hardware.
+   */
+  type AVCaptureDeviceType =
+    | "builtInWideAngleCamera"
+    | "builtInUltraWideCamera"
+    | "builtInTelephotoCamera"
+    | "builtInDualCamera"
+    | "builtInDualWideCamera"
+    | "builtInTripleCamera"
+    | "builtInTrueDepthCamera"
+    | "builtInLiDARDepthCamera"
+    | "continuityCamera"
+    | "external"
+    | "microphone"
+
+  type AVCaptureFocusMode = "locked" | "autoFocus" | "continuousAutoFocus"
+  type AVCaptureExposureMode = "locked" | "autoExpose" | "continuousAutoExposure" | "custom"
+  type AVCaptureTorchMode = "off" | "on" | "auto"
+
+  type AVCaptureMediaType = "video" | "audio" | "muxed"
+
+  /** Top-level rectangle helper for capture APIs. */
+  type AVCaptureRect = { x: number; y: number; width: number; height: number }
+
+  /**
+   * Represents a camera or microphone input on the device. Get one with
+   * `AVCaptureDevice.default(...)` or `AVCaptureDevice.discoverySession(...)`.
+   *
+   * Setters that map to AVFoundation properties guarded by
+   * `lockForConfiguration` automatically lock and unlock around the change.
+   * For batched changes use `lockForConfiguration()` / `unlockForConfiguration()`.
+   */
+  class AVCaptureDevice {
+    private constructor()
+
+    static default(mediaType: AVCaptureMediaType): AVCaptureDevice | null
+    static defaultDevice(
+      deviceType: AVCaptureDeviceType,
+      mediaType: AVCaptureMediaType,
+      position: AVCaptureDevicePosition
+    ): AVCaptureDevice | null
+
+    static discoverySession(options: {
+      deviceTypes: AVCaptureDeviceType[]
+      mediaType: AVCaptureMediaType
+      position?: AVCaptureDevicePosition
+    }): AVCaptureDevice.DiscoverySession
+
+    readonly uniqueID: string
+    readonly modelID: string
+    readonly localizedName: string
+    readonly position: AVCaptureDevicePosition
+    readonly deviceType: AVCaptureDeviceType
+    readonly isConnected: boolean
+
+    readonly hasTorch: boolean
+    readonly isTorchAvailable: boolean
+    readonly torchMode: AVCaptureTorchMode
+    setTorchMode(mode: AVCaptureTorchMode): void
+    /** Force torch on at the given level (0..1). Throws if unsupported. */
+    setTorchModeOn(level: number): void
+
+    readonly minAvailableVideoZoomFactor: number
+    readonly maxAvailableVideoZoomFactor: number
+    readonly videoZoomFactor: number
+    setVideoZoomFactor(factor: number): void
+    rampToVideoZoomFactor(factor: number, rate: number): void
+    cancelVideoZoomRamp(): void
+
+    readonly focusMode: AVCaptureFocusMode
+    readonly focusPointOfInterest: { x: number; y: number }
+    readonly isFocusPointOfInterestSupported: boolean
+    isFocusModeSupported(mode: AVCaptureFocusMode): boolean
+    setFocusMode(mode: AVCaptureFocusMode): void
+    setFocusPointOfInterest(point: { x: number; y: number }): void
+
+    readonly exposureMode: AVCaptureExposureMode
+    readonly exposurePointOfInterest: { x: number; y: number }
+    readonly isExposurePointOfInterestSupported: boolean
+    readonly minExposureTargetBias: number
+    readonly maxExposureTargetBias: number
+    readonly exposureTargetBias: number
+    isExposureModeSupported(mode: AVCaptureExposureMode): boolean
+    setExposureMode(mode: AVCaptureExposureMode): void
+    setExposurePointOfInterest(point: { x: number; y: number }): void
+    setExposureTargetBias(ev: number): Promise<void>
+
+    /** Lock the device for an atomic batch of configuration changes. Pair with `unlockForConfiguration()`. */
+    lockForConfiguration(): void
+    unlockForConfiguration(): void
+
+    /**
+     * All capture formats this device can be configured into. Apple guarantees
+     * a stable order, and the bridge caches wrapper instances per device — so
+     * `device.formats[i] === device.formats[i]` and
+     * `device.formats.includes(device.activeFormat)` both hold across calls.
+     * Filter with `formats.filter(...)` to pick a 4K / 60fps / spatial / etc.
+     * format, then pass it to `setActiveFormat`.
+     */
+    readonly formats: AVCaptureDeviceFormat[]
+
+    /**
+     * The format currently in use. Returns the same wrapper instance as the
+     * matching element in `formats`, so identity comparison works.
+     */
+    readonly activeFormat: AVCaptureDeviceFormat
+
+    /**
+     * Switch the active capture format. The format must come from this device's
+     * `formats` array; passing one from another device throws. The change is
+     * performed inside an automatic configuration lock; for several related
+     * changes (format + frame rate + color space) call `lockForConfiguration()`
+     * yourself first and `unlockForConfiguration()` after, so the whole batch
+     * uses a single lock.
+     */
+    setActiveFormat(format: AVCaptureDeviceFormat): void
+
+    /**
+     * The color space currently in use. One of `"sRGB"`, `"P3_D65"`,
+     * `"HLG_BT2020"`, `"appleLog"`, `"appleLog2"`. Pair with `setActiveColorSpace` to change it.
+     */
+    readonly activeColorSpace: AVCaptureColorSpace
+
+    /**
+     * Switch to a different color space. The chosen value must appear in
+     * `activeFormat.supportedColorSpaces`; otherwise this throws with a message
+     * pointing you at the supported list. Use `appleLog` for grading workflows
+     * on devices where the active format supports it.
+     */
+    setActiveColorSpace(value: AVCaptureColorSpace): void
+
+    /**
+     * Current minimum frame duration in seconds. The maximum frame rate the
+     * device will produce equals `1 / activeVideoMinFrameDuration`. `0` if the
+     * device has not been clamped (it then uses the format's natural range).
+     */
+    readonly activeVideoMinFrameDuration: number
+
+    /**
+     * Clamp the maximum frame rate (shorter duration ⇒ higher fps cap). Pass
+     * seconds, e.g. `1 / 60` to cap at 60 fps. Must fall inside one of the
+     * `minFrameDuration..maxFrameDuration` ranges advertised by
+     * `activeFormat.videoSupportedFrameRateRanges`, or this throws.
+     */
+    setActiveVideoMinFrameDuration(seconds: number): void
+
+    /**
+     * Current maximum frame duration in seconds — the minimum frame rate the
+     * device will produce equals `1 / activeVideoMaxFrameDuration`. `0` if
+     * unclamped.
+     */
+    readonly activeVideoMaxFrameDuration: number
+
+    /**
+     * Clamp the minimum frame rate (longer duration ⇒ lower fps floor). Pass
+     * seconds, e.g. `1 / 24` to floor at 24 fps. Must fall inside one of the
+     * `minFrameDuration..maxFrameDuration` ranges on the active format.
+     */
+    setActiveVideoMaxFrameDuration(seconds: number): void
+  }
+
+  namespace AVCaptureDevice {
+    class DiscoverySession {
+      private constructor()
+      readonly devices: AVCaptureDevice[]
+    }
+  }
+
+  type AVCaptureColorSpace = "sRGB" | "P3_D65" | "HLG_BT2020" | "appleLog" | "appleLog2"
+
+  type AVCaptureAutoFocusSystem = "none" | "contrastDetection" | "phaseDetection"
+
+  /**
+   * Static description of one capture mode a device supports — resolution,
+   * frame rates, HDR/multi-cam/stabilization/spatial-video flags, etc.
+   *
+   * Obtain instances via `device.formats` or `device.activeFormat`. The bridge
+   * caches wrappers per device so identity comparison
+   * (`format === device.activeFormat`) is stable across calls. Never constructed
+   * directly from JS.
+   *
+   * Numeric defaults for non-video formats: `width` / `height` / `fieldOfView`
+   * return `0` on audio / metadata formats since they don't have video dimensions.
+   */
+  class AVCaptureDeviceFormat {
+    private constructor()
+
+    /** "video" / "audio" / "depthData" / "metadata" / etc. (raw AVMediaType) */
+    readonly mediaType: string
+
+    /** Pixel width from the video format description. `0` for non-video formats. */
+    readonly width: number
+    /** Pixel height from the video format description. `0` for non-video formats. */
+    readonly height: number
+    /** Horizontal field of view in degrees. `0` for non-video formats. */
+    readonly fieldOfView: number
+
+    readonly videoMaxZoomFactor: number
+    readonly videoZoomFactorUpscaleThreshold: number
+    /** True when this format uses pixel binning (lower resolution, better low-light). */
+    readonly isVideoBinned: boolean
+
+    readonly isHighestPhotoQualitySupported: boolean
+    readonly isHighPhotoQualitySupported: boolean
+
+    readonly isVideoHDRSupported: boolean
+    /** True if this format works inside an `AVCaptureMultiCamSession`. */
+    readonly isMultiCamSupported: boolean
+
+    /** Color spaces this format can record in. Pass any of these to `device.setActiveColorSpace`. */
+    readonly supportedColorSpaces: AVCaptureColorSpace[]
+
+    readonly autoFocusSystem: AVCaptureAutoFocusSystem
+
+    /**
+     * Frame-rate envelope. Each entry describes one continuous range — pick the
+     * range that covers your desired fps then call
+     * `device.setActiveVideoMinFrameDuration(...)` / `setActiveVideoMaxFrameDuration(...)`
+     * with `1 / desiredFps`. `minFrameDuration` / `maxFrameDuration` are in seconds.
+     */
+    readonly videoSupportedFrameRateRanges: {
+      minFrameRate: number
+      maxFrameRate: number
+      minFrameDuration: number
+      maxFrameDuration: number
+    }[]
+
+    /**
+     * Query whether this format supports a specific stabilization mode. Use it
+     * to filter before setting `movieFileOutput.setVideoStabilizationMode(...)`.
+     */
+    isVideoStabilizationModeSupported(
+      mode: "off" | "standard" | "cinematic" | "cinematicExtended" | "auto"
+    ): boolean
+
+    /** True if this format can record spatial video (iPhone 15 Pro+ / iOS 17.2+). */
+    readonly isSpatialVideoCaptureSupported: boolean
+
+    /** True if this format can use Center Stage on the front camera. */
+    readonly isCenterStageSupported: boolean
+    /** True if this format can use Portrait Effect. */
+    readonly isPortraitEffectSupported: boolean
+    /** True if this format can use Studio Light. */
+    readonly isStudioLightSupported: boolean
+  }
+
+  /**
+   * Camera/microphone input wrapping an `AVCaptureDevice`. You add one of
+   * these to a session with `session.addInput(input)`. Constructor throws if
+   * the device cannot be opened (busy, missing permission, etc.).
+   */
+  class AVCaptureDeviceInput {
+    constructor(device: AVCaptureDevice)
+    readonly device: AVCaptureDevice
+  }
+
+  /** A point in normalized (0..1) coordinates. */
+  type AVCapturePoint = { x: number; y: number }
+
+  /**
+   * A live connection between a capture input and this output. Obtained via
+   * `output.connections`; you do not construct it. Most fields are read-only;
+   * `isEnabled` can be toggled.
+   */
+  class AVCaptureConnection {
+    protected constructor()
+    /** Whether the connection is currently carrying data. */
+    readonly isActive: boolean
+    /** Enable / disable data flow through this connection. */
+    isEnabled: boolean
+    /** `true` if the connection is mirroring video (read-only). */
+    readonly isVideoMirrored: boolean
+    /** Clockwise rotation angle in degrees applied to video (iOS 17+, else 0). */
+    readonly videoRotationAngle: number
+  }
+
+  /**
+   * Base type for capture outputs. You will not construct this directly;
+   * use one of the subclasses (PhotoOutput / MovieFileOutput / MetadataOutput).
+   */
+  class AVCaptureOutput {
+    protected constructor()
+    /** Live connections feeding this output. */
+    readonly connections: AVCaptureConnection[]
+    /**
+     * Convert a rectangle from this output's coordinate space into the
+     * metadata output's normalized (0..1) coordinate space. Pass and receive
+     * `{ x, y, width, height }`.
+     */
+    metadataOutputRectConverted(fromOutputRect: AVCaptureRect): AVCaptureRect
+    /**
+     * Inverse of `metadataOutputRectConverted` — convert a rectangle from the
+     * metadata output's normalized space back into this output's space.
+     */
+    outputRectConverted(fromMetadataOutputRect: AVCaptureRect): AVCaptureRect
+  }
+
+  /**
+   * Captures still photos from a session. PRO-gated when `capturePhoto()` runs.
+   */
+  class AVCapturePhotoOutput extends AVCaptureOutput {
+    constructor()
+    readonly isLivePhotoCaptureSupported: boolean
+    isLivePhotoCaptureEnabled: boolean
+    maxPhotoQualityPrioritization: "speed" | "balanced" | "quality"
+
+    /**
+     * Responsive capture family. Unsupported devices report `*Supported`
+     * as `false` and the setters are silent no-ops, so feature-detect via
+     * `*Supported` before flipping.
+     *
+     * `isFastCapturePrioritizationSupported` is gated by Apple on
+     * `isResponsiveCaptureEnabled = true` *and*
+     * `maxPhotoQualityPrioritization = "quality"` — i.e. responsive is the
+     * prerequisite for fast, not the other way around. The bridge handles
+     * the ordering for you: turning `fast = true` first turns `responsive`
+     * on if it is supported, and turning `responsive = false` first turns
+     * `fast` off if it is on. You can flip either from JS in any order.
+     */
+    readonly isResponsiveCaptureSupported: boolean
+    isResponsiveCaptureEnabled: boolean
+    readonly isFastCapturePrioritizationSupported: boolean
+    isFastCapturePrioritizationEnabled: boolean
+    readonly isZeroShutterLagSupported: boolean
+    isZeroShutterLagEnabled: boolean
+    /**
+     * When `true`, the system may deliver a deferred-photo proxy instead of
+     * a finalized photo for back-to-back captures. The proxy is an
+     * *unfinished* version of the photo; the system finalizes the real
+     * photo asynchronously and writes it directly to the Photo Library —
+     * **the final image is not delivered through `capturePhoto`**.
+     *
+     * When the result of `capturePhoto()` has `isDeferredProxy: true`, the
+     * `image` is the proxy. To pick up the finalized photo, query the user's
+     * Photo Library with PhotoKit.
+     */
+    readonly isAutoDeferredPhotoDeliverySupported: boolean
+    isAutoDeferredPhotoDeliveryEnabled: boolean
+
+    /**
+     * Codec types the output can currently produce, as native raw values
+     * (e.g. `"hvc1"` for HEVC, `"jpeg"`, `"avc1"` for H.264). Note these are
+     * the AVFoundation raw values, not the friendly names accepted by
+     * `capturePhoto({ codec })`.
+     */
+    readonly availablePhotoCodecTypes: string[]
+    /** Live Photo video codecs available, as native raw values. */
+    readonly availableLivePhotoVideoCodecTypes: string[]
+    /** Flash modes supported by the active device. */
+    readonly supportedFlashModes: ("off" | "on" | "auto")[]
+    /**
+     * Maximum photo dimensions (pixels). Setting a value not present in the
+     * device's supported set is a silent no-op — query before relying on it.
+     */
+    maxPhotoDimensions: { width: number; height: number }
+
+    /**
+     * Depth / portrait-effects-matte / Apple ProRAW delivery. Unsupported
+     * configurations report `*Supported` as `false` and the setters are
+     * silent no-ops, so feature-detect via `*Supported` before flipping.
+     */
+    readonly isDepthDataDeliverySupported: boolean
+    isDepthDataDeliveryEnabled: boolean
+    readonly isPortraitEffectsMatteDeliverySupported: boolean
+    isPortraitEffectsMatteDeliveryEnabled: boolean
+    readonly isAppleProRAWSupported: boolean
+    isAppleProRAWEnabled: boolean
+
+    capturePhoto(options?: {
+      codec?: "hevc" | "jpeg"
+      flashMode?: "off" | "on" | "auto"
+      /**
+       * Path where the still photo's raw bytes should be written.
+       * The bridge writes `photo.fileDataRepresentation()` verbatim — all
+       * metadata is preserved (EXIF, Apple Maker Note, and crucially the
+       * Live Photo asset identifier in Maker Note key 17).
+       *
+       * **Required** if you want to feed the result into
+       * `Photos.saveLivePhoto` — re-encoding via `image.toJPEGData()` strips
+       * the asset identifier and PhotoKit then rejects the pairing with
+       * `PHPhotosErrorDomain 3302`.
+       *
+       * If the target file already exists the bridge deletes it first.
+       */
+      photoFile?: string
+      /**
+       * Path where the Live Photo `.mov` companion clip should be written.
+       * Pass an absolute file path; if a file already exists at that path
+       * the bridge deletes it before capture (AVFoundation refuses to write
+       * to an existing path).
+       *
+       * Requires `isLivePhotoCaptureEnabled = true` on the photo output
+       * before calling — otherwise the promise rejects immediately.
+       *
+       * Live Photo capture and `isAutoDeferredPhotoDeliveryEnabled` are
+       * effectively mutually exclusive: with deferred on, the system may
+       * skip the `.mov` and the result's `livePhotoMovieFileURL` is absent.
+       * Turn deferred off if Live Photo is the goal.
+       */
+      livePhotoMovieFile?: string
+      /**
+       * Codec for the Live Photo `.mov` companion. Defaults to the system
+       * choice (usually HEVC on supported devices). Silently ignored if the
+       * device doesn't list it in `availableLivePhotoVideoCodecTypes`.
+       */
+      livePhotoVideoCodec?: "hevc" | "h264"
+    }): Promise<{
+      image: UIImage
+      metadata: Record<string, any>
+      isRawPhoto: boolean
+      /**
+       * `true` if `isAutoDeferredPhotoDeliveryEnabled` was on and the system
+       * chose to defer; the `image` is the deferred-photo proxy, not the
+       * finalized photo. Final image is delivered to the Photo Library async.
+       * Always `false` otherwise.
+       */
+      isDeferredProxy: boolean
+      /**
+       * Absolute path of the still photo's raw bytes, if you passed
+       * `photoFile`. Use this (not a re-encoded `image.toJPEGData()`) when
+       * feeding the result into `Photos.saveLivePhoto` so the Live Photo
+       * asset identifier survives.
+       */
+      photoFileURL?: string
+      /**
+       * Absolute path of the Live Photo `.mov` companion clip, if you
+       * requested one via `livePhotoMovieFile` and the system actually
+       * produced it. Absent for plain photo captures.
+       */
+      livePhotoMovieFileURL?: string
+    }>
+  }
+
+  /**
+   * Records a movie file. Use this when you want a full custom capture
+   * pipeline; for the typical "press record" flow consider `VideoRecorder`
+   * which already wraps state, pause/resume, audio session, and orientation.
+   */
+  /** Video stabilization mode applied to the output's video connection. */
+  type AVCaptureVideoStabilizationMode =
+    | "off"
+    | "standard"
+    | "cinematic"
+    | "cinematicExtended"
+    | "cinematicExtendedEnhanced"
+    | "previewOptimized"
+    | "lowLatency"
+    | "auto"
+
+  class AVCaptureMovieFileOutput extends AVCaptureOutput {
+    constructor()
+    readonly isRecording: boolean
+    /** `true` while recording is paused via `pauseRecording()`. Always `false` below iOS 18. */
+    readonly isRecordingPaused: boolean
+    /** Maximum recorded duration in seconds. `0` = unlimited. */
+    maxRecordedDuration: number
+    /** Maximum recorded file size in bytes. `0` = unlimited. */
+    maxRecordedFileSize: number
+    /** Seconds elapsed in the current recording (`0` when not recording). */
+    readonly recordedDuration: number
+    /** Bytes written so far in the current recording. */
+    readonly recordedFileSize: number
+    /** Video codecs available for recording, as native raw values (e.g. `"hvc1"`, `"avc1"`). */
+    readonly availableVideoCodecTypes: string[]
+    /**
+     * Active video stabilization mode currently applied by the system.
+     * The system may pick a mode different from the one you requested via
+     * `setVideoStabilizationMode` (or `"off"` if unsupported by the active format).
+     */
+    readonly videoStabilizationMode: AVCaptureVideoStabilizationMode
+    /**
+     * Set the preferred video stabilization mode on the output's video connection.
+     * Returns `true` if the preference was written; the system decides whether
+     * to actually activate it based on device + format. Read `videoStabilizationMode`
+     * to see the active mode.
+     *
+     * Throws on unknown modes.
+     */
+    setVideoStabilizationMode(mode: AVCaptureVideoStabilizationMode): boolean
+    /** Resolves with the final output path when recording stops successfully. */
+    startRecording(toPath: string): Promise<string>
+    stopRecording(): Promise<void>
+    /** Pause the current recording. Safe no-op when not recording / already paused / below iOS 18. */
+    pauseRecording(): void
+    /** Resume a paused recording. Safe no-op when not recording / not paused / below iOS 18. */
+    resumeRecording(): void
+  }
+
+  /** Object types that an `AVCaptureMetadataOutput` can detect. */
+  type AVMetadataObjectType =
+    | "qr" | "aztec" | "code128" | "code39" | "code39Mod43"
+    | "code93" | "ean13" | "ean8" | "interleaved2of5" | "itf14"
+    | "pdf417" | "upce" | "dataMatrix" | "face" | "humanBody"
+    | "catBody" | "dogBody" | "salientObject"
+    | string
+
+  type AVMetadataObject = {
+    type: AVMetadataObjectType
+    /** Time of detection in seconds, in the session's clock. */
+    time: number
+    /** Raw bounding box in normalized (0..1) output coordinates. */
+    bounds: AVCaptureRect
+    /** Only present for machine-readable code objects (`qr`, barcodes). */
+    stringValue?: string
+    /**
+     * Corner points (normalized 0..1) of a machine-readable code, in the same
+     * raw output space as `bounds`. Only present for code objects.
+     */
+    corners?: AVCapturePoint[]
+    /**
+     * Coordinates corrected for the video connection's orientation and
+     * mirroring (via `transformedMetadataObject`). Use these when overlaying
+     * on the displayed preview. Absent if the transform is unavailable.
+     */
+    transformed?: {
+      bounds: AVCaptureRect
+      /** Corrected corner points; only for machine-readable code objects. */
+      corners?: AVCapturePoint[]
+    }
+  }
+
+  /**
+   * Detects faces, codes, etc. from the live video stream. The most common use
+   * is QR / barcode scanning — see the docs site for a copy-pasteable demo.
+   */
+  class AVCaptureMetadataOutput extends AVCaptureOutput {
+    constructor()
+    readonly availableMetadataObjectTypes: AVMetadataObjectType[]
+    metadataObjectTypes: AVMetadataObjectType[]
+    /** Region (normalized 0..1) of the video frame to scan. */
+    rectOfInterest: AVCaptureRect
+    setMetadataObjectsListener(listener: ((objects: AVMetadataObject[]) => void) | null): void
+  }
+
+  // ===== Camera Control (iOS 18+, iPhone 16 hardware Camera Control) =====
+
+  /** Base for any camera control. Will not be constructed directly. */
+  class AVCaptureControl {
+    protected constructor()
+    enabled: boolean
+  }
+
+  /**
+   * Continuous or stepped slider that surfaces in the iPhone 16 hardware
+   * Camera Control (and on-screen). Use `range` for a continuous slider,
+   * `step` to make it discrete, or `values` for an explicit value list.
+   *
+   * `localizedValueFormat` lets you render values like "ƒ%.1f".
+   *
+   * @available iOS 18.0+
+   */
+  class AVCaptureSlider extends AVCaptureControl {
+    constructor(
+      localizedTitle: string,
+      symbolName: string,
+      options: {
+        range?: [number, number]
+        step?: number
+        values?: number[]
+        defaultValue?: number
+        localizedValueFormat?: string
+        prominentValues?: number[]
+        accessibilityIdentifier?: string
+      }
+    )
+    value: number
+    prominentValues: number[]
+    setActionHandler(handler: ((value: number) => void) | null): void
+  }
+
+  /**
+   * Index picker control: choose one of a set of localized titles.
+   *
+   * @available iOS 18.0+
+   */
+  class AVCaptureIndexPicker extends AVCaptureControl {
+    constructor(
+      localizedTitle: string,
+      symbolName: string,
+      options: {
+        localizedIndexTitles: string[]
+        defaultIndex?: number
+        accessibilityIdentifier?: string
+      }
+    )
+    selectedIndex: number
+    setActionHandler(handler: ((index: number) => void) | null): void
+  }
+
+  /** System-provided zoom slider bound to a device. @available iOS 18.0+ */
+  class AVCaptureSystemZoomSlider extends AVCaptureControl {
+    constructor(device: AVCaptureDevice, action?: (zoom: number) => void)
+  }
+
+  /** System-provided exposure-bias slider bound to a device. @available iOS 18.0+ */
+  class AVCaptureSystemExposureBiasSlider extends AVCaptureControl {
+    constructor(device: AVCaptureDevice, action?: (bias: number) => void)
+  }
+
+  /**
+   * Bridges the hardware Camera Control button to your capture pipeline.
+   * Without an attached `AVCaptureEventInteraction`, presses on the Camera
+   * Control will not dispatch through your delegate. Always pair this with
+   * `setControlsDelegate(...)` on the session.
+   *
+   * @available iOS 18.0+
+   */
+  class AVCaptureEventInteraction {
+    constructor(handler: (phase: "began" | "ended" | "cancelled", kind: "primary" | "secondary") => void)
+    isEnabled: boolean
+    /** Attach the interaction to the current key window. */
+    attach(): void
+    /** Detach (and stop receiving events). */
+    detach(): void
+  }
+
+  /**
+   * Callbacks for when the system Camera Control UI shows/hides. All keys are
+   * optional. Pass an object literal to `session.setControlsDelegate(...)`.
+   */
+  type AVCaptureSessionControlsDelegate = {
+    didBecomeActive?: () => void
+    willEnterFullscreenAppearance?: () => void
+    willExitFullscreenAppearance?: () => void
+    didBecomeInactive?: () => void
+  }
+
+  /**
+   * Configures camera capture and coordinates the flow of data between
+   * inputs and outputs. Construct with `new AVCaptureSession()`, attach
+   * `AVCaptureDeviceInput` + outputs, then call `startRunning()`.
+   *
+   * `startRunning()`, `capturePhoto()` and `startRecording()` are PRO-gated.
    */
   class AVCaptureSession {
-    private constructor()
+    constructor()
+
+    sessionPreset: AVCaptureSessionPreset
+    canSetSessionPreset(preset: AVCaptureSessionPreset): boolean
+
+    readonly isRunning: boolean
+    readonly isInterrupted: boolean
+    readonly inputs: AVCaptureDeviceInput[]
+    readonly outputs: AVCaptureOutput[]
+
+    canAddInput(input: AVCaptureDeviceInput): boolean
+    addInput(input: AVCaptureDeviceInput): void
+    removeInput(input: AVCaptureDeviceInput): void
+
+    canAddOutput(output: AVCaptureOutput): boolean
+    addOutput(output: AVCaptureOutput): void
+    removeOutput(output: AVCaptureOutput): void
+
+    /** Run a batch of input/output mutations atomically. */
+    configure(block: () => void): void
+    beginConfiguration(): void
+    commitConfiguration(): void
+
+    /** Resolves once the session has started. PRO-gated. */
+    startRunning(): Promise<void>
+    stopRunning(): Promise<void>
+
+    addRuntimeErrorListener(listener: (message: string) => void): void
+    removeRuntimeErrorListener(listener?: (message: string) => void): void
+    addInterruptionListener(listener: (event: "began" | "ended", reason: string) => void): void
+    removeInterruptionListener(listener?: (event: "began" | "ended", reason: string) => void): void
+
+    // ===== Camera Control =====
+    /** `false` on devices without iPhone 16-style Camera Control. */
+    readonly supportsControls: boolean
+    readonly maxControlsCount: number
+    readonly controls: AVCaptureControl[]
+    canAddControl(control: AVCaptureControl): boolean
+    addControl(control: AVCaptureControl): void
+    removeControl(control: AVCaptureControl): void
+    setControlsDelegate(delegate: AVCaptureSessionControlsDelegate | null): void
+
+    dispose(): void
+  }
+
+  /**
+   * Props for `<CaptureVideoPreviewView/>` — the live preview surface for any
+   * `AVCaptureSession` you build yourself. For the typical "press record"
+   * flow there is also `<VideoRecorderPreviewView/>` which is wired to the
+   * built-in `VideoRecorder` singleton.
+   *
+   * Pass `videoDevice` to enable rotation coordination, otherwise the
+   * preview keeps the connection's default orientation.
+   */
+  type CaptureVideoPreviewViewProps = {
+    session: AVCaptureSession
+    videoDevice?: AVCaptureDevice
+    videoGravity?: 'resize' | 'resizeAspect' | 'resizeAspectFill'
+    isVideoMirrored?: boolean
+    cornerRadius?: number
+    masksToBounds?: boolean
   }
 
   namespace VideoRecorder {
@@ -5289,22 +8321,7 @@ If the event’s calendar does not support availability settings, this property�
     /**
      * An array of cookies that will be sent during the initial connection.
      */
-    cookies?: {
-      name: string
-      value: string
-      originURL?: string
-      version?: string
-      domain?: string
-      path?: string
-      secure?: string
-      expires?: string
-      comment?: string
-      commentURL?: string
-      discard?: string
-      maximumAge?: string
-      port?: string
-      sameSitePolicy?: "lax" | "strict"
-    }[]
+    cookies?: Cookie[]
     /**
      * Any extra HTTP headers that should be sent during the initial connection.
      */
@@ -5435,6 +8452,7 @@ If the event’s calendar does not support availability settings, this property�
    * ```
    */
   class SocketIOClient {
+    private constructor()
     /**
      * The id of this socket.io connect.
      */
@@ -5462,6 +8480,7 @@ If the event’s calendar does not support availability settings, this property�
    * This class provides static methods to create various types of SSH authentication methods, such as password-based and private key-based authentication.
    */
   class SSHAuthenticationMethod {
+    private constructor()
     /**
      * Creates a password based authentication method.
      * @param username The username to authenticate with.
@@ -5487,6 +8506,7 @@ If the event’s calendar does not support availability settings, this property�
    * This class provides methods to write data to the TTY stdin and change the terminal size.
    */
   class TTYStdinWriter {
+    private constructor()
 
     /**
      * Writes data to the TTY stdin.
@@ -5516,6 +8536,7 @@ If the event’s calendar does not support availability settings, this property�
    * Represents an SFTP file.
    */
   class SFTPFile {
+    private constructor()
     /**
      * True if the file is still open, false otherwise.
      */
@@ -5574,6 +8595,7 @@ If the event’s calendar does not support availability settings, this property�
    * This class provides methods to perform various file operations such as reading directories, creating directories, reading and writing files, and more.
    */
   class SFTPClient {
+    private constructor()
     /**
      * True if the SFTP connection is still open, false otherwise.
      */
@@ -5666,6 +8688,7 @@ If the event’s calendar does not support availability settings, this property�
    * This class provides methods for connecting to the server, executing commands, and managing the SSH session.
    */
   class SSHClient {
+    private constructor()
     /**
      * Connects to an SSH server using the provided options.
      * @param options The options for connecting to the SSH server.
@@ -5691,24 +8714,45 @@ If the event’s calendar does not support availability settings, this property�
 
     /**
      * Executes a command on the SSH server.
+     *
+     * Output decoding is controlled by `options.encoding`:
+     * - `"utf8"` (default): lossy UTF-8 decode. Invalid bytes are replaced with U+FFFD.
+     * - `"ascii"`: lossy ASCII decode.
+     * - `"binary"`: returns raw bytes as `Data`, no decoding. Use this for commands whose
+     *   output may contain binary or terminal control characters (e.g. `softwareupdate -l`,
+     *   commands that emit `\r` progress bars or ANSI escapes). You can then post-process
+     *   the bytes yourself (strip control chars, decode with a different encoding, etc.).
+     *
      * @param command The command to execute on the SSH server.
      * @param options An optional object containing additional options for the command execution.
      * @param options.maxResponseSize The maximum size of the response to return. Defaults to no limit.
      * @param options.includeStderr A boolean value that indicates whether to include the standard error output in the response. Defaults to false.
      * @param options.inShell A boolean value that indicates whether to execute the command in a shell. Defaults to false.
-     * @returns A promise that resolves to the command output as a string if the command execution is successful, or rejects with an error if the command execution fails.
+     * @param options.encoding How to decode the command output. Defaults to `"utf8"`.
+     * @returns A promise that resolves to the command output. Returns `string` when `encoding` is `"utf8"` or `"ascii"`, `Data` when `encoding` is `"binary"`.
      * @throws Error if the command execution fails or if the SSH connection is not established.
      */
+    executeCommand(command: string, options: {
+      maxResponseSize?: number
+      includeStderr?: boolean
+      inShell?: boolean
+      encoding: "binary"
+    }): Promise<Data>
     executeCommand(command: string, options?: {
       maxResponseSize?: number
       includeStderr?: boolean
       inShell?: boolean
+      encoding?: "utf8" | "ascii"
     }): Promise<string>
 
     /**
      * Executes a command on the SSH server and streams the output.
+     *
+     * Note: `onOutput` runs on the JavaScript main thread. Keep it fast — heavy work
+     * inside the callback will block UI updates and slow down stream consumption.
+     *
      * @param command The command to execute on the SSH server.
-     * @param onOutput A callback function that is called for each line of output from the command. The function receives the output data and a boolean indicating whether it is standard error output. The function should return `true` to continue receiving output or `false` to stop receiving output.
+     * @param onOutput A callback function that is called for each chunk of output from the command. The function receives the output data and a boolean indicating whether it is standard error output. Return `true` to continue receiving output, or `false` to stop the stream.
      * @param options An optional object containing additional options for the command execution.
      * @returns A promise that resolves when the command execution is complete, or rejects with an error if the command execution fails.
      */
@@ -5718,6 +8762,10 @@ If the event’s calendar does not support availability settings, this property�
 
     /**
      * Opens a pseudo-terminal (PTY) session on the SSH server.
+     *
+     * Note: `onOutput` runs on the JavaScript main thread. Keep it fast — heavy work
+     * inside the callback will block UI updates and slow down stream consumption.
+     *
      * @param options An object containing options for the PTY session.
      * @param options.wantReply A boolean value that indicates whether to wait for a reply from the server. Defaults to true.
      * @param options.term The terminal type to use for the PTY session. Defaults to "xterm".
@@ -5725,8 +8773,8 @@ If the event’s calendar does not support availability settings, this property�
      * @param options.terminalRowHeight The row height of the terminal. Defaults to 24.
      * @param options.terminalPixelWidth The pixel width of the terminal. Defaults to 0.
      * @param options.terminalPixelHeight The pixel height of the terminal. Defaults to 0.
-     * @param options.onOutput A callback function that is called for each line of output from the PTY session. The function receives the output data and a boolean indicating whether it is standard error output. The function should return `true` to continue receiving output or `false` to stop receiving output.
-     * @param options.onError An optional callback function that is called when an error occurs in the PTY session. The function receives the error message as a string.
+     * @param options.onOutput A callback function that is called for each chunk of output from the PTY session. The function receives the output data and a boolean indicating whether it is standard error output. Return `true` to continue receiving output, or `false` to stop the stream.
+     * @param options.onError An optional callback function that is called when an error occurs after the PTY session has started streaming. The function receives the error message as a string. Errors thrown before the session is established cause the returned promise to reject instead.
      * @returns A promise that resolves to a TTYStdinWriter instance if the PTY session is successfully opened, or rejects with an error if the PTY session fails to open.
      */
     withPTY(optoins: {
@@ -5742,9 +8790,13 @@ If the event’s calendar does not support availability settings, this property�
 
     /**
      * Creates a TTY session and executes the provided closure with input/output streams.
+     *
+     * Note: `onOutput` runs on the JavaScript main thread. Keep it fast — heavy work
+     * inside the callback will block UI updates and slow down stream consumption.
+     *
      * @param options An object containing options for the TTY session.
-     * @param options.onOutput A callback function that is called for each line of output from the TTY session. The function receives the output data and a boolean indicating whether it is standard error output. The function should return `true` to continue receiving output or `false` to stop receiving output.
-     * @param options.onError An optional callback function that is called when an error occurs in the TTY session. The function receives the error message as a string.
+     * @param options.onOutput A callback function that is called for each chunk of output from the TTY session. The function receives the output data and a boolean indicating whether it is standard error output. Return `true` to continue receiving output, or `false` to stop the stream.
+     * @param options.onError An optional callback function that is called when an error occurs after the TTY session has started streaming. The function receives the error message as a string. Errors thrown before the session is established cause the returned promise to reject instead.
      * @returns A promise that resolves to a TTYStdinWriter instance if the TTY session is successfully created, or rejects with an error if the TTY session fails to open.
      */
     withTTY(options: {
@@ -5934,6 +8986,285 @@ If the event’s calendar does not support availability settings, this property�
      * @throws Error when token format is invalid.
      */
     decode(token: string): JWTDecodedResult
+  }
+
+  /**
+   * The Rime input-method engine, available in the main app and the keyboard
+   * extension. The engine is shared across all scripts in the same process.
+   *
+   * Typical lifecycle in a keyboard script:
+   *
+   * ```ts
+   * await Rime.setup()
+   * await Rime.deploy()      // call once after importing/changing schemas
+   * const s = new Rime.Session()
+   * try {
+   *   if (!s.processKey(charCode)) CustomKeyboard.insertText(text)
+   *   if (s.context?.preedit) CustomKeyboard.setMarkedText(s.context.preedit, 0, 0)
+   *   // ... render s.context.menu.candidates, call s.selectCandidate(i) on tap
+   * } finally {
+   *   s.close()              // release the session promptly
+   * }
+   * ```
+   */
+  namespace Rime {
+    /**
+     * A single candidate produced by the Rime input-method engine.
+     */
+    type Candidate = {
+      /** Candidate text to commit, e.g. "我". */
+      text: string
+      /** Optional comment shown alongside the candidate (e.g. tone hint). */
+      comment: string | null
+    }
+
+    /**
+     * Schema entry exposed by `Rime.listSchemas()`.
+     */
+    type Schema = {
+      /** Schema identifier, e.g. "luna_pinyin". */
+      id: string
+      /** Human-friendly schema name, e.g. "朙月拼音". */
+      name: string
+    }
+
+    /**
+     * Current candidate menu derived from a session's composition.
+     */
+    type Menu = {
+      /** Zero-based page number. */
+      pageNo: number
+      /** Number of candidates per page. */
+      pageSize: number
+      /** True when no more candidates are available after this page. */
+      isLastPage: boolean
+      /** Index of the highlighted candidate on the current page (0-based). */
+      highlightedIndex: number
+      /** Candidates on the current page. */
+      candidates: Candidate[]
+    }
+
+    /**
+     * Snapshot of the current composition + candidate menu.
+     */
+    type Context = {
+      /** Composition text shown above the candidate bar. Null when idle. */
+      preedit: string | null
+      /** Caret position within `preedit`. */
+      cursorPos: number
+      /** Selection start within `preedit`. */
+      selectionStart: number
+      /** Selection end within `preedit`. */
+      selectionEnd: number
+      /** Optional preview of what would commit if the user confirms now. */
+      commitTextPreview?: string
+      /** Optional selection-key string defined by the schema (e.g. "1234567890"). */
+      selectKeys?: string
+      /** Optional per-candidate labels (parallel to `menu.candidates`). */
+      selectLabels?: string[]
+      /** Candidate menu; null when there are no candidates. */
+      menu: Menu | null
+    }
+
+    /**
+     * Engine status flags for a session (schema + input-mode toggles).
+     */
+    type Status = {
+      schemaId: string | null
+      schemaName: string | null
+      /** True if the session has been disabled. */
+      isDisabled: boolean
+      /** True if the user is mid-composition. */
+      isComposing: boolean
+      /** True if ASCII direct-input mode is on (English passthrough). */
+      isAsciiMode: boolean
+      /** True if half/full-shape is full. */
+      isFullShape: boolean
+      /** True if simplified-Chinese output is active. */
+      isSimplified: boolean
+      /** True if traditional-Chinese output is active. */
+      isTraditional: boolean
+      /** True if ASCII punctuation is forced. */
+      isAsciiPunct: boolean
+    }
+
+    /**
+     * Notification event delivered to `Rime.onNotification`.
+     *
+     * Fired on the JS main thread; subscribers should be cheap. To support
+     * multiple subscribers, fan-out from a single handler in JavaScript:
+     *
+     * ```ts
+     * const subs: Array<(e: Rime.Event) => void> = []
+     * Rime.onNotification = (e) => subs.forEach(s => s(e))
+     * ```
+     */
+    type Event =
+      | { type: "deployStart" | "deploySuccess" | "deployFailure"; sessionId: number }
+      | { type: "schemaChanged"; sessionId: number; schemaId: string; schemaName?: string }
+      | { type: "optionChanged"; sessionId: number; option: string; enabled: boolean }
+      | { type: "other"; sessionId: number; raw: { type: string; value: string } }
+
+    /** Engine version string, e.g. "1.16.1". */
+    const version: string
+
+    /** Whether `Rime.setup()` has succeeded in this process. */
+    const isSetUp: boolean
+
+    /** True while a deploy/maintenance pass is running. */
+    const isDeploying: boolean
+
+    /**
+     * Path to the shared data directory (read-only resources such as
+     * schemas and dictionaries). Defaults to the app group's
+     * `Rime/shared/` directory; resolves to a final value after `setup()`.
+     */
+    const sharedDataDir: string
+
+    /**
+     * Path to the user data directory (user dictionaries, build cache).
+     * Defaults to the app group's `Rime/user/` directory.
+     */
+    const userDataDir: string
+
+    /**
+     * Single notification handler. Assign `null` to detach.
+     *
+     * Fires on the JS main thread for engine events such as deploy
+     * start/success/failure, schema change, and option toggles.
+     */
+    let onNotification: ((event: Event) => void) | null
+
+    /**
+     * Initialize the Rime engine. Must be called once before any other
+     * `Rime.*` API. Subsequent calls in the same process are no-ops and
+     * resolve successfully.
+     *
+     * @param options.sharedDataDir Override the shared data directory.
+     * @param options.userDataDir Override the user data directory.
+     * @param options.appName Log identifier passed to the engine.
+     */
+    function setup(options?: {
+      sharedDataDir?: string
+      userDataDir?: string
+      appName?: string
+    }): Promise<void>
+
+    /**
+     * Recompile schemas and rebuild user dictionaries when needed.
+     * Call this after importing or modifying schema/dict files.
+     *
+     * @param options.fullCheck Force a full rebuild even if up-to-date.
+     */
+    function deploy(options?: { fullCheck?: boolean }): Promise<void>
+
+    /** Enumerate all deployed input schemas. */
+    function listSchemas(): Promise<Schema[]>
+
+    /**
+     * Currently selected schema. Reads from a process-internal session,
+     * so reflects the engine-wide default rather than any specific session.
+     * Returns `null` when no schema is active yet.
+     */
+    function getCurrentSchema(): Schema | null
+
+    /**
+     * Switch the engine-wide default schema. New sessions created after
+     * this call inherit the selection; existing sessions are unaffected
+     * unless you call `session.selectSchema(id)` on them.
+     */
+    function selectSchema(schemaId: string): Promise<void>
+
+    /**
+     * Engine-wide option flags (e.g. `"ascii_mode"`, `"full_shape"`).
+     * Internally bound to a shared session; new sessions inherit defaults
+     * defined by the schema. For per-session overrides, use
+     * `session.setOption(...)` instead.
+     */
+    function getOption(name: string): boolean
+    function setOption(name: string, value: boolean): void
+    function getProperty(name: string): string | null
+    function setProperty(name: string, value: string): void
+
+    /**
+     * One input-method session. Each `new Rime.Session()` is independent;
+     * call `session.close()` to release it as soon as the session is done.
+     * Closed sessions become no-ops (methods return `false`/`null`).
+     */
+    class Session {
+      /**
+       * Create a new session. Throws if the engine is not set up.
+       */
+      constructor()
+
+      /** Underlying session id (non-zero); `0` after `close()`. */
+      readonly id: number
+
+      /** True once `close()` has been called (idempotent). */
+      readonly closed: boolean
+
+      /**
+       * Current composition + candidate menu, or `null` when idle.
+       * A fresh snapshot is fetched on every access.
+       */
+      readonly context: Context | null
+
+      /**
+       * Pending commit text from the engine, if any. Reading drains the
+       * pending commit; call once per `processKey` cycle.
+       */
+      readonly commit: string | null
+
+      /** Engine status flags for this session. */
+      readonly status: Status | null
+
+      /** Convenience: `{id, name}` derived from `status`. */
+      readonly currentSchema: Schema | null
+
+      /**
+       * Feed a key event to the engine. Returns `true` if the engine
+       * consumed it (you should not insert the corresponding character
+       * into the host text field).
+       *
+       * @param keyCode X11 keysym value (e.g. `'w'.charCodeAt(0)` is `0x77`).
+       * @param modifiers Optional bitmask (X11 conventions). Defaults to `0`.
+       */
+      processKey(keyCode: number, modifiers?: number): boolean
+
+      /**
+       * Force-commit the current composition. Returns the committed text
+       * wrapped in `{text}`, or `null` when there was nothing to commit.
+       */
+      commitComposition(): { text: string | null } | null
+
+      /** Discard the current composition without committing. */
+      clearComposition(): void
+
+      /**
+       * Pick a candidate by its absolute index in the full menu (0-based).
+       */
+      selectCandidate(index: number): boolean
+
+      /**
+       * Pick a candidate by its 0-based index on the current page.
+       */
+      selectCandidateOnCurrentPage(index: number): boolean
+
+      /** Switch this session to a different schema. */
+      selectSchema(schemaId: string): boolean
+
+      /** Per-session option flags. */
+      setOption(name: string, value: boolean): void
+      getOption(name: string): boolean
+      setProperty(name: string, value: string): void
+      getProperty(name: string): string | null
+
+      /**
+       * Release the session immediately. After this call, all methods
+       * become no-ops and `closed` is `true`. Safe to call multiple times.
+       */
+      close(): void
+    }
   }
 
   /**
@@ -7985,9 +11316,419 @@ If the event’s calendar does not support availability settings, this property�
   }
 
   /**
+   * On-device text analysis APIs that wrap Apple's NaturalLanguage framework:
+   * language identification, tokenization, part-of-speech / named-entity /
+   * sentiment tagging, word & sentence embeddings, gazetteer lookups, and
+   * contextual embeddings.
+   *
+   * All synchronous functions on this namespace return their result directly —
+   * the work is local, free, and typically completes in milliseconds.
+   */
+  namespace NaturalLanguage {
+    /**
+   * ISO BCP-47 language code (e.g. `"en"`, `"zh-Hans"`, `"ja"`). Strings are passed
+   * through to Apple's `Language(rawValue:)`, so any value Apple recognizes is
+   * accepted — the union below is just for editor hints.
+   */
+    type Language =
+      | "en" | "zh-Hans" | "zh-Hant" | "ja" | "ko"
+      | "es" | "fr" | "de" | "it" | "pt" | "ru" | "nl" | "sv" | "no" | "da" | "fi"
+      | "pl" | "tr" | "cs" | "sk" | "hu" | "ro" | "el" | "bg" | "uk" | "hr"
+      | "ar" | "he" | "fa" | "ur" | "hi" | "bn" | "ta" | "te" | "kn" | "ml"
+      | "mr" | "gu" | "pa" | "or"
+      | "th" | "vi" | "id" | "ms" | "lo" | "km" | "my"
+      | "am" | "ka" | "hy" | "mn" | "kk" | "ckb" | "si" | "is" | "ca"
+      | "und"
+      | (string & {})
+
+    type TokenUnit = "word" | "sentence" | "paragraph" | "document"
+
+    /**
+     * Half-open UTF-16 range, mirroring `NSRange`. Indices line up with native
+     * JS string indexing (`text.substring(location, location + length)`).
+     */
+    type StringRange = {
+      location: number
+      length: number
+    }
+
+    type TokenAttributes = {
+      /** The token contains emoji codepoints. */
+      emoji?: boolean
+      /** The token is a numeric sequence. */
+      numeric?: boolean
+      /** The token consists of symbol characters. */
+      symbolic?: boolean
+    }
+
+    type TokenRange = {
+      range: StringRange
+      text: string
+      attributes: TokenAttributes
+    }
+
+    type LanguageHypothesis = {
+      language: Language
+      confidence: number
+    }
+
+    /**
+     * Detect the dominant language of `text`. Returns a BCP-47 language code or
+     * `null` if the recognizer can't make a guess (e.g. text too short).
+     */
+    function dominantLanguage(text: string): Language | null
+
+    /**
+     * Return the top-K language hypotheses for `text`, sorted by confidence
+     * (descending). Pass `constraints` to restrict the candidate set and
+     * `hints` to bias the recognizer with prior probabilities.
+     *
+     * @example
+     * ```ts
+     * const hypotheses = NaturalLanguage.languageHypotheses("Buenos días", {
+     *   maximumCount: 2,
+     *   constraints: ["es", "pt"],
+     * })
+     * ```
+     */
+    function languageHypotheses(
+      text: string,
+      options?: {
+        /** How many candidates to return. Defaults to 3. */
+        maximumCount?: number
+        /** Restrict the recognizer to this set of languages. */
+        constraints?: Language[]
+        /** Prior probabilities, keyed by BCP-47 code. */
+        hints?: { [language: string]: number }
+      }
+    ): LanguageHypothesis[]
+
+    /**
+     * Split `text` into tokens at the requested granularity.
+     *
+     * @param options.unit Token granularity. Defaults to `"word"`.
+     * @param options.language Optional hint to help the tokenizer choose a model.
+     *
+     * @example
+     * ```ts
+     * const sentences = NaturalLanguage.tokenize(article, { unit: "sentence" })
+     * sentences.forEach(t => console.log(t.text))
+     * ```
+     */
+    function tokenize(
+      text: string,
+      options?: {
+        unit?: TokenUnit
+        language?: Language
+      }
+    ): TokenRange[]
+
+    /**
+     * Linguistic tag scheme. Custom NLModel-defined schemes are not exposed yet.
+     */
+    type TagScheme =
+      | "tokenType"
+      | "lexicalClass"
+      | "nameType"
+      | "nameTypeOrLexicalClass"
+      | "lemma"
+      | "language"
+      | "script"
+      | "sentimentScore"
+
+    /**
+     * Enumeration filters applied while walking tags. Mirrors `Tagger.Options`.
+     */
+    type TaggerOptions = {
+      omitWords?: boolean
+      omitPunctuation?: boolean
+      omitWhitespace?: boolean
+      omitOther?: boolean
+      /** Treat sequences of personal-name tokens (e.g. "John Smith") as a single tag. */
+      joinNames?: boolean
+      /** Treat contractions (e.g. "don't") as a single tag. */
+      joinContractions?: boolean
+    }
+
+    type TagResult = {
+      /** Apple's `NLTag` rawValue (e.g. `"Noun"`, `"PersonalName"`). `null` when no tag at this position. */
+      tag: string | null
+      range: StringRange
+    }
+
+    type NamedEntityKind = "personalName" | "placeName" | "organizationName"
+
+    type NamedEntityResult = {
+      entity: NamedEntityKind
+      text: string
+      range: StringRange
+    }
+
+    type TagHypothesesResult = {
+      /** Candidate tag rawValue → confidence (0...1). */
+      hypotheses: { [tag: string]: number }
+      range: StringRange
+    }
+
+    /**
+     * Linguistic tagger. Construct with the schemes you want to use, attach a
+     * text via `setText`, then query single positions or whole ranges.
+     *
+     * Convenience methods `enumerateNamedEntities` and `sentimentScore` cover
+     * the two most common workflows without manually wiring tag scheme flags.
+     *
+     * @example
+     * ```ts
+     * const tagger = new NaturalLanguage.Tagger(["nameType", "lexicalClass"])
+     * tagger.setText("Tim Cook visited Beijing yesterday.")
+     * const entities = tagger.enumerateNamedEntities()
+     * // [{ entity: "personalName", text: "Tim Cook", range: ... },
+     * //  { entity: "placeName",    text: "Beijing",  range: ... }]
+     * ```
+     */
+    class Tagger {
+      constructor(tagSchemes: TagScheme[])
+
+      /** Attach the text to analyze. All subsequent queries operate on this string. */
+      setText(text: string): void
+
+      /**
+       * Override the language hint for the whole text or a sub-range.
+       * Omit `range` to apply to the entire text.
+       */
+      setLanguage(language: Language, range?: StringRange): void
+
+      /**
+       * Attach one or more gazetteers to a tag scheme. Tokens that hit a
+       * gazetteer entry will be tagged with the corresponding label, taking
+       * precedence over the system model for that scheme.
+       *
+       * The scheme must be one of the schemes passed to the constructor.
+       */
+      setGazetteers(gazetteers: Gazetteer[], scheme: TagScheme): void
+
+      /**
+       * Look up the tag covering a single UTF-16 offset.
+       * Returns `null` if `at` is out of range; the inner `tag` may still be `null`
+       * when no tag of the requested scheme exists at that position.
+       */
+      tag(at: number, unit: TokenUnit, scheme: TagScheme): TagResult | null
+
+      /**
+       * Enumerate all tags in a range. Pass `null` to scan the whole text.
+       */
+      tags(
+        range: StringRange | null,
+        unit: TokenUnit,
+        scheme: TagScheme,
+        options?: TaggerOptions
+      ): TagResult[]
+
+      /**
+       * Top-K candidate tags at a position, sorted by confidence (descending).
+       */
+      tagHypotheses(
+        at: number,
+        unit: TokenUnit,
+        scheme: TagScheme,
+        maximumCount: number
+      ): TagHypothesesResult
+
+      /**
+       * Convenience over `tags(..., "word", "nameType", ...)`: returns
+       * person / place / organization mentions only, with `joinNames` enabled
+       * so multi-token names appear as a single entity.
+       */
+      enumerateNamedEntities(
+        range?: StringRange,
+        options?: TaggerOptions
+      ): NamedEntityResult[]
+
+      /**
+       * Sentiment score in the range `[-1.0, 1.0]` (negative → positive),
+       * scored at paragraph granularity starting from `range.location`.
+       * Returns `null` when no sentiment can be computed.
+       *
+       * Requires the tagger to have been constructed with `"sentimentScore"`
+       * in its scheme list.
+       */
+      sentimentScore(range?: StringRange): number | null
+    }
+
+    /**
+     * Distance metric used by Embedding lookups. Apple currently exposes
+     * only cosine distance, but the parameter is reserved for future metrics.
+     */
+    type DistanceType = "cosine"
+
+    type EmbeddingNeighbor = {
+      token: string
+      /** Cosine distance ∈ [0, 2]; smaller is closer. */
+      distance: number
+    }
+
+    /**
+     * On-device word and sentence embeddings. Get an instance from
+     * `wordEmbedding(language)` or `sentenceEmbedding(language)` — direct
+     * construction is not supported.
+     *
+     * The static factories return `null` when no embedding is available for
+     * the requested language on this OS revision.
+     *
+     * @example
+     * ```ts
+     * const emb = NaturalLanguage.Embedding.wordEmbedding("en")
+     * if (emb) {
+     *   console.log(emb.distance("cat", "kitten"))     // small
+     *   console.log(emb.neighbors("happy", 5))         // ~5 nearest words
+     * }
+     * ```
+     */
+    class Embedding {
+      private constructor()
+
+      /** Word-level embedding (iOS 12+). */
+      static wordEmbedding(language: Language, revision?: number): Embedding | null
+      /** Sentence-level embedding (iOS 14+). Returns `null` on iOS 13. */
+      static sentenceEmbedding(language: Language, revision?: number): Embedding | null
+
+      readonly language: Language | null
+      readonly dimension: number
+      readonly vocabularySize: number
+      readonly revision: number
+
+      /** Whether `token` is present in this embedding's vocabulary. */
+      contains(token: string): boolean
+
+      /** Vector for `token`, or `null` if the token is not in vocabulary. */
+      vector(token: string): number[] | null
+
+      /**
+       * Cosine distance between two tokens. Returns `null` if either token is
+       * outside the embedding's vocabulary — use `contains` to disambiguate
+       * "no signal" from "very far apart".
+       */
+      distance(first: string, second: string, type?: DistanceType): number | null
+
+      /**
+       * Up to `maximumCount` nearest neighbors of `token`, sorted by ascending
+       * distance. Returns an empty array if `token` is not in vocabulary.
+       */
+      neighbors(token: string, maximumCount: number, type?: DistanceType): EmbeddingNeighbor[]
+    }
+
+    /**
+     * A user-supplied lexicon mapping labels to lists of terms. Attach to a
+     * `Tagger` via `setGazetteers` to override the system model for a tag
+     * scheme — useful for product names, code identifiers, or any custom
+     * vocabulary you want NER / lexical tagging to recognize.
+     *
+     * @example
+     * ```ts
+     * const gz = new NaturalLanguage.Gazetteer({
+     *   product: ["Scripting", "Pro"],
+     *   company: ["Acme", "Acme Corp"]
+     * }, "en")
+     *
+     * const tagger = new NaturalLanguage.Tagger(["nameType"])
+     * tagger.setGazetteers([gz], "nameType")
+     * tagger.setText("Acme Corp ships the Scripting app.")
+     * const tags = tagger.tags(null, "word", "nameType", { omitWhitespace: true })
+     * // tags include { tag: "product", ... } and { tag: "company", ... }
+     * ```
+     */
+    class Gazetteer {
+      /**
+       * Build a gazetteer from a `{ label: [term, term, ...] }` dictionary.
+       * Throws if the dictionary is malformed (e.g. empty terms, duplicate
+       * entries across labels).
+       *
+       * @param language Optional BCP-47 language hint; pass when the terms
+       *                 are language-specific.
+       */
+      constructor(dictionary: { [label: string]: string[] }, language?: Language)
+
+      /** Language the gazetteer was built for, or `null` if unspecified. */
+      readonly language: Language | null
+
+      /** Returns the gazetteer label matching `term`, or `null` for a miss. */
+      label(term: string): string | null
+    }
+
+    /**
+     * BCP-47 script tag (ISO 15924), e.g. `"Latn"`, `"Hans"`, `"Cyrl"`.
+     */
+    type Script = "Latn" | "Hans" | "Hant" | "Cyrl" | "Hira" | "Arab" | "Hebr" | "Grek" | (string & {})
+
+    type ContextualEmbeddingToken = {
+      text: string
+      range: StringRange
+      /** Dense vector of length `dimension`. */
+      vector: number[]
+    }
+
+    type ContextualEmbeddingResult = {
+      sequenceLength: number
+      tokens: ContextualEmbeddingToken[]
+    }
+
+    /**
+     * Pretrained transformer-style contextual embeddings (iOS 17+). The
+     * underlying assets are downloaded on demand — call `prepare()` once
+     * before the first `embeddingResult()`.
+     *
+     * On iOS 16 and earlier, the class is still present but every method
+     * rejects with `"ContextualEmbedding requires iOS 17 or later."`.
+     *
+     * @example
+     * ```ts
+     * const emb = NaturalLanguage.ContextualEmbedding.forLanguage("en")
+     * if (emb) {
+     *   await emb.prepare()
+     *   const r = await emb.embeddingResult("Hello world", "en")
+     *   console.log(r.sequenceLength, r.tokens[0].vector.length)
+     * }
+     * ```
+     */
+    class ContextualEmbedding {
+      private constructor()
+
+      /** Most recent embedding suitable for the given language, or `null`. */
+      static forLanguage(language: Language): ContextualEmbedding | null
+      /** Most recent embedding suitable for the given script, or `null`. */
+      static forScript(script: Script): ContextualEmbedding | null
+      /** Locate an embedding by its model identifier (e.g. for inference matching a training run). */
+      static forModelIdentifier(modelIdentifier: string): ContextualEmbedding | null
+
+      readonly modelIdentifier: string
+      readonly languages: Language[]
+      readonly scripts: Script[]
+      readonly revision: number
+      readonly dimension: number
+      readonly maximumSequenceLength: number
+      readonly hasAvailableAssets: boolean
+
+      /**
+       * Request that the embedding's assets be loaded onto the device, then
+       * resolve. Calling `embeddingResult()` before this resolves will
+       * generally fail.
+       */
+      prepare(): Promise<void>
+
+      /**
+       * Compute contextual embedding vectors for `text`. Tokens correspond to
+       * the embedding model's own tokenization (typically wordpieces), each
+       * with a `vector` of length `dimension`.
+       */
+      embeddingResult(text: string, language?: Language): Promise<ContextualEmbeddingResult>
+    }
+  }
+
+  /**
    * This class provides an interface for working with PDF page.
    */
   class PDFPage {
+    private constructor()
     /**
      * Creates a PDF page from the given image.
      * @param image The image to be converted to a PDF page.
@@ -8023,6 +11764,7 @@ If the event’s calendar does not support availability settings, this property�
    * It allows you to read, modify, and save PDF documents.
    */
   class PDFDocument {
+    private constructor()
     /**
      * Creates a PDF document from the given data.
      * @param data The data to be converted to a PDF document.
@@ -8219,6 +11961,7 @@ If the event’s calendar does not support availability settings, this property�
   type TimeZoneIdentifier = "current" | "autoupdatingCurrent" | "gmt" | string
 
   class DateFormatter {
+    constructor()
 
     static localizedString(date: Date, options: {
       dateStyle: DateFormatterStyle
@@ -8856,6 +12599,7 @@ If the event’s calendar does not support availability settings, this property�
    * It allows you to access information about health devices, such as their unique identifier, manufacturer, model, hardware version, firmware version, software version, and user-facing name.
    */
   class HealthDevice {
+    private constructor()
     /**
      * A unique identifier for the health device.
      * This identifier is used to distinguish the device from other health devices.
@@ -8897,6 +12641,7 @@ If the event’s calendar does not support availability settings, this property�
    * It allows you to access information about health sources, such as the bundle identifier and name of the app that provides the health data.
    */
   class HealthSource {
+    private constructor()
     /**
      * The bundle identifier of the health source.
      */
@@ -8912,6 +12657,7 @@ If the event’s calendar does not support availability settings, this property�
   }
 
   class HealthSourceRevision {
+    private constructor()
     /**
      * The health source that this revision belongs to.
      * This is an instance of the HealthSource class, which provides information about the app that provides the health data.
@@ -8945,6 +12691,7 @@ If the event’s calendar does not support availability settings, this property�
    * @see {@link https://developer.apple.com/documentation/healthkit/hkunit}
    */
   class HealthUnit {
+    private constructor()
 
     /**
      * The raw value of the health unit, which is a string representation of the unit.
@@ -9085,6 +12832,7 @@ If the event’s calendar does not support availability settings, this property�
    * You can use this class to analyze health data over a specified period, such as daily, weekly, or monthly statistics.
    */
   class HealthStatistics {
+    private constructor()
     /**
      * The identifier for the health quantity type that this statistics object represents.
      */
@@ -9169,6 +12917,7 @@ If the event’s calendar does not support availability settings, this property�
    * It allows you to access collections of health statistics, which can include multiple health sources and statistics for different health quantity types.
    */
   class HealthStatisticsCollection {
+    private constructor()
     sources(): HealthSource[]
     statistics(): HealthStatistics[]
     statisticsFor(date: Date): HealthStatistics | null
@@ -9185,6 +12934,7 @@ If the event’s calendar does not support availability settings, this property�
    * @see {@link https://developer.apple.com/documentation/healthkit/hkquantitysample}
    */
   class HealthQuantitySample {
+    private constructor()
     readonly uuid: string
     readonly quantityType: HealthQuantityType
     readonly startDate: Date
@@ -9231,6 +12981,7 @@ If the event’s calendar does not support availability settings, this property�
    * @see {@link https://developer.apple.com/documentation/healthkit/hkcumulativequantitysample}
    */
   class HealthCumulativeQuantitySample {
+    private constructor()
     readonly uuid: string
     readonly quantityType: HealthQuantityType
     readonly startDate: Date
@@ -9259,6 +13010,7 @@ If the event’s calendar does not support availability settings, this property�
    * @see {@link https://developer.apple.com/documentation/healthkit/hkdiscretequantitysample}
    */
   class HealthDiscreteQuantitySample {
+    private constructor()
     readonly uuid: string
     readonly quantityType: HealthQuantityType
     readonly startDate: Date
@@ -9288,6 +13040,7 @@ If the event’s calendar does not support availability settings, this property�
    * @see {@link https://developer.apple.com/documentation/healthkit/hkcategorysample}
    */
   class HealthCategorySample {
+    private constructor()
     readonly uuid: string
     readonly categoryType: HealthCategoryType
     readonly startDate: Date
@@ -9331,6 +13084,7 @@ If the event’s calendar does not support availability settings, this property�
    * @see {@link https://developer.apple.com/documentation/healthkit/hkcorrelation}
    */
   class HealthCorrelation {
+    private constructor()
     readonly uuid: string
     readonly correlationType: HealthCorrelationType
     readonly startDate: Date
@@ -9482,6 +13236,7 @@ If the event’s calendar does not support availability settings, this property�
    * @see {@link https://developer.apple.com/documentation/healthkit/hkworkoutevent}
    */
   class HealthWorkoutEvent {
+    private constructor()
     readonly type: HealthWorkoutEventType
     readonly dateInterval: HealthDateInterval
     readonly metadata: Record<string, any> | null
@@ -9499,6 +13254,7 @@ If the event’s calendar does not support availability settings, this property�
    * @see {@link https://developer.apple.com/documentation/healthkit/hkworkout}
    */
   class HealthWorkout {
+    private constructor()
     readonly uuid: string
     readonly workoutActivityType: HealthWorkoutActivityType
     readonly startDate: Date
@@ -9523,6 +13279,7 @@ If the event’s calendar does not support availability settings, this property�
    * @see {@link https://developer.apple.com/documentation/healthkit/hkheartbeatseriessample}
    */
   class HealthHeartbeatSeriesSample {
+    private constructor()
     readonly uuid: string
     readonly sampleType: string
     readonly startDate: Date
@@ -9547,6 +13304,7 @@ If the event’s calendar does not support availability settings, this property�
    * It allows you to access daily summaries of health activity, including active energy burned, exercise time, stand hours, and more.
    */
   class HealthActivitySummary {
+    private constructor()
     readonly dateComponents: DateComponents
     readonly activityMoveMode: HealthActivityMoveMode
 
@@ -10028,6 +13786,7 @@ If the event’s calendar does not support availability settings, this property�
    * Requires iOS 18.0 or later.
    */
   class Translation {
+    constructor()
 
     /**
      * The shared instance of the Translation class for convenient access to translation methods.
@@ -10155,7 +13914,34 @@ If the event’s calendar does not support availability settings, this property�
       "shipmentTrackingNumber"
     }
 
+    /**
+     * Metadata for a script that can run in the custom keyboard extension.
+     */
+    type KeyboardScriptInfo = {
+      /**
+       * The script's stable name.
+       */
+      name: string
+      /**
+       * The localized display name for the current device language.
+       */
+      localizedName: string
+      /**
+       * The SF Symbol name used by the script.
+       */
+      icon: string
+      /**
+       * The script color name.
+       */
+      color: string
+    }
+
     const traits: TextInputTraits
+
+    /**
+     * All scripts that can run in the custom keyboard extension.
+     */
+    const allScripts: KeyboardScriptInfo[]
 
     /**
      * The text before the cursor, or null if there is no text before the cursor.
@@ -10179,10 +13965,9 @@ If the event’s calendar does not support availability settings, this property�
     const hasText: boolean
 
     /**
-     * Sets the visibility of the dictation key of the system.
-     * @param value A boolean value indicating whether the dictation key should be shown (true) or hidden (false).
+     * A boolean value indicating whether the dictation key should be shown (true) or hidden (false).
      */
-    function setHasDictationKey(value: boolean): void
+    var hasDictationKey: boolean
 
     /**
      * Dismisses the custom keyboard.
@@ -10192,6 +13977,17 @@ If the event’s calendar does not support availability settings, this property�
      * Switches to the next keyboard in the list of enabled keyboards.
      */
     function nextKeyboard(): void
+    /**
+     * Dismisses the current keyboard script and runs another keyboard script by name.
+     * @param scriptName The target script's stable name.
+     * @param queryParameters Parameters passed to the target script, available as `Script.queryParameters`.
+     */
+    function switchToScript(scriptName: string, queryParameters?: Record<string, any>): Promise<void>
+    /**
+     * Dismisses the current keyboard script and runs the next available keyboard script.
+     * @param queryParameters Parameters passed to the target script, available as `Script.queryParameters`.
+     */
+    function nextScript(queryParameters?: Record<string, any>): Promise<void>
     /**
      * Moves the cursor by the specified offset.
      * @param offset The number of characters to move the cursor. A positive value moves the cursor to the right, while a negative value moves it to the left.
@@ -10343,6 +14139,7 @@ If the event’s calendar does not support availability settings, this property�
    * It contains properties that describe the characteristic's UUID, service UUID, properties, notification status, and value.
    */
   class BluetoothCharacteristic {
+    private constructor()
     /**
      * The UUID of the characteristic.
      */
@@ -10372,6 +14169,7 @@ If the event’s calendar does not support availability settings, this property�
    * It contains properties that describe the service's UUID, peripheral ID, primary status, included services, and characteristics.
    */
   class BluetoothService {
+    private constructor()
     /**
      * The UUID of the service.
      */
@@ -10408,6 +14206,7 @@ If the event’s calendar does not support availability settings, this property�
    * It contains properties that describe the peripheral's name, ID, services, and capabilities, as well as methods for interacting with the peripheral.
    */
   class BluetoothPeripheral {
+    private constructor()
     /**
      * The name of the peripheral, or null if the name is not known.
      */
@@ -11031,6 +14830,7 @@ If the length of the value parameter exceeds the length of the `maximumUpdateVal
    * A URL session download task.
    */
   class URLSessionDownloadTask {
+    private constructor()
     /**
      * The identifier of the download task.
      */
@@ -11119,6 +14919,7 @@ If the length of the value parameter exceeds the length of the `maximumUpdateVal
    * A URL session upload task.
    */
   class URLSessionUploadTask {
+    private constructor()
     /**
      * The identifier of the upload task.
      */
@@ -11284,6 +15085,7 @@ If the length of the value parameter exceeds the length of the `maximumUpdateVal
   }
 
   class FileEntity {
+    private constructor()
     /**
      * The path of the file
      */
@@ -11354,6 +15156,7 @@ If the length of the value parameter exceeds the length of the `maximumUpdateVal
    * The HTTP response body.
    */
   class HttpResponseBody {
+    private constructor()
     /**
      * Creates a text response body.
      * @param text The text content of the response body.
@@ -11380,6 +15183,7 @@ If the length of the value parameter exceeds the length of the `maximumUpdateVal
    * The HTTP response.
    */
   class HttpResponse {
+    private constructor()
     /**
      * The status code of the response.
      */
@@ -11442,6 +15246,7 @@ If the length of the value parameter exceeds the length of the `maximumUpdateVal
    * The HTTP request.
    */
   class HttpRequest {
+    private constructor()
     /**
      * The path of the request.
      */
@@ -11501,6 +15306,7 @@ If the length of the value parameter exceeds the length of the `maximumUpdateVal
    * The WebSocket session.
    */
   class WebSocketSession {
+    private constructor()
     /**
      * Writes text to the session.
      * @param text The text to write.
@@ -11526,6 +15332,7 @@ If the length of the value parameter exceeds the length of the `maximumUpdateVal
    * The HTTP server.
    */
   class HttpServer {
+    constructor()
     /**
      * The state of the HTTP server.
      */
@@ -11549,11 +15356,37 @@ If the length of the value parameter exceeds the length of the `maximumUpdateVal
     listenAddressIPv6: string | null
 
     /**
-     * Registers a handler for the specified path.
+     * Registers a synchronous handler for the specified path. The handler
+     * runs on the JavaScript main thread and must return an `HttpResponse`
+     * immediately.
+     *
+     * @deprecated Prefer `registerAsyncHandler`, which lets the handler
+     * await async work (network calls, async file IO, SQLite queries,
+     * etc.) before sending the response. The sync entry point is kept
+     * only for legacy scripts and may be removed in a future major
+     * release.
+     *
      * @param path The path to register the handler for.
-     * @param handler The handler function. The handler function takes a request as an argument and returns a response.
+     * @param handler The handler function. Takes a request and returns a response.
      */
     registerHandler(path: string, handler: (request: HttpRequest) => HttpResponse): void
+
+    /**
+     * Registers an async handler for the specified path. The handler may
+     * return a `Promise<HttpResponse>` and the server will wait for it to
+     * resolve before sending the reply. If the promise rejects, the server
+     * returns a 500 with the error message as the body.
+     * @param path The path to register the handler for.
+     * @param handler The async handler function. Takes a request and returns a promise of a response.
+     * @example
+     * ```ts
+     * server.registerAsyncHandler("/slow", async req => {
+     *   await new Promise(r => setTimeout(r, 200))
+     *   return HttpResponse.ok(HttpResponseBody.text("slow ok"))
+     * })
+     * ```
+     */
+    registerAsyncHandler(path: string, handler: (request: HttpRequest) => Promise<HttpResponse>): void
 
     /**
      * Register a static file for the specified path.
@@ -11582,6 +15415,21 @@ If the length of the value parameter exceeds the length of the `maximumUpdateVal
     registerFilesFromDirectory(path: string, directory: string, options?: {
       defaults?: string[]
     }): void
+
+    /**
+     * Register an auto-generated directory browser for the specified path.
+     * Subpaths that resolve to a file are streamed back as-is; subpaths
+     * that resolve to a directory are rendered as a simple HTML index
+     * with links to each entry.
+     * @param path The path to register the browser for. Must include a
+     * single path variable, e.g. "/browse/:path".
+     * @param directory The directory to browse.
+     * @example
+     * ```ts
+     * server.registerDirectoryBrowser("/browse/:path", Path.join(Script.directory, "data"))
+     * ```
+     */
+    registerDirectoryBrowser(path: string, directory: string): void
 
     /**
      * Registers a websocket handler for the specified path.
@@ -11623,15 +15471,110 @@ If the length of the value parameter exceeds the length of the `maximumUpdateVal
     }): void
 
     /**
+     * Registers an async middleware layer that runs before route handlers.
+     * The middleware receives the incoming request and may either:
+     *   - resolve with `null` / `undefined` to let the request pass through
+     *     to the next middleware or the route handler, or
+     *   - resolve with an `HttpResponse` to short-circuit the request — no
+     *     subsequent middleware or route handler will run.
+     *
+     * Layers run in registration order. Throwing or rejecting becomes a
+     * 500 response.
+     *
+     * Common uses: per-request logging, auth checks, CORS headers, rate
+     * limiting. For CORS specifically, prefer setting headers on the
+     * downstream response inside the middleware that returns `null`.
+     *
+     * @param handler The middleware function. Always async.
+     * @example
+     * ```ts
+     * // Reject anything without an X-Auth header
+     * server.registerMiddleware(async (req) => {
+     *   if (!req.headers["x-auth"]) {
+     *     return HttpResponse.unauthorized(HttpResponseBody.text("missing token"))
+     *   }
+     *   return null
+     * })
+     * ```
+     */
+    registerMiddleware(handler: (request: HttpRequest) => Promise<HttpResponse | null | undefined>): void
+
+    /**
+     * Sets the async handler that runs when no route matches the request.
+     * The handler is required to resolve with an `HttpResponse`. Throwing
+     * or rejecting becomes a 500 response.
+     *
+     * Calling this multiple times replaces the previous handler.
+     *
+     * @param handler The async handler. Resolves with an `HttpResponse`.
+     * @example
+     * ```ts
+     * server.setNotFoundHandler(async (req) => {
+     *   return HttpResponse.notFound(HttpResponseBody.text(`No route: ${req.path}`))
+     * })
+     * ```
+     */
+    setNotFoundHandler(handler: (request: HttpRequest) => Promise<HttpResponse>): void
+
+    /**
      * Starts the HTTP server.
      * @param options The options for the HTTP server.
      * @param options.port The port to listen on. Defaults to 8080, if specified 0, the server will listen on a random port.
      * @param options.forceIPv4 Whether to force the server to listen on IPv4. Defaults to false.
+     * @param options.maxRequestBodySize Maximum accepted request body size in
+     *   bytes. A request whose `Content-Length` exceeds this is rejected with
+     *   413 before the body is read (guards against memory exhaustion).
+     *   Defaults to 50 MB. Values <= 0 are ignored.
+     * @param options.maxWebSocketPayloadSize Maximum WebSocket frame payload /
+     *   accumulated fragmented-message size in bytes. Frames or messages that
+     *   exceed it close the connection with a protocol error. Defaults to
+     *   16 MB. Values <= 0 are ignored.
+     * @param options.tls Optional TLS configuration. When provided, the server starts as HTTPS using the supplied PKCS#12 identity.
+     * @param options.tls.p12 Either an absolute path to a PKCS#12 file (string)
+     *   or the raw P12 bytes (`Data`). The `Data` form is useful when the P12
+     *   is loaded from Keychain or another in-memory source instead of disk.
+     * @param options.tls.password Password for the P12 identity.
+     * @param options.tls.minVersion Minimum TLS protocol version. Accepts
+     *   `"1.2"` or `"1.3"`. Defaults to `"1.2"`.
+     * @param options.tls.maxVersion Maximum TLS protocol version. Accepts
+     *   `"1.2"` or `"1.3"`. Defaults to unset (no upper bound).
      * @returns An error message if the server fails to start, or null if the server starts successfully.
+     * @example
+     * ```ts
+     * // HTTPS from a P12 file
+     * const err = server.start({
+     *   port: 8443,
+     *   tls: {
+     *     p12: Path.join(Script.directory, "server.p12"),
+     *     password: "your-p12-password",
+     *   },
+     * })
+     *
+     * // HTTPS with P12 bytes from Keychain, pinned to TLS 1.3
+     * const p12Bytes = Keychain.getData("server.p12") // sync, returns Data | null
+     * if (!p12Bytes) throw new Error("P12 not found in Keychain")
+     * server.start({
+     *   port: 8443,
+     *   tls: {
+     *     p12: p12Bytes,
+     *     password: "your-p12-password",
+     *     minVersion: "1.3",
+     *     maxVersion: "1.3",
+     *   },
+     * })
+     * ```
      */
     start(options?: {
       port?: number
       forceIPv4?: boolean
+      maxRequestBodySize?: number
+      maxWebSocketPayloadSize?: number
+      tls?: {
+        p12: string | Data
+        password: string
+        minVersion?: "1.2" | "1.3"
+        maxVersion?: "1.2" | "1.3"
+      }
     }): string | null
 
     /**
@@ -11671,6 +15614,7 @@ If the length of the value parameter exceeds the length of the `maximumUpdateVal
   }
 
   class Archive {
+    private constructor()
     /**
      * Opens an archive for specifed path and accessMode.
      * @param path The path of the archive
@@ -11919,6 +15863,7 @@ If the length of the value parameter exceeds the length of the `maximumUpdateVal
    * Represents an animation.
    */
   class Animation {
+    private constructor()
     /**
      * Delay the animation by the given time.
      * @param time The time to delay in seconds.
@@ -12062,6 +16007,7 @@ If the length of the value parameter exceeds the length of the `maximumUpdateVal
    * Represents a transition.
    */
   class Transition {
+    private constructor()
     animation(animation?: Animation): Transition
     combined(other: Transition): Transition
 
@@ -12144,7 +16090,7 @@ If the length of the value parameter exceeds the length of the `maximumUpdateVal
   }
 
   class Observable<T> {
-    constructor(initialValue: T)
+    private constructor(initialValue: T)
     value: T
     setValue: (value: T) => void
     subscribe: (callback: (value: T, oldValue: T) => void) => void
@@ -12178,6 +16124,7 @@ If the length of the value parameter exceeds the length of the `maximumUpdateVal
   }
 
   class EditMode {
+    private constructor()
 
     readonly value: "active" | "inactive" | "transient" | "unknown"
     readonly isEditing: boolean
@@ -12192,6 +16139,7 @@ If the length of the value parameter exceeds the length of the `maximumUpdateVal
    * This is used in the `openURL` view modifier.
    */
   class OpenURLActionResult {
+    private constructor()
 
     type: string
 
@@ -12232,6 +16180,7 @@ If the length of the value parameter exceeds the length of the `maximumUpdateVal
    * @available iOS 18.4+
    */
   class TabViewCustomizationSection {
+    private constructor()
     readonly tabOrder: string[] | null
     resetTabOrder(): void
   }
@@ -12241,6 +16190,7 @@ If the length of the value parameter exceeds the length of the `maximumUpdateVal
    * @available iOS 18.4+
    */
   class TabViewCustomizationTab {
+    private constructor()
     readonly tabBarVisibility: Visibility
     sidebarVisibility: Visibility
   }
@@ -12251,6 +16201,7 @@ If the length of the value parameter exceeds the length of the `maximumUpdateVal
    * @available iOS 18.0+
    */
   class TabViewCustomization {
+    constructor()
     /**
      * Create a TabViewCustomization from data.
      * @param data The data to create the TabViewCustomization from, use the `toData` method to create the data.
@@ -12303,6 +16254,7 @@ If the length of the value parameter exceeds the length of the `maximumUpdateVal
    * @available iOS 26.0+
    */
   class UIGlass {
+    private constructor()
     /**
      * Returns a new instance configured to be interactive. Defaults to true.
      */
@@ -12324,6 +16276,75 @@ If the length of the value parameter exceeds the length of the `maximumUpdateVal
      * The regular variant of the Liquid Glass material.
      */
     static identity(): UIGlass
+  }
+
+  /**
+   * Format style for chart axis tick labels (mirrors SwiftUI Foundation's `FormatStyle` family).
+   * Use it as the `format` field of a `chartXAxis` / `chartYAxis` value-label config when you need
+   * fraction-digit precision, a fixed currency code, or a non-default date / time style. The
+   * existing string-token shortcuts (`'number'` / `'percent'` / `'currency'` / `'date'` / `'time'`
+   * / `'dateTime'`) keep working unchanged — use this class only when you need extra options.
+   *
+   * - `number` / `percent` / `currency`: applies to `Double`-plottable axes.
+   * - `currency` defaults to the device locale's currency code; pass `currencyCode: 'CNY'` etc.
+   *   to override.
+   * - `date` / `time` / `dateTime`: applies to `Date`-plottable axes; mirrors the
+   *   `Date.formatted(date:time:)` style enums.
+   *
+   * @example
+   * ```ts
+   * <Chart chartYAxis={{
+   *   valueLabel: {
+   *     format: ChartAxisLabelFormat.currency({ currencyCode: "CNY", fractionDigits: 2 })
+   *   }
+   * }}>...</Chart>
+   * ```
+   */
+  class ChartAxisLabelFormat {
+    private constructor()
+    /**
+     * Numeric format. Optional `fractionDigits` (max) / `minFractionDigits` (min).
+     * Default produces an integer-style render.
+     */
+    static number(opts?: {
+      fractionDigits?: number
+      minFractionDigits?: number
+    }): ChartAxisLabelFormat
+    /**
+     * Percent format (formats the underlying `Double`, e.g. `0.42` → `42%`).
+     */
+    static percent(opts?: {
+      fractionDigits?: number
+      minFractionDigits?: number
+    }): ChartAxisLabelFormat
+    /**
+     * Currency format. `currencyCode` defaults to the device locale's currency.
+     * Use `fractionDigits` to override the default decimal places for that currency.
+     */
+    static currency(opts?: {
+      fractionDigits?: number
+      minFractionDigits?: number
+      currencyCode?: string
+    }): ChartAxisLabelFormat
+    /**
+     * Date-only format. `dateStyle` defaults to `'numeric'` when omitted.
+     */
+    static date(opts?: {
+      dateStyle?: 'omitted' | 'numeric' | 'abbreviated' | 'long' | 'complete'
+    }): ChartAxisLabelFormat
+    /**
+     * Time-only format. `timeStyle` defaults to `'shortened'` when omitted.
+     */
+    static time(opts?: {
+      timeStyle?: 'omitted' | 'shortened' | 'standard' | 'complete'
+    }): ChartAxisLabelFormat
+    /**
+     * Combined date + time format. Defaults to `dateStyle: 'numeric'`, `timeStyle: 'shortened'`.
+     */
+    static dateTime(opts?: {
+      dateStyle?: 'omitted' | 'numeric' | 'abbreviated' | 'long' | 'complete'
+      timeStyle?: 'omitted' | 'shortened' | 'standard' | 'complete'
+    }): ChartAxisLabelFormat
   }
 
   namespace AppStore {
@@ -12537,6 +16558,7 @@ If the length of the value parameter exceeds the length of the `maximumUpdateVal
     type AlarmUpdateListener = (alarms: Alarm[]) => void
 
     class Alarm {
+      private constructor()
       readonly id: string
       readonly state: AlarmState
       readonly schedule?: Schedule | null
@@ -12544,6 +16566,7 @@ If the length of the value parameter exceeds the length of the `maximumUpdateVal
     }
 
     class Schedule {
+      private constructor()
       readonly type: "fixed" | "relative"
       readonly date?: Date | null
       readonly hour?: number | null
@@ -12556,6 +16579,7 @@ If the length of the value parameter exceeds the length of the `maximumUpdateVal
     }
 
     class Countdown {
+      private constructor()
       readonly preAlert?: number | null
       readonly postAlert?: number | null
 
@@ -12566,6 +16590,7 @@ If the length of the value parameter exceeds the length of the `maximumUpdateVal
     }
 
     class Button {
+      private constructor()
       static create(options: {
         title?: string
         textColor?: Color
@@ -12574,11 +16599,13 @@ If the length of the value parameter exceeds the length of the `maximumUpdateVal
     }
 
     class Sound {
+      private constructor()
       static default(): Sound
       static named(name: string): Sound
     }
 
     class AlertPresentation {
+      private constructor()
       static create(options: {
         title: string
         /**
@@ -12594,23 +16621,30 @@ If the length of the value parameter exceeds the length of the `maximumUpdateVal
     }
 
     class CountdownPresentation {
+      private constructor()
       static create(title?: string | null, pauseButton?: Button | null): CountdownPresentation
     }
 
     class PausedPresentation {
+      private constructor()
       static create(title?: string | null, resumeButton?: Button | null): PausedPresentation | null
     }
 
     class Attributes {
+      private constructor()
       static create(options: {
         alert: AlertPresentation
         countdown?: CountdownPresentation | null
         paused?: PausedPresentation | null
         tintColor?: Color
         metadata?: Record<string, string>
+        liveActivity?: {
+          name: string
+        }
       }): Attributes | null
     }
     class Configuration {
+      private constructor()
       static alarm(options: {
         schedule?: Schedule | null
         attributes: Attributes
@@ -12767,6 +16801,1028 @@ If the length of the value parameter exceeds the length of the `maximumUpdateVal
         height: number
       }
     ): Promise<UIImage | null>
+  }
+
+  /**
+   * Provides authenticated access to the GitHub REST API.
+   *
+   * The API is gated by Scripting PRO and requires a personal access token configured in
+   * Settings → GitHub. Each script and shared skill maintains its own per-capability
+   * authorization state — the first call to a capability prompts the user to allow or deny
+   * it. Tokens are stored in the iCloud-synchronized Keychain and are never readable from JS.
+   *
+   * Extension hosts (Widget, Keyboard, Notification, Share) cannot present the authorization
+   * UI; if a capability has not yet been granted in the main app, calls there will fail with
+   * a "permission not granted in this context" error.
+   */
+  namespace GitHub {
+    /**
+     * The 13 permission identifiers a script or skill can be granted.
+     */
+    type Permission =
+      | "read_profile"
+      | "read_repos"
+      | "read_contents"
+      | "write_contents"
+      | "read_issues"
+      | "write_issues"
+      | "read_pull_requests"
+      | "write_pull_requests"
+      | "read_actions"
+      | "write_actions"
+      | "search_repositories"
+      | "search_issues"
+      | "search_code"
+
+    type Availability = {
+      /** True only if PRO is active AND a token is configured. */
+      available: boolean
+      /** True if Scripting PRO is required (i.e. not currently active). */
+      proRequired: boolean
+      /** True if a personal access token is configured in the keychain. */
+      tokenConfigured: boolean
+    }
+
+    type SortDirection = "asc" | "desc"
+
+    type ArchiveFormat = "zipball" | "tarball"
+
+    /** Optional commit identity passed to write APIs. */
+    type CommitterIdentity = {
+      name: string
+      email: string
+      /** ISO-8601 timestamp. */
+      date?: string
+    }
+
+    /**
+     * Synchronous availability probe. Returns true when PRO is active AND a token is configured.
+     * Does not consult per-script permission state — use it for capability discovery, not gating.
+     */
+    function isAvailable(): boolean
+
+    /** Detailed availability snapshot — see {@link Availability}. */
+    function getAvailability(): Availability
+
+    /**
+     * Read-only inspection of the current scope's permission state. Does not prompt the user
+     * and does not require PRO or a configured token. Returns `"unset"` when called outside
+     * a context that has a script/skill scope.
+     */
+    function getPermissionStatus(options: { permission: Permission }): Promise<"allowed" | "denied" | "unset">
+
+    /**
+     * Bulk authorization request. Useful at script startup to grant several capabilities at
+     * once instead of letting them prompt one by one on first use.
+     *
+     * Behavior:
+     * - PRO check runs first. Throws `tokenNotConfigured` if no token is configured.
+     * - Permissions already `allowed` or `denied` are NOT shown in the prompt.
+     * - If every requested permission is already recorded, no sheet is shown.
+     * - In environments without a presenting view controller (Widget / Keyboard / Notification /
+     *   Share extensions), no sheet is shown either.
+     * - If a sheet is shown:
+     *   - "Allow Selected" persists the checked permissions as `allowed`; unchecked ones stay `unset`.
+     *   - "Deny All" persists every permission in this batch as `denied`.
+     *   - "Cancel" persists nothing.
+     * - The resolved value is the FINAL set of permissions in the `allowed` state for this scope
+     *   among those requested (already-allowed ∪ newly-approved).
+     *
+     * Pass no argument (or omit/empty array) to request all 13 permissions.
+     */
+    function requestPermissions(permissions?: Permission[]): Promise<Permission[]>
+
+    /** GET /user — returns the authenticated user. Permission: `read_profile`. */
+    function getViewer(): Promise<Record<string, any>>
+
+    /** GET /repos/{owner}/{repo} — Permission: `read_repos`. */
+    function getRepo(options: { owner: string; repo: string }): Promise<Record<string, any>>
+
+    /** GET /user/repos — Permission: `read_repos`. */
+    function listRepos(options?: {
+      visibility?: "all" | "public" | "private"
+      affiliation?: string
+      type?: "all" | "owner" | "public" | "private" | "member"
+      sort?: "created" | "updated" | "pushed" | "full_name"
+      direction?: SortDirection
+      perPage?: number
+      page?: number
+    }): Promise<Record<string, any>[]>
+
+    /** GET /users/{username}/repos — Permission: `read_repos`. */
+    function listUserRepos(options: {
+      username: string
+      sort?: "created" | "updated" | "pushed" | "full_name"
+      direction?: SortDirection
+      type?: "all" | "owner" | "member"
+      perPage?: number
+      page?: number
+    }): Promise<Record<string, any>[]>
+
+    /** GET /repos/{owner}/{repo}/branches — Permission: `read_repos`. */
+    function listBranches(options: {
+      owner: string
+      repo: string
+      protected?: boolean
+      perPage?: number
+      page?: number
+    }): Promise<Record<string, any>[]>
+
+    /** GET /repos/{owner}/{repo}/branches/{branch} — Permission: `read_repos`. */
+    function getBranch(options: {
+      owner: string
+      repo: string
+      branch: string
+    }): Promise<Record<string, any>>
+
+    /** GET /repos/{owner}/{repo}/commits — Permission: `read_repos`. */
+    function listCommits(options: {
+      owner: string
+      repo: string
+      sha?: string
+      path?: string
+      author?: string
+      /** ISO-8601 timestamp. */
+      since?: string
+      /** ISO-8601 timestamp. */
+      until?: string
+      perPage?: number
+      page?: number
+    }): Promise<Record<string, any>[]>
+
+    /** GET /repos/{owner}/{repo}/compare/{base}...{head} — Permission: `read_repos`. */
+    function compareCommits(options: {
+      owner: string
+      repo: string
+      base: string
+      head: string
+    }): Promise<Record<string, any>>
+
+    /**
+     * GET /repos/{owner}/{repo}/contents/{path} — Returns either a file metadata object
+     * (with `content` base64) or an array of entries when `path` is a directory.
+     * Permission: `read_contents`.
+     */
+    function getContent(options: {
+      owner: string
+      repo: string
+      path: string
+      ref?: string
+    }): Promise<Record<string, any> | Record<string, any>[]>
+
+    /**
+     * Same as {@link getContent} but with the file decoded as UTF-8 text in `result.text`.
+     * Throws if the file is not valid UTF-8 or larger than ~1 MB (use {@link getRawContent}
+     * or {@link getBlob} instead). Permission: `read_contents`.
+     */
+    function getTextContent(options: {
+      owner: string
+      repo: string
+      path: string
+      ref?: string
+    }): Promise<Record<string, any> & { text: string }>
+
+    /**
+     * PUT /repos/{owner}/{repo}/contents/{path} — Creates or updates a file.
+     * `content` accepts a string (encoded as UTF-8), a {@link Data} buffer, an
+     * `ArrayBuffer`, or a `Uint8Array`. Provide `sha` to update an existing file.
+     * Permission: `write_contents`.
+     */
+    function putContent(options: {
+      owner: string
+      repo: string
+      path: string
+      message: string
+      content: string | Data | ArrayBuffer | Uint8Array
+      sha?: string
+      branch?: string
+      committer?: CommitterIdentity
+      author?: CommitterIdentity
+    }): Promise<Record<string, any>>
+
+    /**
+     * DELETE /repos/{owner}/{repo}/contents/{path} — Deletes a file. `sha` is required.
+     * Permission: `write_contents`.
+     */
+    function deleteContent(options: {
+      owner: string
+      repo: string
+      path: string
+      message: string
+      sha: string
+      branch?: string
+      committer?: CommitterIdentity
+      author?: CommitterIdentity
+    }): Promise<Record<string, any>>
+
+    /**
+     * GET /repos/{owner}/{repo}/contents/{path} with `Accept: application/vnd.github.raw`.
+     * Returns the raw file bytes. Use this for binary files. Permission: `read_contents`.
+     */
+    function getRawContent(options: {
+      owner: string
+      repo: string
+      path: string
+      ref?: string
+    }): Promise<Data>
+
+    /**
+     * GET /repos/{owner}/{repo}/git/blobs/{sha} with raw accept — returns the blob bytes.
+     * Permission: `read_contents`.
+     */
+    function getBlob(options: {
+      owner: string
+      repo: string
+      sha: string
+    }): Promise<Data>
+
+    /**
+     * GET /repos/{owner}/{repo}/{format}/{ref?} — Downloads a repository archive.
+     * `format` defaults to `"zipball"`; pass `"tarball"` for a tar.gz. `ref` defaults
+     * to the repository's default branch. Permission: `read_contents`.
+     */
+    function downloadArchive(options: {
+      owner: string
+      repo: string
+      format?: ArchiveFormat
+      ref?: string
+    }): Promise<Data>
+
+    /** GET /repos/{owner}/{repo}/issues — Permission: `read_issues`. */
+    function listIssues(options: {
+      owner: string
+      repo: string
+      state?: "open" | "closed" | "all"
+      labels?: string
+      assignee?: string
+      creator?: string
+      mentioned?: string
+      sort?: "created" | "updated" | "comments"
+      direction?: SortDirection
+      since?: string
+      perPage?: number
+      page?: number
+    }): Promise<Record<string, any>[]>
+
+    /** GET /repos/{owner}/{repo}/issues/{issueNumber} — Permission: `read_issues`. */
+    function getIssue(options: {
+      owner: string
+      repo: string
+      issueNumber: number
+    }): Promise<Record<string, any>>
+
+    /** POST /repos/{owner}/{repo}/issues — Permission: `write_issues`. */
+    function createIssue(options: {
+      owner: string
+      repo: string
+      title: string
+      body?: string
+      assignees?: string[]
+      labels?: string[]
+      milestone?: number
+    }): Promise<Record<string, any>>
+
+    /** GET /repos/{owner}/{repo}/issues/{issueNumber}/comments — Permission: `read_issues`. */
+    function listIssueComments(options: {
+      owner: string
+      repo: string
+      issueNumber: number
+      sort?: "created" | "updated"
+      direction?: SortDirection
+      since?: string
+      perPage?: number
+      page?: number
+    }): Promise<Record<string, any>[]>
+
+    /** POST /repos/{owner}/{repo}/issues/{issueNumber}/comments — Permission: `write_issues`. */
+    function createIssueComment(options: {
+      owner: string
+      repo: string
+      issueNumber: number
+      body: string
+    }): Promise<Record<string, any>>
+
+    /** GET /repos/{owner}/{repo}/pulls — Permission: `read_pull_requests`. */
+    function listPullRequests(options: {
+      owner: string
+      repo: string
+      state?: "open" | "closed" | "all"
+      head?: string
+      base?: string
+      sort?: "created" | "updated" | "popularity" | "long-running"
+      direction?: SortDirection
+      perPage?: number
+      page?: number
+    }): Promise<Record<string, any>[]>
+
+    /** GET /repos/{owner}/{repo}/pulls/{pullNumber} — Permission: `read_pull_requests`. */
+    function getPullRequest(options: {
+      owner: string
+      repo: string
+      pullNumber: number
+    }): Promise<Record<string, any>>
+
+    /** GET /repos/{owner}/{repo}/pulls/{pullNumber}/files — Permission: `read_pull_requests`. */
+    function listPullRequestFiles(options: {
+      owner: string
+      repo: string
+      pullNumber: number
+      perPage?: number
+      page?: number
+    }): Promise<Record<string, any>[]>
+
+    /** POST /repos/{owner}/{repo}/pulls — Permission: `write_pull_requests`. */
+    function createPullRequest(options: {
+      owner: string
+      repo: string
+      title: string
+      head: string
+      base: string
+      body?: string
+      draft?: boolean
+      maintainerCanModify?: boolean
+    }): Promise<Record<string, any>>
+
+    /** GET /repos/{owner}/{repo}/actions/workflows — Permission: `read_actions`. */
+    function listWorkflows(options: {
+      owner: string
+      repo: string
+    }): Promise<Record<string, any>>
+
+    /**
+     * GET /repos/{owner}/{repo}/actions/workflows/{workflow}/runs — `workflow` accepts a
+     * filename like `"ci.yml"` or a numeric workflow id as a string. Permission: `read_actions`.
+     */
+    function listWorkflowRuns(options: {
+      owner: string
+      repo: string
+      workflow: string
+      actor?: string
+      branch?: string
+      event?: string
+      status?: string
+      created?: string
+      excludePullRequests?: boolean
+      checkSuiteId?: number
+      headSha?: string
+      perPage?: number
+      page?: number
+    }): Promise<Record<string, any>>
+
+    /**
+     * POST /repos/{owner}/{repo}/actions/workflows/{workflow}/dispatches — Triggers a
+     * `workflow_dispatch` event. Resolves to `void` on success (HTTP 204). The keys of
+     * `inputs` are passed through to GitHub as-is — they correspond to the workflow's
+     * declared inputs and are NOT auto-converted to snake_case. Permission: `write_actions`.
+     */
+    function dispatchWorkflow(options: {
+      owner: string
+      repo: string
+      workflow: string
+      ref: string
+      inputs?: Record<string, any>
+    }): Promise<void>
+
+    /** GET /search/repositories — `query` is sent as `q`. Permission: `search_repositories`. */
+    function searchRepositories(options: {
+      query: string
+      sort?: "stars" | "forks" | "help-wanted-issues" | "updated"
+      order?: SortDirection
+      perPage?: number
+      page?: number
+    }): Promise<Record<string, any>>
+
+    /** GET /search/issues — `query` is sent as `q`. Permission: `search_issues`. */
+    function searchIssues(options: {
+      query: string
+      sort?:
+      | "comments"
+      | "reactions"
+      | "reactions-+1"
+      | "reactions--1"
+      | "reactions-smile"
+      | "reactions-thinking_face"
+      | "reactions-heart"
+      | "reactions-tada"
+      | "interactions"
+      | "created"
+      | "updated"
+      order?: SortDirection
+      perPage?: number
+      page?: number
+    }): Promise<Record<string, any>>
+
+    /** GET /search/code — `query` is sent as `q`. Permission: `search_code`. */
+    function searchCode(options: {
+      query: string
+      sort?: "indexed"
+      order?: SortDirection
+      perPage?: number
+      page?: number
+    }): Promise<Record<string, any>>
+
+    /** GET /repos/{owner}/{repo}/releases — Permission: `read_repos`. */
+    function listReleases(options: {
+      owner: string
+      repo: string
+      perPage?: number
+      page?: number
+    }): Promise<Record<string, any>[]>
+
+    /** GET /repos/{owner}/{repo}/releases/latest — Permission: `read_repos`. */
+    function getLatestRelease(options: {
+      owner: string
+      repo: string
+    }): Promise<Record<string, any>>
+
+    /** GET /repos/{owner}/{repo}/releases/{releaseId}/assets — Permission: `read_repos`. */
+    function listReleaseAssets(options: {
+      owner: string
+      repo: string
+      releaseId: number
+      perPage?: number
+      page?: number
+    }): Promise<Record<string, any>[]>
+
+    /**
+     * GET /repos/{owner}/{repo}/releases/assets/{assetId} with `Accept: application/octet-stream`.
+     * Follows GitHub's redirect to fetch the asset bytes. Permission: `read_repos`.
+     */
+    function downloadReleaseAsset(options: {
+      owner: string
+      repo: string
+      assetId: number
+    }): Promise<Data>
+  }
+
+
+  /**
+   * Result of executing a shell command via `Shell.run` or a Python code
+   * snippet via `Python.run`.
+   *
+   * `output` is the combined stdout + stderr (the underlying iOS shell pipes
+   * both into a single stream, so they cannot be separated). The caller should
+   * inspect `exitCode` to decide whether the command succeeded.
+   */
+  type ShellExecutionResult = {
+    /**
+     * Combined stdout + stderr produced by the command.
+     */
+    output: string;
+    /**
+     * Process exit code. `0` means success. Non-zero values are surfaced as
+     * resolved promises (no rejection), so the caller can handle expected
+     * non-zero exits (e.g. `grep` finding no matches).
+     */
+    exitCode: number;
+    /**
+     * Whether the command was killed by the timeout limit.
+     */
+    timedOut: boolean;
+    /**
+     * Whether the command was cancelled by the caller.
+     */
+    cancelled: boolean;
+  };
+
+  /**
+   * Common options for `Shell.run` and `Python.run`.
+   */
+  type ShellRunOptions = {
+    /**
+     * Working directory for the command. Resolved relative to the
+     * documents directory if a relative path is provided. Tilde (`~/`) is
+     * expanded to the documents directory.
+     */
+    cwd?: string;
+    /**
+     * Maximum execution time in seconds. Defaults to 120.
+     * Note: not honored by `Python.run` in the current version.
+     */
+    timeout?: number;
+    /**
+     * Extra environment variables injected for this invocation only.
+     * Restored to their previous values after the command finishes.
+     */
+    env?: Record<string, string>;
+    /**
+     * Key/value pairs serialized as JSON and exposed to the subprocess via
+     * the `SCRIPTING_QUERY_PARAMETERS` environment variable. Values keep their
+     * JSON types (boolean/number/null/array/object). Mirrors
+     * `Script.queryParameters` for ad-hoc commands.
+     */
+    queryParameters?: Record<string, any>;
+  };
+
+  /**
+   * Run shell commands via the embedded `ios_system` runtime.
+   *
+   * - All `Shell.run` and `Python.run` invocations share a single serial
+   *   queue: while one is running, others wait. This is intentional —
+   *   `ios_system` and the embedded Python interpreter share global state
+   *   (env vars, sys.modules) and cannot run concurrently.
+   * - Non-zero exit codes resolve normally; only argument validation errors
+   *   reject the promise.
+   *
+   * @example
+   * ```ts
+   * const r = await Shell.run("echo hi && pwd", { cwd: "/tmp" })
+   * console.log(r.output)   // "hi\n/tmp\n"
+   * console.log(r.exitCode) // 0
+   * ```
+   */
+  namespace Shell {
+    /**
+     * Execute a shell command. Returns when the command exits or the
+     * timeout is reached.
+     */
+    function run(command: string, options?: ShellRunOptions): Promise<ShellExecutionResult>;
+  }
+
+  /**
+   * Run Python code via the embedded Python interpreter (the same runtime
+   * that powers Python index scripts). Code is executed using
+   * `python -c <code>`, so it must be self-contained.
+   *
+   * Shares the serial queue with `Shell.run`. The current version does not
+   * honor `options.timeout` because the underlying Python bridge has no
+   * timeout primitive — long-running snippets will block subsequent
+   * `Shell.run` / `Python.run` calls until they finish.
+   *
+   * @example
+   * ```ts
+   * const r = await Python.run("print(1 + 2)")
+   * console.log(r.output) // "3\n"
+   * ```
+   */
+  namespace Python {
+    /**
+     * Execute a Python code snippet. Returns when the snippet exits.
+     */
+    function run(code: string, options?: ShellRunOptions): Promise<ShellExecutionResult>;
+
+    /**
+     * Execute a Python file by absolute filesystem path. The script runs
+     * under `__main__` (so `if __name__ == "__main__":` triggers, `__file__`
+     * is the given path, and `sys.argv[0]` matches). The directory
+     * containing the file is prepended to `sys.path` so sibling modules
+     * are importable without manual setup.
+     *
+     * @example
+     * ```ts
+     * const r = await Python.runFile("/path/to/script.py", {
+     *   queryParameters: { foo: "bar" },
+     * })
+     * console.log(r.exitCode)
+     * ```
+     */
+    function runFile(path: string, options?: ShellRunOptions): Promise<ShellExecutionResult>;
+  }
+
+  // ─── HomeKit ────────────────────────────────────────────────────────────
+
+  /**
+   * HomeKit accessory category. Mirrors `HMAccessoryCategoryType*`.
+   * Unrecognized categories on newer iOS versions are passed through as
+   * raw strings, so this type stays open via `(string & {})`.
+   */
+  type HMAccessoryCategory =
+    | 'other' | 'bridge' | 'fan' | 'garageDoorOpener' | 'lightbulb' | 'doorLock'
+    | 'outlet' | 'switch' | 'thermostat' | 'sensor' | 'securitySystem' | 'door'
+    | 'window' | 'windowCovering' | 'programmableSwitch' | 'rangeExtender'
+    | 'ipCamera' | 'videoDoorbell' | 'airPurifier' | 'airHeater' | 'airConditioner'
+    | 'airHumidifier' | 'airDehumidifier' | 'sprinkler' | 'faucet' | 'showerHead'
+    | 'television' | 'wifiRouter' | 'audioReceiver' | 'speaker'
+    | 'tvSetTopBox' | 'tvStreamingStick' | 'airPort'
+    | (string & {})
+
+  /**
+   * HomeKit service type. Mirrors `HMServiceType*`. Open-ended (see
+   * HMAccessoryCategory).
+   */
+  type HMServiceType =
+    | 'lightbulb' | 'switch' | 'outlet' | 'fan' | 'thermostat' | 'lockMechanism'
+    | 'lockManagement' | 'garageDoorOpener' | 'door' | 'window' | 'windowCovering'
+    | 'temperatureSensor' | 'humiditySensor' | 'airQualitySensor' | 'lightSensor'
+    | 'motionSensor' | 'occupancySensor' | 'smokeSensor' | 'carbonDioxideSensor'
+    | 'carbonMonoxideSensor' | 'leakSensor' | 'contactSensor'
+    | 'securitySystem' | 'cameraRTPStreamManagement' | 'doorbell'
+    | 'battery' | 'accessoryInformation' | 'label' | 'speaker' | 'microphone'
+    | 'irrigationSystem' | 'valve' | 'faucet' | 'filterMaintenance'
+    | 'statefulProgrammableSwitch' | 'statelessProgrammableSwitch'
+    | 'ventilationFan' | 'heaterCooler' | 'humidifierDehumidifier' | 'slats'
+    | (string & {})
+
+  /**
+   * HomeKit characteristic type. Mirrors `HMCharacteristicType*`. Open-ended.
+   *
+   * Note: legacy `manufacturer` / `model` / `serialNumber` / `firmwareVersion`
+   * characteristic constants were deprecated by Apple in iOS 11. Use the
+   * direct `HMAccessory.manufacturer` / `model` / `firmwareVersion`
+   * properties instead.
+   */
+  type HMCharacteristicType =
+    | 'powerState' | 'brightness' | 'hue' | 'saturation' | 'colorTemperature'
+    | 'currentTemperature' | 'targetTemperature' | 'temperatureUnits'
+    | 'currentHeatingCooling' | 'targetHeatingCooling'
+    | 'currentRelativeHumidity' | 'targetRelativeHumidity'
+    | 'currentDoorState' | 'targetDoorState'
+    | 'lockMechanismCurrentState' | 'lockMechanismTargetState'
+    | 'motionDetected' | 'occupancyDetected' | 'leakDetected' | 'contactState'
+    | 'currentLightLevel' | 'currentAirQuality'
+    | 'batteryLevel' | 'chargingState' | 'statusLowBattery'
+    | 'identify' | 'name' | 'hardwareVersion' | 'softwareVersion' | 'version'
+    | 'currentPosition' | 'targetPosition' | 'positionState' | 'obstructionDetected'
+    | 'rotationDirection' | 'rotationSpeed'
+    | 'airParticulateDensity' | 'airParticulateSize'
+    | 'carbonDioxideDetected' | 'carbonDioxideLevel' | 'carbonDioxidePeakLevel'
+    | 'carbonMonoxideDetected' | 'carbonMonoxideLevel' | 'carbonMonoxidePeakLevel'
+    | 'smokeDetected' | 'statusActive' | 'statusFault' | 'statusJammed' | 'statusTampered'
+    | 'outputState' | 'inputEvent' | 'outletInUse'
+    | 'mute' | 'volume'
+    | 'ozoneDensity' | 'nitrogenDioxideDensity' | 'sulphurDioxideDensity'
+    | 'pm25Density' | 'pm10Density' | 'volatileOrganicCompoundDensity'
+    | 'filterChangeIndication' | 'filterLifeLevel' | 'filterResetChangeIndication'
+    | (string & {})
+
+  type HMCharacteristicProperty = 'readable' | 'writable' | 'supportsEvent' | 'hidden' | (string & {})
+
+  /**
+   * Characteristic value shape. Currently scalar; future versions may extend
+   * to include `Data` or structured objects (forward-compatible).
+   */
+  type HMCharacteristicValue = number | boolean | string
+
+  type HMActionSetType = 'userDefined' | 'wakeUp' | 'sleep' | 'homeArrival' | 'homeDeparture' | 'triggerOwned' | (string & {})
+
+  /**
+   * Format & range metadata for a characteristic. Use this to validate values
+   * client-side before calling `writeValue`.
+   */
+  interface HMCharacteristicMetadata {
+    format:
+    | 'bool' | 'int' | 'float' | 'string' | 'tlv8' | 'data' | 'array' | 'dictionary'
+    | 'uint8' | 'uint16' | 'uint32' | 'uint64' | (string & {})
+    units?:
+    | 'celsius' | 'fahrenheit' | 'percentage' | 'arcdegree' | 'seconds'
+    | 'lux' | 'partsPerMillion' | 'microgramsPerCubicMeter' | (string & {})
+    minimumValue?: number
+    maximumValue?: number
+    stepValue?: number
+    maxLength?: number
+    validValues?: number[]
+    manufacturerDescription?: string
+  }
+
+  interface HMCharacteristicWriteAction {
+    characteristicUUID: string
+    serviceUUID: string | null
+    accessoryUUID: string | null
+    targetValue: HMCharacteristicValue
+  }
+
+  /**
+   * Top-level HomeKit entry.
+   *
+   * Authorization is handled transparently: any call (homes / addHome /
+   * removeHome) lazily triggers the system HomeKit permission prompt the
+   * first time it is invoked. Once the user grants access, subsequent
+   * calls proceed normally; if access is denied or restricted, the call
+   * rejects with an "HomeKit access is not authorized" error.
+   *
+   * Scripts therefore do not need to check or request authorization
+   * manually — just call the API, and handle the rejection if the user
+   * has disabled HomeKit access in Settings.
+   */
+  class HMHomeManager {
+    static readonly homes: Promise<HMHome[]>
+    static addHome(name: string): Promise<HMHome>
+    static removeHome(home: HMHome): Promise<void>
+
+    static onHomesChanged: ((homes: HMHome[]) => void) | null
+  }
+
+  /**
+   * A HomeKit home — the top-level container for rooms, accessories, scenes,
+   * and zones.
+   */
+  class HMHome {
+    readonly uuid: string
+    readonly name: string
+    readonly isPrimary: boolean
+
+    readonly rooms: HMRoom[]
+    readonly accessories: HMAccessory[]
+    readonly actionSets: HMActionSet[]
+    readonly zones: HMZone[]
+    readonly serviceGroups: HMServiceGroup[]
+    readonly currentUser: HMUser
+
+    rename(name: string): Promise<void>
+
+    /** Virtual "default" room that contains accessories without a custom room. */
+    roomForEntireHome(): HMRoom
+    addRoom(name: string): Promise<HMRoom>
+    removeRoom(room: HMRoom): Promise<void>
+
+    /**
+     * Triggers the system Add-Accessory UI (uses `HMAccessorySetupManager`
+     * on iOS 15.4+); resolves to the home's full accessory list afterward.
+     */
+    addAndSetupAccessories(): Promise<HMAccessory[]>
+    removeAccessory(accessory: HMAccessory): Promise<void>
+    assignAccessoryToRoom(accessory: HMAccessory, room: HMRoom): Promise<void>
+
+    addZone(name: string): Promise<HMZone>
+    removeZone(zone: HMZone): Promise<void>
+
+    executeActionSet(set: HMActionSet): Promise<void>
+    addUserActionSet(name: string): Promise<HMActionSet>
+    removeActionSet(set: HMActionSet): Promise<void>
+    /** System-defined action sets (wake-up, sleep, arrival, departure). Read-only. */
+    builtinActionSets(): {
+      wakeUp: HMActionSet | null
+      sleep: HMActionSet | null
+      homeArrival: HMActionSet | null
+      homeDeparture: HMActionSet | null
+    }
+
+    onAccessoriesChanged: ((accessories: HMAccessory[]) => void) | null
+    onRoomsChanged: ((rooms: HMRoom[]) => void) | null
+    onActionSetsChanged: ((sets: HMActionSet[]) => void) | null
+    onNameChanged: ((name: string) => void) | null
+  }
+
+  class HMRoom {
+    readonly uuid: string
+    readonly name: string
+    readonly accessories: HMAccessory[]
+    rename(name: string): Promise<void>
+  }
+
+  class HMZone {
+    readonly uuid: string
+    readonly name: string
+    readonly rooms: HMRoom[]
+    rename(name: string): Promise<void>
+    addRoom(room: HMRoom): Promise<void>
+    removeRoom(room: HMRoom): Promise<void>
+  }
+
+  class HMAccessory {
+    readonly uuid: string
+    readonly name: string
+    readonly room: HMRoom | null
+    readonly category: HMAccessoryCategory
+    readonly manufacturer: string | null
+    readonly model: string | null
+    readonly firmwareVersion: string | null
+    readonly isReachable: boolean
+    readonly isBlocked: boolean
+    readonly isBridged: boolean
+    readonly bridgedAccessoryUUIDs: string[] | null
+    readonly services: HMService[]
+
+    rename(name: string): Promise<void>
+    /** Sends an identify request to the accessory (e.g. blink). */
+    identify(): Promise<void>
+
+    onReachabilityChanged: ((isReachable: boolean) => void) | null
+    onNameChanged: ((name: string) => void) | null
+    onServicesChanged: ((services: HMService[]) => void) | null
+    onFirmwareVersionChanged: ((version: string | null) => void) | null
+  }
+
+  class HMService {
+    readonly uuid: string
+    readonly name: string
+    readonly serviceType: HMServiceType
+    readonly accessoryUUID: string
+    readonly isPrimaryService: boolean
+    readonly isUserInteractive: boolean
+    readonly characteristics: HMCharacteristic[]
+    readonly linkedServices: HMService[] | null
+    readonly associatedServiceType: HMServiceType | null
+
+    rename(name: string): Promise<void>
+    updateAssociatedServiceType(type: HMServiceType | null): Promise<void>
+  }
+
+  class HMCharacteristic {
+    readonly uuid: string
+    readonly serviceUUID: string
+    readonly characteristicType: HMCharacteristicType
+    readonly properties: HMCharacteristicProperty[]
+    readonly metadata: HMCharacteristicMetadata | null
+    /** Last cached value (from a previous readValue / notification). */
+    readonly value: HMCharacteristicValue | null
+
+    /** Reads the live value from the accessory. */
+    readValue(): Promise<HMCharacteristicValue>
+    /** Writes a value; coerced and range-checked against `metadata`. */
+    writeValue(value: HMCharacteristicValue): Promise<void>
+
+    /**
+     * Subscribe to value-change notifications. The handler is invoked on
+     * every characteristic update until `unsubscribe()` is called.
+     * Note: HomeKit notification delivery is best-effort.
+     */
+    subscribe(handler: (error: Error | null, value: HMCharacteristicValue | null) => void): Promise<void>
+    unsubscribe(): Promise<void>
+  }
+
+  class HMActionSet {
+    readonly uuid: string
+    readonly name: string
+    readonly type: HMActionSetType
+    readonly isExecuting: boolean
+    readonly lastExecutionDate: Date | null
+    /** Read-only snapshot of characteristic write actions in this set. */
+    readonly actions: HMCharacteristicWriteAction[]
+    rename(name: string): Promise<void>
+    addCharacteristicAction(characteristic: HMCharacteristic, value: HMCharacteristicValue): Promise<void>
+    removeCharacteristicAction(characteristic: HMCharacteristic): Promise<void>
+  }
+
+  class HMServiceGroup {
+    readonly uuid: string
+    readonly name: string
+    readonly services: HMService[]
+  }
+
+  class HMUser {
+    readonly uuid: string
+    readonly name: string
+  }
+
+  type SpotlightParameters = Record<string, any>
+
+  /**
+   * A Spotlight item. Every field except `id` and `title` maps 1:1 to a
+   * `CSSearchableItemAttributeSet` property in Apple's Core Spotlight framework,
+   * grouped below the same way Apple documents them.
+   *
+   * @see https://developer.apple.com/documentation/corespotlight/cssearchableitemattributeset
+   */
+  type SpotlightItem = {
+    /**
+     * Script-local identifier. Required and unique within the current script.
+     * Returned as `Spotlight.current.id` when the item is tapped.
+     */
+    id: string
+    /** Arbitrary data delivered to `spotlight.tsx` as `Spotlight.current.parameters`. */
+    parameters?: SpotlightParameters
+
+    // General
+
+    /** Primary title shown in Spotlight results. Required. */
+    title: string
+    /** Localized display name. */
+    displayName?: string
+    /** Alternate names the item can also be found by. */
+    alternateNames?: string[]
+    /** Uniform Type Identifier used to choose the system icon, e.g. `"public.image"`. */
+    contentType?: UTType
+    /** URL of the underlying content (use a file URL for local content). */
+    contentURL?: string
+    /** Thumbnail image bytes. Takes priority over `thumbnailURL`. */
+    thumbnailData?: Data
+    /** Local file URL string pointing to a thumbnail image. */
+    thumbnailURL?: string
+    /** Extra keywords to match against. */
+    keywords?: string[]
+    /** Higher values rank the item higher in results. */
+    rankingHint?: number
+    /** Whether the item can be navigated to (uses `latitude`/`longitude`). */
+    supportsNavigation?: boolean
+    /** Whether the item can be called (uses `phoneNumbers`). */
+    supportsPhoneCall?: boolean
+
+    // Documents
+
+    /** Long description shown under the title. */
+    contentDescription?: string
+    /** Subject of the content. */
+    subject?: string
+    /** Human-readable kind, e.g. "Note", "Invoice". */
+    kind?: string
+    /** Entity that created the content. */
+    creator?: string
+    /** Number of pages in the document. */
+    pageCount?: number
+    /** Size of the content in bytes. */
+    fileSize?: number
+
+    // Messaging
+
+    /** Full searchable text body. Improves recall for free-text queries. */
+    textContent?: string
+    /** Author display names. */
+    authorNames?: string[]
+    /** Associated email addresses. */
+    emailAddresses?: string[]
+    /** Associated phone numbers. */
+    phoneNumbers?: string[]
+
+    // Media
+
+    /** Free-form comment. */
+    comment?: string
+    /** Content creation date. Defaults to first index time when omitted. */
+    contentCreationDate?: Date | string | number
+    /** Content modification date. Defaults to last index time when omitted. */
+    contentModificationDate?: Date | string | number
+    /** Last used date. */
+    lastUsedDate?: Date | string | number
+
+    // Events
+
+    /** Start date, for event-like items. */
+    startDate?: Date | string | number
+    /** End date, for event-like items. */
+    endDate?: Date | string | number
+    /** Due date, for task-like items. */
+    dueDate?: Date | string | number
+    /** Completion date, for task-like items. */
+    completionDate?: Date | string | number
+    /** Whether the event lasts all day. */
+    allDay?: boolean
+
+    // Places
+
+    /** Latitude in degrees. */
+    latitude?: number
+    /** Longitude in degrees. */
+    longitude?: number
+    /** Altitude in meters. */
+    altitude?: number
+    /** Human-readable place name. */
+    namedLocation?: string
+    /** City of the place. */
+    city?: string
+    /** State or province of the place. */
+    stateOrProvince?: string
+    /** Country of the place. */
+    country?: string
+    /** Postal code of the place. */
+    postalCode?: string
+    /** Fully formatted address of the place. */
+    fullyFormattedAddress?: string
+
+    // Item-level
+
+    /** When the item should be removed from the index. */
+    expirationDate?: Date | string | number
+  }
+
+  type SpotlightCurrent = {
+    id: string
+    parameters: SpotlightParameters
+  }
+
+  type SpotlightIndexedItem = Omit<SpotlightItem, "thumbnailData" | "contentCreationDate" | "contentModificationDate"> & {
+    scriptName: string
+    uniqueIdentifier: string
+    contentCreationDate: number
+    contentModificationDate: number
+  }
+
+  const Spotlight: {
+    /**
+     * Spotlight launch context. This is non-null when the current script is
+     * running from `spotlight.tsx` after a user taps a Spotlight result.
+     */
+    readonly current: SpotlightCurrent | null
+
+    /**
+     * Index or update one item for the current script. Requires Scripting PRO.
+     */
+    index(item: SpotlightItem): Promise<void>
+
+    /**
+     * Index or update multiple items for the current script. Requires Scripting PRO.
+     */
+    indexItems(items: SpotlightItem[]): Promise<void>
+
+    /**
+     * Delete one indexed item by its script-local id. Requires Scripting PRO.
+     */
+    delete(id: string): Promise<void>
+
+    /**
+     * Delete indexed items by their script-local ids. Requires Scripting PRO.
+     */
+    deleteItems(ids: string[]): Promise<void>
+
+    /**
+     * Delete all Spotlight items registered by the current script. Requires Scripting PRO.
+     */
+    deleteAll(): Promise<void>
+
+    /**
+     * List Spotlight items registered by the current script. Requires Scripting PRO.
+     */
+    getItems(): Promise<SpotlightIndexedItem[]>
   }
 }
 

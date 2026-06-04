@@ -38,22 +38,98 @@ export const areaOptions = [
 ]
 
 // 油号选项配置
-export const oilTypeOptions = [
-  { label: '92#汽油', value: '92', key: 'oil92' },
-  { label: '95#汽油', value: '95', key: 'oil95' },
-  { label: '98#汽油', value: '98', key: 'oil98' },
-  { label: '0#柴油', value: '0', key: 'oil0' }
+export const MAX_DISPLAY_OIL_TYPES = 4
+export const DEFAULT_DISPLAY_OIL_TYPES = ['92', '95', '98', '0'] as const
+export const DEFAULT_SMALL_WIDGET_OIL_TYPE = '92'
+
+export type OilTypeValue = '89' | '92' | '95' | '98' | '0' | '-10' | '-20' | '-35'
+
+export interface OilTypeOption {
+  label: string
+  shortLabel: string
+  value: OilTypeValue
+}
+
+export const oilTypeOptions: OilTypeOption[] = [
+  { label: '89#汽油', shortLabel: '89#', value: '89' },
+  { label: '92#汽油', shortLabel: '92#', value: '92' },
+  { label: '95#汽油', shortLabel: '95#', value: '95' },
+  { label: '98#汽油', shortLabel: '98#', value: '98' },
+  { label: '0#柴油', shortLabel: '0#', value: '0' },
+  { label: '-10#柴油', shortLabel: '-10#', value: '-10' },
+  { label: '-20#柴油', shortLabel: '-20#', value: '-20' },
+  { label: '-35#柴油', shortLabel: '-35#', value: '-35' }
 ]
+
+export interface AreaZoneOption {
+  label: string
+  value: number
+  name: string
+  description: string
+}
+
+export interface OilPriceItem {
+  type: OilTypeValue
+  label: string
+  shortLabel: string
+  price: string
+}
+
+interface SinopecAreaCheck {
+  AIPAO95?: string
+  AIPAO98?: string
+  AIPAOE92?: string
+  AIPAOE95?: string
+  AIPAOE98?: string
+  AREA_DESC?: string
+  AREA_NAME?: string
+  CHAI_0?: string
+  CHAI_10?: string
+  CHAI_20?: string
+  CHAI_35?: string
+  E92?: string
+  E95?: string
+  E98?: string
+  GAS_89?: string
+  GAS_92?: string
+  GAS_95?: string
+  GAS_98?: string
+  PROVINCE_NAME?: string
+}
+
+interface SinopecPriceData {
+  [key: string]: number | string | undefined
+  START_DATE?: string
+}
+
+interface SinopecAreaEntry {
+  areaCheck?: SinopecAreaCheck
+  areaData?: SinopecPriceData
+}
+
+interface SinopecProvinceData {
+  provinceCheck?: SinopecAreaCheck
+  provinceData?: SinopecPriceData
+  area?: SinopecAreaEntry[]
+}
+
+interface SinopecResponse {
+  data?: SinopecProvinceData
+}
+
+export interface AreaMetadata {
+  areaZoneOptions: AreaZoneOption[]
+  availableOilTypes: OilTypeValue[]
+}
 
 // 油价数据类型定义
 export interface OilPriceData {
   startDate: string
-  oil92: string
-  oil95: string
-  oil98: string
-  oil0: string
   region: string
+  areaZoneName: string
   lastUpdated: string
+  prices: OilPriceItem[]
+  availableOilTypes: OilTypeValue[]
 }
 
 export interface ForecastData {
@@ -67,7 +143,7 @@ export interface CompleteOilData extends OilPriceData, ForecastData {}
 export interface AreaSettings {
   areaType: string
   areaZoneType: number
-  areaZoneOptions: any[]
+  areaZoneOptions: AreaZoneOption[]
 }
 
 // 储存键名 - 统一管理所有持久化数据
@@ -80,7 +156,9 @@ const STORAGE_KEYS = {
   OIL_DATA: 'oilData',
   FORECAST_STR: 'forecastStr',
   AREA_ZONE_OPTIONS: 'areaZoneOptions',
-  SELECTED_OIL_TYPE: 'selectedOilType',
+  AVAILABLE_OIL_TYPES: 'availableOilTypes',
+  SELECTED_OIL_TYPES: 'selectedOilTypes',
+  SMALL_WIDGET_OIL_TYPE: 'smallWidgetOilType',
   LAST_VERSION: 'lastVersion',
   UPDATE_DISMISSED: 'updateDismissed',
   SETTINGS: 'settings'
@@ -113,6 +191,172 @@ const formatDate = (date: Date, format: string): string => {
   return format.replace('yyyy', String(year)).replace('MM', month).replace('dd', day)
 }
 
+const formatPrice = (price: number | string | undefined): string => {
+  return typeof price === 'number' && price > 0
+    ? price.toLocaleString('zh-CN', {
+        style: 'currency',
+        currency: 'CNY'
+      })
+    : '未开放'
+}
+
+const requestProvinceData = async (areaType: string): Promise<SinopecResponse> => {
+  const response = await fetch('https://cx.sinopecsales.com/yjkqiantai/data/switchProvince', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json;charset=UTF-8',
+      Accept: 'application/json, text/plain, */*',
+      Origin: 'https://cx.sinopecsales.com',
+      Referer: 'https://cx.sinopecsales.com/yjkqiantai/core/initCpb'
+    },
+    body: JSON.stringify({
+      provinceId: areaType
+    })
+  })
+
+  if (!response.ok) {
+    throw new Error(`HTTP error! status: ${response.status}`)
+  }
+
+  return (await response.json()) as SinopecResponse
+}
+
+const buildAreaZoneOptions = (areaEntries: SinopecAreaEntry[] = []): AreaZoneOption[] => {
+  return areaEntries.map((item, index) => {
+    const areaCheck = item.areaCheck || {}
+    const areaName = areaCheck.AREA_NAME || areaCheck.AREA_DESC || areaCheck.PROVINCE_NAME || `价区${index + 1}`
+    const areaDesc = areaCheck.AREA_DESC || ''
+
+    return {
+      label: areaName,
+      value: index,
+      name: areaName,
+      description: areaDesc
+    }
+  })
+}
+
+const pickProvinceSource = (
+  data: SinopecProvinceData | undefined,
+  areaZoneType: number
+): {
+  areaCheck: SinopecAreaCheck
+  priceData: SinopecPriceData
+  areaZoneName: string
+} => {
+  const areaEntries = data?.area || []
+
+  if (areaEntries.length > 0) {
+    const selectedAreaIndex = Math.min(Math.max(areaZoneType, 0), areaEntries.length - 1)
+    const selectedArea = areaEntries[selectedAreaIndex] || {}
+    const selectedAreaCheck = selectedArea.areaCheck || {}
+
+    return {
+      areaCheck: selectedAreaCheck,
+      priceData: selectedArea.areaData || {},
+      areaZoneName: selectedAreaCheck.AREA_NAME || ''
+    }
+  }
+
+  return {
+    areaCheck: data?.provinceCheck || {},
+    priceData: data?.provinceData || {},
+    areaZoneName: ''
+  }
+}
+
+const resolveOilField = (type: OilTypeValue, areaCheck: SinopecAreaCheck, priceData: SinopecPriceData): string => {
+  const candidates: Record<OilTypeValue, Array<[keyof SinopecAreaCheck, string]>> = {
+    '89': [['GAS_89', 'GAS_89']],
+    '92': [
+      ['AIPAOE92', 'AIPAO_GAS_E92'],
+      ['E92', 'E92'],
+      ['GAS_92', 'GAS_92']
+    ],
+    '95': [
+      ['AIPAO95', 'AIPAO_GAS_95'],
+      ['AIPAOE95', 'AIPAO_GAS_E95'],
+      ['E95', 'E95'],
+      ['GAS_95', 'GAS_95']
+    ],
+    '98': [
+      ['AIPAO98', 'AIPAO_GAS_98'],
+      ['AIPAOE98', 'AIPAO_GAS_E98'],
+      ['E98', 'E98'],
+      ['GAS_98', 'GAS_98']
+    ],
+    '0': [['CHAI_0', 'CHECHAI_0']],
+    '-10': [['CHAI_10', 'CHECHAI_10']],
+    '-20': [['CHAI_20', 'CHAI_20']],
+    '-35': [['CHAI_35', 'CHAI_35']]
+  }
+
+  return candidates[type].find(([checkKey, fieldName]) => areaCheck[checkKey] === 'Y' && typeof priceData[fieldName] === 'number')?.[1] || ''
+}
+
+const buildOilPriceItems = (areaCheck: SinopecAreaCheck, priceData: SinopecPriceData): OilPriceItem[] => {
+  return oilTypeOptions
+    .map(option => {
+      const fieldName = resolveOilField(option.value, areaCheck, priceData)
+
+      return {
+        type: option.value,
+        label: option.label,
+        shortLabel: option.shortLabel,
+        price: formatPrice(priceData[fieldName])
+      }
+    })
+    .filter(item => item.price !== '未开放')
+}
+
+const normalizeOilTypes = (oilTypes: readonly string[], availableOilTypes?: OilTypeValue[]): OilTypeValue[] => {
+  const availableSet = availableOilTypes && availableOilTypes.length > 0 ? new Set(availableOilTypes) : undefined
+  const validSet = new Set(oilTypeOptions.map(option => option.value))
+  const normalized: OilTypeValue[] = []
+
+  oilTypes.forEach(oilType => {
+    if (!validSet.has(oilType as OilTypeValue)) return
+    if (availableSet && !availableSet.has(oilType as OilTypeValue)) return
+    if (normalized.includes(oilType as OilTypeValue)) return
+    normalized.push(oilType as OilTypeValue)
+  })
+
+  return normalized.slice(0, MAX_DISPLAY_OIL_TYPES)
+}
+
+const normalizeOilType = (oilType: string | undefined, availableOilTypes?: OilTypeValue[]): OilTypeValue | undefined => {
+  return normalizeOilTypes(oilType ? [oilType] : [], availableOilTypes)[0]
+}
+
+const getDefaultDisplayOilTypes = (availableOilTypes?: OilTypeValue[]): OilTypeValue[] => {
+  const defaultOilTypes = normalizeOilTypes(DEFAULT_DISPLAY_OIL_TYPES, availableOilTypes)
+  if (defaultOilTypes.length > 0) return defaultOilTypes
+  return normalizeOilTypes(
+    oilTypeOptions.map(option => option.value),
+    availableOilTypes
+  )
+}
+
+const cacheAreaMetadata = (areaZoneOptions: AreaZoneOption[], availableOilTypes: OilTypeValue[]): void => {
+  storageManager.storage.batchSet({
+    [STORAGE_KEYS.AREA_ZONE_OPTIONS]: areaZoneOptions,
+    [STORAGE_KEYS.AVAILABLE_OIL_TYPES]: availableOilTypes
+  })
+}
+
+const buildAreaMetadata = (response: SinopecResponse, areaZoneType: number): AreaMetadata => {
+  const areaZoneOptions = buildAreaZoneOptions(response.data?.area)
+  const { areaCheck, priceData } = pickProvinceSource(response.data, areaZoneType)
+  const availableOilTypes = buildOilPriceItems(areaCheck, priceData).map(item => item.type)
+
+  cacheAreaMetadata(areaZoneOptions, availableOilTypes)
+
+  return {
+    areaZoneOptions,
+    availableOilTypes
+  }
+}
+
 /**
  * 获取当前油价数据
  * @returns 油价数据Promise
@@ -122,39 +366,19 @@ export const fetchOilPriceData = async (): Promise<OilPriceData> => {
   const areaZoneType = storageManager.storage.get<number>(STORAGE_KEYS.AREA_ZONE_TYPE) || 0
 
   try {
-    const response = await fetch('https://cx.sinopecsales.com/yjkqiantai/data/switchProvince', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json;charset=UTF-8',
-        Accept: 'application/json, text/plain, */*',
-        Origin: 'https://cx.sinopecsales.com',
-        Referer: 'https://cx.sinopecsales.com/yjkqiantai/core/initCpb'
-      },
-      body: JSON.stringify({
-        provinceId: areaType
-      })
-    })
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`)
-    }
-
-    const data = await response.json()
-
-    // 缓存数据
+    const data = await requestProvinceData(areaType)
     storageManager.storage.set(STORAGE_KEYS.OIL_DATA, data)
 
-    return await handleOilPriceData(data, areaType, areaZoneType)
+    return handleOilPriceData(data, areaType, areaZoneType)
   } catch (error) {
     console.error('获取油价数据失败:', error)
-    // 使用缓存数据
-    const cachedData = storageManager.storage.get<any>(STORAGE_KEYS.OIL_DATA)
+
+    const cachedData = storageManager.storage.get<SinopecResponse>(STORAGE_KEYS.OIL_DATA)
     if (cachedData) {
-      return await handleOilPriceData(cachedData, areaType, areaZoneType)
+      return handleOilPriceData(cachedData, areaType, areaZoneType)
     }
 
-    // 返回默认数据
-    return getDefaultOilData(areaType as string)
+    return getDefaultOilData(areaType)
   }
 }
 
@@ -163,92 +387,33 @@ export const fetchOilPriceData = async (): Promise<OilPriceData> => {
  * @param response API响应数据
  * @param areaType 地区类型
  * @param areaZoneType 价区类型
- * @returns 处理后的油价数据Promise
+ * @returns 处理后的油价数据
  */
-const handleOilPriceData = async (response: any, areaType: string, areaZoneType: number): Promise<OilPriceData> => {
+const handleOilPriceData = (response: SinopecResponse, areaType: string, areaZoneType: number): OilPriceData => {
   const data = response.data
-  const areaData = data.area
-  let provinceData: any = {}
-  let provinceCheck: any = {}
+  const areaZoneOptions = buildAreaZoneOptions(data?.area)
+  const { areaCheck, priceData, areaZoneName } = pickProvinceSource(data, areaZoneType)
+  const prices = buildOilPriceItems(areaCheck, priceData)
+  const availableOilTypes = prices.map(item => item.type)
 
-  if (areaData && areaData.length !== 0) {
-    // 保存地区选项
-    const areaZoneOptions = areaData.map((item: any, index: number) => ({
-      label: item.areaCheck.AREA_NAME + ' - ' + (item.areaCheck.AREA_DESC || item.areaCheck.PROVINCE_NAME),
-      value: index,
-      name: item.areaCheck.AREA_DESC
-    }))
-    storageManager.storage.set(STORAGE_KEYS.AREA_ZONE_OPTIONS, areaZoneOptions)
+  cacheAreaMetadata(areaZoneOptions, availableOilTypes)
 
-    provinceData = areaData[areaZoneType]?.areaData || {}
-    provinceCheck = areaData[areaZoneType]?.areaCheck || {}
-  } else {
-    storageManager.storage.set(STORAGE_KEYS.AREA_ZONE_OPTIONS, [])
-    provinceData = data.provinceData || {}
-    provinceCheck = data.provinceCheck || {}
+  if (prices.length === 0 || Object.keys(priceData).length === 0) {
+    return getDefaultOilData(areaType)
   }
 
-  if (provinceData && Object.keys(provinceData).length !== 0) {
-    const startDateData = provinceData.START_DATE?.slice(0, 10)
-    const day = 1000 * 60 * 60 * 24
-    const startDate = new Date(new Date(startDateData).valueOf() + day)
+  const startDateData = priceData.START_DATE?.slice(0, 10)
+  const day = 1000 * 60 * 60 * 24
+  const startDate = startDateData ? new Date(new Date(startDateData).valueOf() + day) : new Date()
+  const region = areaOptions.find(i => i.value === areaType)?.label || areaCheck.PROVINCE_NAME || '未知地区'
 
-    /**
-     * 确定字段名称
-     * @param type 油品类型
-     * @returns 字段名称
-     */
-    const handleConfirmField = (type: string): string => {
-      if (type === '92') {
-        if (provinceCheck.AIPAOE92 === 'Y') return 'AIPAO_GAS_E92'
-        if (provinceCheck.E92 === 'Y') return 'E92'
-        if (provinceCheck.GAS_92 === 'Y') return 'GAS_92'
-      }
-      if (type === '95') {
-        if (provinceCheck.AIPAO95 === 'Y') return 'AIPAO_GAS_95'
-        if (provinceCheck.AIPAOE95 === 'Y') return 'AIPAO_GAS_E95'
-        if (provinceCheck.E95 === 'Y') return 'E95'
-        if (provinceCheck.GAS_95 === 'Y') return 'GAS_95'
-      }
-      if (type === '98') {
-        if (provinceCheck.AIPAO98 === 'Y') return 'AIPAO_GAS_98'
-        if (provinceCheck.AIPAOE98 === 'Y') return 'AIPAO_GAS_E98'
-        if (provinceCheck.E98 === 'Y') return 'E98'
-        if (provinceCheck.GAS_98 === 'Y') return 'GAS_98'
-      }
-      if (type === '0') {
-        if (provinceCheck.CHAI_0 === 'Y') return 'CHECHAI_0'
-      }
-      return ''
-    }
-
-    /**
-     * 格式化价格
-     * @param price 价格数值
-     * @returns 格式化后的价格字符串
-     */
-    const formatPrice = (price: number): string => {
-      return price
-        ? price.toLocaleString('zh-CN', {
-            style: 'currency',
-            currency: 'CNY'
-          })
-        : '未开放'
-    }
-
-    const region = areaOptions.find(i => i.value === areaType)?.label || '未知地区'
-
-    return {
-      startDate: formatDate(startDate, 'yyyy年MM月dd日'),
-      oil92: formatPrice(provinceData[handleConfirmField('92')]),
-      oil95: formatPrice(provinceData[handleConfirmField('95')]),
-      oil98: formatPrice(provinceData[handleConfirmField('98')]),
-      oil0: formatPrice(provinceData[handleConfirmField('0')]),
-      region,
-      lastUpdated: formatDate(new Date(), 'yyyy年MM月dd日')
-    }
-  } else {
-    return getDefaultOilData(areaType)
+  return {
+    startDate: formatDate(startDate, 'yyyy年MM月dd日'),
+    region,
+    areaZoneName,
+    lastUpdated: formatDate(new Date(), 'yyyy年MM月dd日'),
+    prices,
+    availableOilTypes
   }
 }
 
@@ -259,14 +424,23 @@ const handleOilPriceData = async (response: any, areaType: string, areaZoneType:
  */
 const getDefaultOilData = (areaType: string): OilPriceData => {
   const region = areaOptions.find(i => i.value === areaType)?.label || '未知地区'
+  const availableOilTypes = getDefaultDisplayOilTypes()
+  const prices = oilTypeOptions
+    .filter(option => availableOilTypes.includes(option.value))
+    .map(option => ({
+      type: option.value,
+      label: option.label,
+      shortLabel: option.shortLabel,
+      price: formatForecastPrice('0')
+    }))
+
   return {
     startDate: '数据获取失败',
-    oil92: formatForecastPrice('0'),
-    oil95: formatForecastPrice('0'),
-    oil98: formatForecastPrice('0'),
-    oil0: formatForecastPrice('0'),
     region,
-    lastUpdated: formatDate(new Date(), 'yyyy年MM月dd日')
+    areaZoneName: '',
+    lastUpdated: formatDate(new Date(), 'yyyy年MM月dd日'),
+    prices,
+    availableOilTypes
   }
 }
 
@@ -399,105 +573,103 @@ export const getCurrentAreaSettings = (): AreaSettings => {
   return {
     areaType: storageManager.storage.get<string>(STORAGE_KEYS.AREA_TYPE) || '32',
     areaZoneType: storageManager.storage.get<number>(STORAGE_KEYS.AREA_ZONE_TYPE) || 0,
-    areaZoneOptions: storageManager.storage.get<any[]>(STORAGE_KEYS.AREA_ZONE_OPTIONS) || []
+    areaZoneOptions: storageManager.storage.get<AreaZoneOption[]>(STORAGE_KEYS.AREA_ZONE_OPTIONS) || []
   }
 }
 
 /**
- * 获取指定地区的价区选项
+ * 获取指定地区和价区的价区/油标元数据
  * @param areaType 地区类型
- * @returns 价区选项数组Promise
+ * @param areaZoneType 价区类型
+ * @returns 价区和油标元数据
  */
-export const getAreaZoneOptions = async (areaType: string): Promise<any[]> => {
+export const getAreaMetadata = async (areaType: string, areaZoneType: number = 0): Promise<AreaMetadata> => {
   try {
-    const response = await fetch('https://cx.sinopecsales.com/yjkqiantai/data/switchProvince', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json;charset=UTF-8',
-        Accept: 'application/json, text/plain, */*',
-        Origin: 'https://cx.sinopecsales.com',
-        Referer: 'https://cx.sinopecsales.com/yjkqiantai/core/initCpb'
-      },
-      body: JSON.stringify({
-        provinceId: areaType
-      })
-    })
+    const data = await requestProvinceData(areaType)
+    storageManager.storage.set(STORAGE_KEYS.OIL_DATA, data)
 
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`)
-    }
-
-    const data = await response.json()
-    const areaData = data.data?.area || []
-
-    if (areaData && areaData.length > 0) {
-      const options = areaData.map((item: any, index: number) => {
-        const areaName = item.areaCheck.AREA_NAME || ''
-        const areaDesc = item.areaCheck.AREA_DESC || item.areaCheck.PROVINCE_NAME || ''
-
-        // 优化标签显示，避免重复信息
-        let label = areaName
-        if (areaDesc && areaDesc !== areaName) {
-          label = `${areaName} - ${areaDesc}`
-        }
-
-        return {
-          label: label,
-          value: index,
-          name: areaDesc || areaName
-        }
-      })
-
-      // 缓存价区选项
-      storageManager.storage.set(STORAGE_KEYS.AREA_ZONE_OPTIONS, options)
-      return options
-    } else {
-      // 没有价区选项的省份
-      storageManager.storage.set(STORAGE_KEYS.AREA_ZONE_OPTIONS, [])
-      return []
-    }
+    return buildAreaMetadata(data, areaZoneType)
   } catch (error) {
-    console.error('获取价区选项失败:', error)
-    // 返回缓存的选项
-    return storageManager.storage.get<any[]>(STORAGE_KEYS.AREA_ZONE_OPTIONS) || []
+    console.error('获取地区元数据失败:', error)
+    cacheAreaMetadata([], [])
+
+    return {
+      areaZoneOptions: [],
+      availableOilTypes: []
+    }
   }
 }
 
 /**
- * 设置选中的油号
- * @param oilType 油号类型
+ * 获取当前价区可用油标
  */
-export const setSelectedOilType = (oilType: string): void => {
-  storageManager.storage.set(STORAGE_KEYS.SELECTED_OIL_TYPE, oilType)
+export const getAvailableOilTypes = (): OilTypeValue[] => {
+  return storageManager.storage.get<OilTypeValue[]>(STORAGE_KEYS.AVAILABLE_OIL_TYPES) || []
 }
 
 /**
- * 获取选中的油号
- * @returns 选中的油号类型
+ * 设置最多四个展示油标
+ * @param oilTypes 油标数组
  */
-export const getSelectedOilType = (): string => {
-  return storageManager.storage.get<string>(STORAGE_KEYS.SELECTED_OIL_TYPE) || '92'
+export const setSelectedOilTypes = (oilTypes: readonly OilTypeValue[]): void => {
+  const selectedOilTypes = normalizeOilTypes(oilTypes, getAvailableOilTypes())
+  storageManager.storage.set(STORAGE_KEYS.SELECTED_OIL_TYPES, selectedOilTypes)
 }
 
 /**
- * 根据油号获取价格
+ * 获取最多四个展示油标
+ * @param availableOilTypes 当前价区可用油标
+ * @returns 展示油标数组
+ */
+export const getSelectedOilTypes = (availableOilTypes: OilTypeValue[] = getAvailableOilTypes()): OilTypeValue[] => {
+  const selectedOilTypes = storageManager.storage.get<OilTypeValue[]>(STORAGE_KEYS.SELECTED_OIL_TYPES) || []
+  const normalizedOilTypes = normalizeOilTypes(selectedOilTypes, availableOilTypes)
+
+  if (normalizedOilTypes.length > 0) return normalizedOilTypes
+
+  return getDefaultDisplayOilTypes(availableOilTypes)
+}
+
+/**
+ * 设置小号组件展示油标
+ * @param oilType 油标
+ */
+export const setSmallWidgetOilType = (oilType: OilTypeValue): void => {
+  storageManager.storage.set(STORAGE_KEYS.SMALL_WIDGET_OIL_TYPE, normalizeOilType(oilType, getAvailableOilTypes()) || oilType)
+}
+
+/**
+ * 获取小号组件展示油标
+ * @param availableOilTypes 当前价区可用油标
+ * @returns 小号组件展示油标
+ */
+export const getSmallWidgetOilType = (availableOilTypes: OilTypeValue[] = getAvailableOilTypes()): OilTypeValue => {
+  const savedOilType = storageManager.storage.get<string>(STORAGE_KEYS.SMALL_WIDGET_OIL_TYPE)
+  const normalizedOilType = normalizeOilType(savedOilType, availableOilTypes)
+
+  if (normalizedOilType) return normalizedOilType
+
+  return normalizeOilType(DEFAULT_SMALL_WIDGET_OIL_TYPE, availableOilTypes) || getDefaultDisplayOilTypes(availableOilTypes)[0] || DEFAULT_SMALL_WIDGET_OIL_TYPE
+}
+
+/**
+ * 获取小号组件展示油价项
  * @param data 完整油价数据
- * @param oilType 油号类型
- * @returns 对应油号的价格
+ * @returns 小号组件展示油价项
  */
-export const getPriceByOilType = (data: CompleteOilData, oilType: string): string => {
-  switch (oilType) {
-    case '92':
-      return data.oil92
-    case '95':
-      return data.oil95
-    case '98':
-      return data.oil98
-    case '0':
-      return data.oil0
-    default:
-      return data.oil92
-  }
+export const getSmallWidgetOilPriceItem = (data: CompleteOilData): OilPriceItem | undefined => {
+  const oilType = getSmallWidgetOilType(data.availableOilTypes)
+  return data.prices.find(item => item.type === oilType)
+}
+
+/**
+ * 获取中号组件展示油价项
+ * @param data 完整油价数据
+ * @returns 中号组件展示油价项
+ */
+export const getMediumWidgetOilPriceItems = (data: CompleteOilData): OilPriceItem[] => {
+  const selectedOilTypes = getSelectedOilTypes(data.availableOilTypes)
+  return selectedOilTypes.map(oilType => data.prices.find(item => item.type === oilType)).filter((item): item is OilPriceItem => Boolean(item))
 }
 
 /**

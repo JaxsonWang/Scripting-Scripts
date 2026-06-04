@@ -616,6 +616,10 @@ type ColorScheme = 'light' | 'dark';
 type ColorSchemeContrast = "standard" | "increased";
 type UserInterfaceSizeClass = "compact" | "regular";
 type Visibility = 'automatic' | 'hidden' | 'visible';
+type LayoutDirection = 'leftToRight' | 'rightToLeft';
+type LayoutDirectionBehavior = 'fixed' | 'mirrors' | {
+    mirrors: LayoutDirection;
+};
 /**
  * A geometric angle whose value you access in either radians or degrees.
  */
@@ -916,296 +920,6 @@ type ButtonProps = ({
  */
 declare const Button: FunctionComponent<ButtonProps>;
 
-type ChartScrollPosition<T> = {
-    value: T;
-    onChanged: (newValue: T) => void;
-};
-type ChartStringSelection = {
-    valueType: 'string';
-} & ({
-    value: string | undefined | null;
-    onChanged: (newValue: string | undefined | null) => void;
-} | {
-    value: Observable<string | null>;
-});
-type ChartNumberSelection = {
-    valueType: 'number';
-} & ({
-    value: number | undefined | null;
-    onChanged: (newValue: number | undefined | null) => void;
-} | {
-    value: Observable<number | null>;
-});
-type ChartSelection = ChartStringSelection | ChartNumberSelection;
-type ClosedRange<T> = {
-    from: T;
-    to: T;
-};
-/**
- *  - `category`: A scale that has discrete domain values as inputs.
- *  - `date`: A date scale where each range value y can be expressed as a function of the domain value x’s timestamp, with y = a * x.timeIntervalSinceReferenceDate + b.
- *  - `linear`: A number scale where each range value y can be expressed as a linear function of the domain value x, with y = a * x + b.
- *  - `log`: A number scale where each range value y can be expressed as a logarithmic function of the domain value x, with y = a * log(x) + b.
- *  - `squareRoot`: A number scale where each range value y can be expressed as a square root function of the domain value x, with y = a * sqrt(x) + b. This is equivalent to a power scale with exponent 0.5.
- *  - `symmetricLog`: A number scale where each range value y can be expressed as a symmetric log function of the domain value x, with y = a * sign(x) * log(1 + |x * slopeAtZero|) + b. The constant slopeAtZero defaults to 1.
- */
-type ChartAxisScaleType = 'category' | 'date' | 'linear' | 'log' | 'squareRoot' | 'symmetricLog';
-/**
- * The ways in which you can stack marks in a chart.
- *  - `standard`: Stack marks starting at zero.
- *  - `normal`: Create normalized stacked bar and area charts.
- *  - `center`: Stack marks using a center offset.
- *  - `unstacked`: Don’t stack marks.
- */
-type ChartMarkStackingMethod = 'standard' | 'normalized' | 'center' | 'unstacked';
-type ChartInterpolationMethod = "cardinal" | "catmullRom" | "linear" | "monotone" | "stepCenter" | "stepEnd" | "stepStart";
-type ChartSymbolShape = "asterisk" | "circle" | "cross" | "diamond" | "pentagon" | "plus" | "square" | "triangle";
-/**
- * The position of an annotation.
- */
-type AnnotationPosition = "automatic" | "bottom" | "bottomLeading" | "bottomTrailing" | "leading" | "overlay" | "top" | "topLeading" | "topTrailing" | "trailing";
-type AnnotationOverflowResolution = {
-    /**
-     * The strategy to resolve X overflow.
-     */
-    x?: AnnotationOverflowResolutionStrategy;
-    /**
-     * The strategy to resolve Y overflow.
-     */
-    y?: AnnotationOverflowResolutionStrategy;
-};
-/**
- *  - `fit`: Fits the annotation automatically, adjusting its position to ensure it doesn't overflow.
- *  - `fitTo**`: Fits the annotation to the given boundary, adjusting its position to ensure it doesn't overflow.
- *  - `padScale`: Pads the scale of the chart to make space for the annotation.
- *  - `disabled`: Places the annotation "as-is".
- *  - `automatic`: Automatically chooses a overflow resolution.
- */
-type AnnotationOverflowResolutionStrategy = 'automatic' | 'fit' | 'fitToPlot' | 'fitToChart' | 'fitToAutomatic' | 'padScale' | 'disabled';
-/**
- * The various components of a calendar date.
- *
- * Specifying Years and Months
- *
- *  - `era`: Identifier for the era unit.
- *  - `year`: Identifier for the year unit.
- *  - `yearForWeekOfYear`: Identifier for the week-counting year unit.
- *  - `quarter`: Identifier for the quarter of the calendar.
- *  - `month`: Identifier for the month unit.
- *
- * Specifying Weeks and Days
- *
- *  - `weekOfYear`: Identifier for the week of the year unit.
- *  - `weekOfMonth`: Identifier for the week of the month calendar unit.
- *  - `weekday`: Identifier for the weekday unit.
- *  - `weekdayOrdinal`: Identifier for the weekday ordinal unit.
- *  - `day`: Identifier for the day unit.
- *
- * Specifying Hours, Minutes, and Seconds
- *
- *  - `hour`: Identifier for the hour unit.
- *  - `minute`: Identifier for the minute unit.
- *  - `second`: Identifier for the second unit.
- *  - `nanosecond`: Identifier for the nanosecond unit.
- *
- * Specifying Calendars and Time Zones
- *
- *  - `calendar`: Identifier for the calendar unit.
- *  - `timeZone`: Identifier for the time zone unit.
- */
-type CalendarComponent = "era" | "year" | "month" | "day" | "hour" | "minute" | "second" | "weekday" | "weekdayOrdinal" | "quarter" | "weekOfMonth" | "weekOfYear" | "yearForWeekOfYear" | "nanosecond" | "calendar" | "timeZone";
-
-/**
- * Hex string: `#FF0033` or `#333`
- */
-type ColorStringHex = `#${string}`;
-/**
- * RGBA string: `rgba(0,0,0,0.5)`.
- * This is same as css color string.
- *
- *  - R: red, 0 - 255
- *  - G: green, 0 - 255
- *  - B: blue, 0 - 255
- *  - A: alpha, 0 - 1
- */
-type ColorStringRGBA = `rgba(${number},${number},${number},${number})`;
-type KeywordsColor = "accentColor" | "systemRed" | "systemGreen" | "systemBlue" | "systemOrange" | "systemYellow" | "systemPink" | "systemPurple" | "systemTeal" | "systemIndigo" | "systemBrown" | "systemMint" | "systemCyan" | "systemGray" | "systemGray2" | "systemGray3" | "systemGray4" | "systemGray5" | "systemGray6" | "tintColor" | "label" | "secondaryLabel" | "tertiaryLabel" | "quaternaryLabel" | "placeholderText" | "separator" | "opaqueSeparator" | "link" | "darkText" | "lightText" | "black" | "darkGray" | "lightGray" | "white" | "gray" | "red" | "green" | "blue" | "cyan" | "yellow" | "magenta" | "orange" | "purple" | "brown" | "clear" | "systemFill" | "secondarySystemFill" | "tertiarySystemFill" | "quaternarySystemFill" | "systemBackground" | "secondarySystemBackground" | "tertiarySystemBackground" | "systemGroupedBackground" | "secondarySystemGroupedBackground" | "tertiarySystemGroupedBackground";
-/**
- * You can define colors using the following 3 formats:
- *  - Keyword colors, e.g. `green` or `label`.
- *  - Hex string, `#ff0000`.
- *  - CSS rgba string, `rgba(255,255,255, 1)`.
- */
-type Color = ColorStringHex | ColorStringRGBA | KeywordsColor;
-type ColorWithGradientOrOpacity = {
-    color: Color;
-    /**
-     * Returns the standard gradient for the color self
-     */
-    gradient: true;
-    /**
-     * Multiplies the opacity of the color by the given amount.
-     */
-    opacity: number;
-} | {
-    color: Color;
-    /**
-     * Returns the standard gradient for the color self
-     */
-    gradient: true;
-} | {
-    color: Color;
-    /**
-     * Multiplies the opacity of the color by the given amount.
-     */
-    opacity: number;
-} | {
-    color?: never;
-    gradient?: never;
-    opacity?: never;
-};
-
-/**
- * A kind of transition that applies to the content within a single view, rather than to the insertion or removal of a view.
- *  - `identity`: The identity content transition, which indicates that content changes shouldn’t animate.
- *  - `interpolate`: A content transition that indicates the views attempt to interpolate their contents during transitions, where appropriate.
- *  - `opacity`: A content transition that indicates content fades from transparent to opaque on insertion, and from opaque to transparent on removal.
- *  - `numericText`: Creates a content transition intended to be used with Text views displaying numbers.
- *  - `numericTextCountsDown`: Creates a content transition intended to be used with Text views displaying numeric text. In certain environments changes to the text will enable a nonstandard transition tailored to numeric characters that count down.
- *  - `numericTextCountsUp`: Creates a content transition intended to be used with Text views displaying numeric text. In certain environments changes to the text will enable a nonstandard transition tailored to numeric characters that count up.
- *  - `symbolEffect`: A content transition that applies the default symbol effect transition to symbol images within the inserted or removed view hierarchy. Other views are unaffected by this transition.
- *  - `symbolEffectAutomatic`: A transition that applies the default animation to a symbol-based image in a context-sensitive manner.
- *  - `symbolEffectReplace`: An effect that replaces the layers of one symbol-based image with those of another.
- */
-type ContentTransition = "identity" | "interpolate" | "opacity" | "symbolEffect" | "numericText" | "numericTextCountsDown" | "numericTextCountsUp" | "symbolEffectAutomatic" | "symbolEffectReplace" | "symbolEffectAppear" | "symbolEffectDisappear" | "symbolEffectScale";
-type MatchedGeometryProperties = 'frame' | 'position' | 'size';
-
-type GradientStop = {
-    color: Color;
-    location: number;
-};
-type Gradient = GradientStop[] | Color[];
-type LinearGradient = {
-    colors: Color[];
-    startPoint: KeywordPoint | Point;
-    endPoint: KeywordPoint | Point;
-} | {
-    stops: GradientStop[];
-    startPoint: KeywordPoint | Point;
-    endPoint: KeywordPoint | Point;
-} | {
-    gradient: Gradient;
-    startPoint: KeywordPoint | Point;
-    endPoint: KeywordPoint | Point;
-};
-type RadialGradient = {
-    stops: GradientStop[];
-    center: KeywordPoint | Point;
-    startRadius: number;
-    endRadius: number;
-} | {
-    colors: Color[];
-    center: KeywordPoint | Point;
-    startRadius: number;
-    endRadius: number;
-} | {
-    gradient: Gradient;
-    center: KeywordPoint | Point;
-    startRadius: number;
-    endRadius: number;
-};
-type AngularGradient = {
-    stops: GradientStop[];
-    center: KeywordPoint | Point;
-    startAngle: Angle;
-    endAngle: Angle;
-} | {
-    colors: Color[];
-    center: KeywordPoint | Point;
-    startAngle: Angle;
-    endAngle: Angle;
-} | {
-    gradient: Gradient;
-    center: KeywordPoint | Point;
-    startAngle: Angle;
-    endAngle: Angle;
-} | {
-    stops: GradientStop[];
-    center: KeywordPoint | Point;
-    angle: Angle;
-} | {
-    colors: Color[];
-    center: KeywordPoint | Point;
-    angle: Angle;
-} | {
-    gradient: Gradient;
-    center: KeywordPoint | Point;
-    angle: Angle;
-};
-/**
- * (iOS 18.0+) A two-dimensional gradient defined by a 2D grid of positioned colors.
- */
-type MeshGradient = {
-    /**
-     * The width of the mesh, i.e. the number of vertices per row.
-     */
-    width: number;
-    /**
-     * The height of the mesh, i.e. the number of vertices per column.
-     */
-    height: number;
-    /**
-     * The array of points, containing width x height elements.
-     */
-    points: Point[];
-    /**
-     * The array of colors, containing width x height elements.
-     */
-    colors: Color[];
-    /**
-     * The background color, this fills any points outside the defined vertex mesh. Defaults to "clear".
-     */
-    background?: Color;
-    /**
-     * Whether cubic (smooth) interpolation should be used for the colors in the mesh (rather than only for the shape of the mesh). Defaults to true.
-     */
-    smoothsColors?: boolean;
-};
-
-/**
- * The size in the minor axis of one or more rows or columns in a grid layout.
- * A number value indicates that a single item with the specified fixed size.
- */
-type GridSize = number | {
-    /**
-     * Multiple items in the space of a single flexible item.
-     */
-    type: 'adaptive';
-    min: number;
-    max?: number | 'infinity';
-} | {
-    /**
-     * A single flexible item.
-     */
-    type: 'flexible';
-    min?: number;
-    max?: number | 'infinity';
-};
-type GridItem = {
-    /**
-     * The alignment to use when placing each view.
-     */
-    alignment?: Alignment;
-    /**
-     * The spacing to the next item.
-     */
-    spacing?: number;
-    /**
-     * The size of the item, which is the width of a column item or the height of a row item.
-     */
-    size: GridSize;
-};
-
 declare class GestureInfo<Options, Value> {
     type: string;
     options: Options;
@@ -1320,166 +1034,395 @@ type TapGesture = ReturnType<typeof TapGesture>;
 type Gesture = TapGesture | DragGesture | RotateGesture | LongPressGesture | MagnifyGesture;
 
 /**
- * The spacing options between two adjacent sections in a list. When you specify a number value, it indicates that the amount of spacing to use.
+ * Options that control how adding a gesture to a view affects other gestures recognized by the view and its subviews.
+ *  - `all`: Enable both the added gesture as well as all other gestures on the view and its subviews.
+ *  - `gesture`: Enable the added gesture but disable all gestures in the subview hierarchy.
+ *  - `subviews`: Enable all gestures in the subview hierarchy but disable the added gesture.
+ *  - `none`: Disable all gestures in the subview hierarchy, including the added gesture.
  */
-type ListSectionSpacing = number | 'default' | 'compact';
-
-/**
- * A type that represents a height where a sheet naturally rests.
- *  - `large`: The system detent for a sheet at full height.
- *  - `medium`: The system detent for a sheet that’s approximately half the height of the screen, and is inactive in compact height.
- *  - When the value `0 < number <= 1`, it indicates a custom detent with the specified fractional height.
- *  - When the value `number > 1`, it indicates a custom detent with the specified height.
- */
-type PresentationDetent = "large" | "medium" | number;
-/**
- * Strategies for adapting a presentation to a different size class.
- *  - `automatic`: Use the default presentation adaptation.
- *  - `fullScreenCover`: Prefer a full-screen-cover appearance when adapting for size classes.
- *  - `none`: Don’t adapt for the size class, if possible.
- *  - `popover`: Prefer a popover appearance when adapting for size classes.
- *  - `sheet`: Prefer a sheet appearance when adapting for size classes.
- */
-type PresentationAdaptation = "automatic" | "fullScreenCover" | "none" | "popover" | "sheet";
-/**
- * The kinds of interaction available to views behind a presentation.
- *  - `automatic`: The default background interaction for the presentation.
- *  - `disabled`: People can’t interact with the view behind a presentation.
- *  - `enabled`: People can interact with the view behind a presentation.
- *  - `enabledUpThrough`: People can interact with the view behind a presentation up through a specified detent.
- */
-type PresentationBackgroundInteraction = "automatic" | "disabled" | "enabled" | {
-    enabledUpThrough: PresentationDetent;
-};
-/**
- * A behavior that you can use to influence how a presentation responds to swipe gestures.
- *  - `automatic`: The default swipe behavior for the presentation.
- *  - `resizes`: A behavior that prioritizes resizing a presentation when swiping, rather than scrolling the content of the presentation.
- *  - `scrolls`: A behavior that prioritizes scrolling the content of a presentation when swiping, rather than resizing the presentation.
- */
-type PresentationContentInteraction = "automatic" | "resizes" | "scrolls";
-type ModalPresentation = {
+type GestureMask = "all" | "gesture" | "subviews" | "none";
+type GestureProps = Gesture | {
     /**
-     * The modal content.
+     * A gesture to attach to the view.
      */
-    content: VirtualNode;
-} & ({
+    gesture: Gesture;
     /**
-     * A boolean value that determines whether to present the modal content.
+     * A value that controls how adding this gesture to the view affects other gestures recognized by the view and its subviews. Defaults to "all".
      */
-    isPresented: boolean;
-    /**
-     * The `isPresented` changed callback.
-     */
-    onChanged: (isPresented: boolean) => void;
+    mask: GestureMask;
 } | {
-    isPresented: Observable<boolean>;
-    onChanged?: never;
-});
-type PopoverPresentation = ModalPresentation & {
+    gesture: Gesture;
     /**
-     * The edge of the attachmentAnchor that defines the location of the popover’s arrow. The default is `top`.
+     * Whether the added gesture is enabled.
      */
-    arrowEdge?: Edge;
+    isEnabled: boolean;
+};
+type GesturesProps = {
     /**
-     * If you want to display the content as popover presentation, you must use this property.
+     * The gesture to apply to the view
+     * @example
+     * ```tsx
+     * <Text
+     *   gesture={
+     *     TapGesture()
+     *       .onEnded(() => console.log('Tapped'))
+     *   }
+     * />
+     * ```
      */
-    presentationCompactAdaptation?: PresentationAdaptation | {
+    gesture?: GestureProps;
+    /**
+     * Attaches a gesture to the view to process simultaneously with gestures defined by the view.
+     * @example
+     * ```tsx
+     * <Text
+     *   simultaneousGesture={
+     *     TapGesture()
+     *       .onEnded(() => console.log('Tapped'))
+     *   }
+     * />
+     * ```
+     */
+    simultaneousGesture?: GestureProps;
+    /**
+     * Attaches a gesture to the view with a higher precedence than gestures defined by the view.
+     * @example
+     * ```tsx
+     * <Text
+     *   highPriorityGesture={
+     *     TapGesture()
+     *       .onEnded(() => console.log('Tapped'))
+     *   }
+     * />
+     * ```
+     */
+    highPriorityGesture?: GestureProps;
+    /**
+     * Sets the screen edge from which you want your gesture to take precedence over the system gesture.
+     */
+    defersSystemGestures?: EdgeSet;
+    /**
+     * Adds an action to perform when this view recognizes a tap gesture.
+     */
+    onTapGesture?: (() => void) | {
         /**
-         * The adaptation to use in a horizontally compact size class.
+         * The number of taps or clicks required to trigger the action closure provided in action. Defaults to 1.
          */
-        horizontal: PresentationAdaptation;
+        count: number;
         /**
-         * The adaptation to use in a vertically compact size class. In a size class that is both horizontally and vertically compact, system uses the verticalAdaptation value.
+         * The coordinate space in which to receive location values. Defaults to "local".
+         *  - `local`: The local coordinate space of the current view.
+         *  - `global`: The global coordinate space at the root of the view hierarchy.
+         *  - `scrollView`: The named coordinate space that is added by the system for the innermost containing scroll view.
+         *  - `immersiveSpace`: The named coordinate space that represents the currently opened ImmersiveSpace scene. If no immersive space is currently opened, this CoordinateSpace provides the same behavior as the "global" coordinate space.
          */
-        vertical: PresentationAdaptation;
+        coordinateSpace?: "local" | "global" | "scrollView" | "immersiveSpace";
+        /**
+         * The action to perform.
+         */
+        perform: () => void;
+    };
+    /**
+     * Adds an action to perform when this view recognizes a long press gesture.
+     */
+    onLongPressGesture?: (() => void) | {
+        /**
+         * The minimum duration of the long press that must elapse before the gesture succeeds.
+         * Defaults to `500` ms.
+         */
+        minDuration?: DurationInMilliseconds;
+        /**
+         * The maximum distance that the fingers or cursor performing the long press can move before the gesture fails.
+         * Defaults to `10000` ms.
+         */
+        maxDuration?: DurationInMilliseconds;
+        /**
+         * The action to perform when a long press is recognized.
+         */
+        perform: () => void;
+        /**
+         * A callback to run when the pressing state of the gesture changes, passing the current state as a parameter.
+         */
+        onPressingChanged?: (state: boolean) => void;
+    };
+    /**
+     * A dragging motion that invokes an action as the drag-event sequence changes.
+     * @param onDragGesture.minDistance The minimum dragging distance for the gesture to succeed. Defaults to 10.
+     * @param onDragGesture.coordinateSpace The coordinate space of the dragging gesture’s location. Defaults to `locale`.
+     * @param onDragGesture.onChanged Adds an action to perform when the gesture’s value changes. The action to perform when this gesture’s value changes. The action closure’s parameter contains the gesture’s new value.
+     * @param onDragGesture.onEnded Adds an action to perform when the gesture ends. The action to perform when this gesture ends. The action closure’s parameter contains the final value of the gesture.
+     */
+    onDragGesture?: {
+        minDistance?: number;
+        coordinateSpace?: 'local' | 'global';
+        onChanged?: (action: DragGestureDetails) => void;
+        onEnded?: (action: DragGestureDetails) => void;
+    };
+    /**
+     * Configures whether this view participates in hit test operations.
+     */
+    allowsHitTesting?: boolean;
+};
+
+type FrameSizeProps = {
+    frame?: {
+        width?: number;
+        height?: number;
+        /**
+         * The alignment of this view inside the resulting frame.
+         * Note that most alignment values have no apparent effect when the
+         * size of the frame happens to match that of this view.
+         */
+        alignment?: Alignment;
+    } | {
+        /**
+         * The alignment of this view inside the resulting frame.
+         * Note that most alignment values have no apparent effect when the
+         * size of the frame happens to match that of this view.
+         */
+        alignment?: Alignment;
+        /**
+         * The minimum width of the resulting frame.
+         */
+        minWidth?: number;
+        /**
+         * The minimum height of the resulting frame.
+         */
+        minHeight?: number;
+        /**
+         * The maximum width of the resulting frame.
+         */
+        maxWidth?: number | 'infinity';
+        /**
+         * The maximum height of the resulting frame.
+         */
+        maxHeight?: number | 'infinity';
+        /**
+         * The ideal width of the resulting frame.
+         */
+        idealWidth?: number | 'infinity';
+        /**
+         * The ideal height of the resulting frame.
+         */
+        idealHeight?: number | 'infinity';
+    };
+    /**
+     * Positions this view within an invisible frame with a size relative to the nearest container.
+     * @see https://developer.apple.com/documentation/swiftui/view/containerrelativeframe(_:alignment:)
+     * @see https://www.hackingwithswift.com/quick-start/swiftui/how-to-adjust-the-size-of-a-view-relative-to-its-container
+     */
+    containerRelativeFrame?: {
+        axes: AxisSet;
+        /**
+         * Defaults to `center`.
+         */
+        alignment?: Alignment;
+        count: never;
+        span: never;
+        spacing: never;
+    } | {
+        axes: AxisSet;
+        /**
+         * Defaults to `center`.
+         */
+        alignment?: Alignment;
+        /**
+         * How many parts the container's space should be split into.
+         */
+        count: number;
+        /**
+         * How many parts should be allocated to for each view.
+         * Defaults to 1.
+         */
+        span?: number;
+        spacing: number;
+    };
+    /**
+     * Fixes this view at its ideal size.
+     */
+    fixedSize?: boolean | {
+        /**
+         * A Boolean value that indicates whether to fix the width of the view.
+         */
+        horizontal: boolean;
+        /**
+         * A Boolean value that indicates whether to fix the height of the view.
+         */
+        vertical: boolean;
     };
 };
 
 /**
- * A type that specifies the appearance and interaction of navigation split views within a view hierarchy.
- *  - `automatic`: A navigation split style that resolves its appearance automatically based on the current context.
- *  - `balanced`: A navigation split style that reduces the size of the detail content to make room when showing the leading column or columns.
- *  - `prominentDetail`: A navigation split style that attempts to maintain the size of the detail content when hiding or showing the leading columns.
+ * Hex string: `#FF0033` or `#333`
  */
-type NavigationSplitViewStyle = "automatic" | "balanced" | "prominentDetail";
+type ColorStringHex = `#${string}`;
+/**
+ * RGB string: `rgb(255, 0, 0)`. Alpha defaults to 1.
+ *
+ *  - R: red, 0 - 255
+ *  - G: green, 0 - 255
+ *  - B: blue, 0 - 255
+ */
+type ColorStringRGB = `rgb(${number},${number},${number})`;
+/**
+ * RGBA string: `rgba(0,0,0,0.5)`.
+ * This is same as css color string.
+ *
+ *  - R: red, 0 - 255
+ *  - G: green, 0 - 255
+ *  - B: blue, 0 - 255
+ *  - A: alpha, 0 - 1
+ */
+type ColorStringRGBA = `rgba(${number},${number},${number},${number})`;
+/**
+ * HSL string: `hsl(120, 50%, 40%)`.
+ *
+ *  - H: hue in degrees, 0 - 360 (values outside the range are wrapped via `mod 360`)
+ *  - S: saturation, 0% - 100% (the trailing `%` is required)
+ *  - L: lightness, 0% - 100% (the trailing `%` is required)
+ *
+ * Use `ColorStringHSLA` if you also need an alpha channel.
+ */
+type ColorStringHSL = `hsl(${number},${number}%,${number}%)`;
+/**
+ * HSLA string: `hsla(120, 50%, 40%, 0.8)`.
+ *
+ *  - H: hue in degrees, 0 - 360 (values outside the range are wrapped via `mod 360`)
+ *  - S: saturation, 0% - 100% (the trailing `%` is required)
+ *  - L: lightness, 0% - 100% (the trailing `%` is required)
+ *  - A: alpha, 0 - 1
+ */
+type ColorStringHSLA = `hsla(${number},${number}%,${number}%,${number})`;
+type KeywordsColor = "accentColor" | "systemRed" | "systemGreen" | "systemBlue" | "systemOrange" | "systemYellow" | "systemPink" | "systemPurple" | "systemTeal" | "systemIndigo" | "systemBrown" | "systemMint" | "systemCyan" | "systemGray" | "systemGray2" | "systemGray3" | "systemGray4" | "systemGray5" | "systemGray6" | "tintColor" | "label" | "secondaryLabel" | "tertiaryLabel" | "quaternaryLabel" | "placeholderText" | "separator" | "opaqueSeparator" | "link" | "darkText" | "lightText" | "black" | "darkGray" | "lightGray" | "white" | "gray" | "red" | "green" | "blue" | "cyan" | "yellow" | "magenta" | "orange" | "purple" | "brown" | "clear" | "systemFill" | "secondarySystemFill" | "tertiarySystemFill" | "quaternarySystemFill" | "systemBackground" | "secondarySystemBackground" | "tertiarySystemBackground" | "systemGroupedBackground" | "secondarySystemGroupedBackground" | "tertiarySystemGroupedBackground";
+/**
+ * You can define colors using the following formats:
+ *  - Keyword colors, e.g. `green` or `label`.
+ *  - Hex string, `#ff0000`.
+ *  - CSS rgb string, `rgb(255, 0, 0)`.
+ *  - CSS rgba string, `rgba(255,255,255, 1)`.
+ *  - CSS hsl string, `hsl(120, 50%, 40%)`.
+ *  - CSS hsla string, `hsla(120, 50%, 40%, 0.8)`.
+ */
+type Color = ColorStringHex | ColorStringRGB | ColorStringRGBA | ColorStringHSL | ColorStringHSLA | KeywordsColor;
+type ColorWithGradientOrOpacity = {
+    color: Color;
+    /**
+     * Returns the standard gradient for the color self
+     */
+    gradient: true;
+    /**
+     * Multiplies the opacity of the color by the given amount.
+     */
+    opacity: number;
+} | {
+    color: Color;
+    /**
+     * Returns the standard gradient for the color self
+     */
+    gradient: true;
+} | {
+    color: Color;
+    /**
+     * Multiplies the opacity of the color by the given amount.
+     */
+    opacity: number;
+} | {
+    color?: never;
+    gradient?: never;
+    opacity?: never;
+};
 
+type GradientStop$1 = {
+    color: Color;
+    location: number;
+};
+type Gradient = GradientStop$1[] | Color[];
+type LinearGradient = {
+    colors: Color[];
+    startPoint: KeywordPoint | Point;
+    endPoint: KeywordPoint | Point;
+} | {
+    stops: GradientStop$1[];
+    startPoint: KeywordPoint | Point;
+    endPoint: KeywordPoint | Point;
+} | {
+    gradient: Gradient;
+    startPoint: KeywordPoint | Point;
+    endPoint: KeywordPoint | Point;
+};
+type RadialGradient = {
+    stops: GradientStop$1[];
+    center: KeywordPoint | Point;
+    startRadius: number;
+    endRadius: number;
+} | {
+    colors: Color[];
+    center: KeywordPoint | Point;
+    startRadius: number;
+    endRadius: number;
+} | {
+    gradient: Gradient;
+    center: KeywordPoint | Point;
+    startRadius: number;
+    endRadius: number;
+};
+type AngularGradient = {
+    stops: GradientStop$1[];
+    center: KeywordPoint | Point;
+    startAngle: Angle;
+    endAngle: Angle;
+} | {
+    colors: Color[];
+    center: KeywordPoint | Point;
+    startAngle: Angle;
+    endAngle: Angle;
+} | {
+    gradient: Gradient;
+    center: KeywordPoint | Point;
+    startAngle: Angle;
+    endAngle: Angle;
+} | {
+    stops: GradientStop$1[];
+    center: KeywordPoint | Point;
+    angle: Angle;
+} | {
+    colors: Color[];
+    center: KeywordPoint | Point;
+    angle: Angle;
+} | {
+    gradient: Gradient;
+    center: KeywordPoint | Point;
+    angle: Angle;
+};
 /**
- * The visual prominence of a badge.
- *  - `standard`: The standard level of prominence for a badge.
- *  - `increased`: The highest level of prominence for a badge.
- *  - `decreased`: The lowest level of prominence for a badge.
+ * (iOS 18.0+) A two-dimensional gradient defined by a 2D grid of positioned colors.
  */
-type BadgeProminence = "standard" | "increased" | "decreased";
-/**
- * A type indicating the prominence of a view hierarchy.
- */
-type Prominence = "standard" | "increased";
-
-declare abstract class ScreenshotMaker {
-    abstract screenshot(): UIImage | null;
-}
-
-/**
- * The visibility of scroll indicators of a UI element.
- *  - `automatic`: Scroll indicator visibility depends on the policies of the component accepting the visibility configuration.
- *  - `visible`: The actual visibility of the indicators depends on platform conventions like auto-hiding behaviors in iOS or user preference behaviors in macOS.
- *  - `hidden`: By default, scroll views in macOS show indicators when a mouse is connected. Use `never` to indicate a stronger preference that can override this behavior.
- *  - `never`: Scroll indicators should never be visible.
- */
-type ScrollScrollIndicatorVisibility = "automatic" | "visible" | "hidden" | "never";
-/**
- * The ways that scrollable content can interact with the software keyboard.
- *  - `automatic`: Determine the mode automatically based on the surrounding context.
- *  - `immediately`: Dismiss the keyboard as soon as scrolling starts.
- *  - `interactively`: Enable people to interactively dismiss the keyboard as part of the scroll operation.
- *  - `never`: Never dismiss the keyboard automatically as a result of scrolling.
- */
-type ScrollDismissesKeyboardMode = "automatic" | "immediately" | "interactively" | "never";
-/**
- * A type that defines the scroll behavior of a scrollable view.
- *  - `paging`: The scroll behavior that aligns scroll targets to container-based geometry.
- *  - `viewAligned`: The scroll behavior that aligns scroll targets to view-based geometry.
- *  - `viewAlignedLimitAutomatic`: By default, the behavior will be limited in compact horizontal size classes and will not be limited otherwise.
- *  - `viewAlignedLimitAlways`: Always limit the amount of views that can be scrolled.
- *  - `viewAlignedLimitNever`: Never limit the amount of views that can be scrolled.
- *  - `viewAlignedLimitAlwaysByFew`: (iOS 18.0+) Limit the number of views that can be scrolled by a single interaction to a small number of views, rather than a single view at a time. The number of views is determined automatically.
- *  - `viewAlignedLimitAlwaysByOne`: (iOS 18.0+) Limit the number of views that can be scrolled by a single interaction to a single view.
- */
-type ScrollTargetBehavior = "paging" | "viewAligned" | "viewAlignedLimitAutomatic" | "viewAlignedLimitAlways" | "viewAlignedLimitNever" | "viewAlignedLimitAlwaysByFew" | "viewAlignedLimitAlwaysByOne";
-/**
- * A set of view types that may be pinned to the bounds of a scroll view.
- */
-type PinnedScrollViews = 'sectionHeaders' | 'sectionFooters' | 'sectionHeadersAndFooters';
-/**
- * The placement of margins.
- */
-type ContentMarginPlacement = "automatic" | "scrollContent" | "scrollIndicators";
-
-/**
- * The placement of a search field in a view hierarchy.
- */
-type SearchFieldPlacement = 'automatic' | 'navigationBarDrawer' | 'sidebar' | 'toolbar' | 'navigationBarDrawerAlwaysDisplay' | 'navigationBarDrawerAutomaticDisplay';
-type SearchSuggestionsPlacementSet = 'content' | 'menu' | 'all';
-
-/**
- * Represents a type of haptic and/or audio feedback that can be played.
- *  - `start`: Indicates that an activity started.
- *  - `stop`:  Indicates that an activity stopped.
- *  - `alignment`: Indicates the alignment of a dragged item.
- *  - `decrease`: Indicates that an important value decreased below a significant threshold.
- *  - `increase`: Indicates that an important value increased above a significant threshold.
- *  - `levelChange`: Indicates movement between discrete levels of pressure.
- *  - `selection`: Indicates that a UI element’s values are changing.
- *  - `success`: Indicates that a task or action has completed.
- *  - `warning`: Indicates that a task or action has produced a warning of some kind.
- *  - `error`: Indicates that an error has occurred.
- *  - `impact`: Provides a physical metaphor you can use to complement a visual experience.
- *  - `impactRigid`: Indicates a collision between hard or inflexible UI objects.
- *  - `impactSoft`: Indicates a collision between soft or flexible UI objects.
- *  - `impactSolid`: Indicates a collision between solid UI objects of medium flexibility.
- */
-type SensoryFeedback = 'start' | 'stop' | 'alignment' | 'decrease' | 'increase' | 'levelChange' | 'selection' | 'success' | 'warning' | 'error' | 'impact' | 'impactRigid' | 'impactSoft' | 'impactSolid';
+type MeshGradient = {
+    /**
+     * The width of the mesh, i.e. the number of vertices per row.
+     */
+    width: number;
+    /**
+     * The height of the mesh, i.e. the number of vertices per column.
+     */
+    height: number;
+    /**
+     * The array of points, containing width x height elements.
+     */
+    points: Point[];
+    /**
+     * The array of colors, containing width x height elements.
+     */
+    colors: Color[];
+    /**
+     * The background color, this fills any points outside the defined vertex mesh. Defaults to "clear".
+     */
+    background?: Color;
+    /**
+     * Whether cubic (smooth) interpolation should be used for the colors in the mesh (rather than only for the shape of the mesh). Defaults to true.
+     */
+    smoothsColors?: boolean;
+};
 
 type ShapeStyle = Material | Color | Gradient | LinearGradient | RadialGradient | AngularGradient | MeshGradient | ColorWithGradientOrOpacity;
 /**
@@ -1569,7 +1512,15 @@ type RectWithCornerRadii = {
 type Shape = 'rect' | 'circle' | 'capsule' | 'ellipse' | 'buttonBorder' | 'containerRelative' | {
     type: 'capsule';
     style: RoundedCornerStyle;
-} | RectWithCornerRadius | RectWithCornerSize | RectWithCornerRadii;
+} | RectWithCornerRadius | RectWithCornerSize | RectWithCornerRadii | PathShapeValue;
+/**
+ * A custom vector shape produced by `Path2D`, usable wherever a `Shape` is accepted
+ * (`clipShape`, `contentShape`, `containerShape`).
+ */
+interface PathShapeValue {
+    /** @internal */
+    _toWire(): any[];
+}
 /**
  * The type with the drawing methods on Shape to apply multiple fills and/or strokes to a shape.
  */
@@ -1615,140 +1566,96 @@ type ShapeProps = {
  */
 type ContentShapeKinds = "interaction" | "dragPreview" | "contextMenuPreview" | "hoverEffect" | "accessibility";
 
-/**
- * The SwingAnimation type defines the configuration for animating a view in a swinging motion along the X and Y axes.
- */
-type SwingAnimation = {
+type ForeAndBackgroundProps = {
     /**
-     * The animation duration, in seconds.
+     * Sets a view’s foreground elements to use a given style. You can also sets the primary, secondary, and tertiary levels of the foreground style.
      */
-    duration: DurationInSeconds;
+    foregroundStyle?: ShapeStyle | DynamicShapeStyle | {
+        primary: ShapeStyle | DynamicShapeStyle;
+        secondary: ShapeStyle | DynamicShapeStyle;
+        tertiary?: ShapeStyle | DynamicShapeStyle;
+    };
     /**
-     * The distance the view swings along the given axis.
+     * Sets the view’s background to an insettable shape filled with a style. You can also layers the views that you specify behind this view.
      */
-    distance: number;
+    background?: ShapeStyle | DynamicShapeStyle | {
+        style: ShapeStyle | DynamicShapeStyle;
+        shape: Shape | 'concentricRect' | ({
+            type: 'concentricRect';
+        } & ConcentricRectangleShape);
+    } | VirtualNode | {
+        content: VirtualNode;
+        alignment: Alignment;
+    };
+    /**
+     * Adds the background extension effect to the view. The view will be duplicated into mirrored copies which will be placed around the view on any edge with available safe area. Additionally, a blur effect will be applied on top to blur out the copies.
+     * @available iOS 26.0+
+     */
+    backgroundExtensionEffect?: boolean;
 };
-type ClockHandRotationEffectPeriod = DurationInSeconds | "hourHand" | "minuteHand" | "secondHand";
 
-/**
- * Makes symbols within the view show a particular variant.
- *  - `none`: No variant for a symbol.
- *  - `circle`: A variant that encapsulates the symbol in a circle.
- *  - `square`: A variant that encapsulates the symbol in a square.
- *  - `rectangle`: A variant that encapsulates the symbol in a rectangle.
- *  - `fill`: A variant that fills the symbol.
- *  - `slash`: A variant that draws a slash through the symbol.
- */
-type SymbolVariants = 'none' | 'circle' | 'square' | 'rectangle' | 'fill' | 'slash';
-/**
- *  - `hierarchical`: A mode that renders symbols as multiple layers, with different opacities applied to the foreground style.
- *  - `monochrome`: A mode that renders symbols as a single layer filled with the foreground style.
- *  - `multicolor`: A mode that renders symbols as multiple layers with their inherit styles.
- *  - `palette`: A mode that renders symbols as multiple layers, with different styles applied to the layers.
- */
-type SymbolRenderingMode = 'hierarchical' | 'monochrome' | 'multicolor' | 'palette';
-type SymbolEffect = "appear" | "appearByLayer" | "appearDown" | "appearUp" | "appearWholeSymbol" | "disppear" | "disappearByLayer" | "disappearDown" | "disappearUp" | "disappearWholeSymbol" | "scale" | "scaleByLayer" | "scaleDown" | "scaleUp" | "scaleWholeSymbol" | {
+type PaddingAndBorderProps = {
     /**
-     * A symbol effect to add to the view. Existing effects added by ancestors of the view are preserved, but may be overridden by the new effect. Added effects will be applied to the `Image` views contained by the child view.
+     * When specify to true, will apply the default padding.
      */
-    effect: DiscreteSymbolEffect;
+    padding?: true | number | {
+        horizontal?: number | true;
+        vertical?: number | true;
+        leading?: number | true;
+        trailing?: number | true;
+        top?: number | true;
+        bottom?: number | true;
+    };
     /**
-     * The value to monitor for changes, the animation is triggered each time the value changes.
+     * Adds a border to this view with the specified style and width.
      */
-    value: string | number | boolean;
+    border?: {
+        style: ShapeStyle | DynamicShapeStyle;
+        /**
+         * The thickness of the border. The default is 1 pixel.
+         */
+        width?: number;
+    } | ShapeStyle | DynamicShapeStyle;
 };
-type DiscreteSymbolEffect = "bounce" | "bounceByLayer" | "bounceDown" | "bounceUp" | "bounceWholeSymbol" | "breathe" | "breatheByLayer" | "breathePlain" | "breathePulse" | "breatheWholeSymbol" | "pulse" | "pulseByLayer" | "pulseWholeSymbol" | "rotate" | "rotateByLayer" | "rotateClockwise" | "rotateCounterClockwise" | "rotateWholeSymbol" | "variableColor" | "variableColorCumulative" | "variableColorDimInactiveLayers" | "variableColorHideInactiveLayers" | "variableColorIterative" | "wiggle" | "wiggleRight" | "wiggleLeft" | "wiggleBackward" | "wiggleByLayer" | "wiggleClockwise" | "wiggleCounterClockwise" | "wiggleDown" | "wiggleForward" | "wiggleUp" | "wiggleWholeSymbol";
 
-type Font = "largeTitle" | "title" | "title2" | "title3" | "headline" | "subheadline" | "body" | "callout" | "footnote" | "caption" | "caption2";
-type FontWeight = "ultraLight" | "thin" | "light" | "regular" | "medium" | "semibold" | "bold" | "heavy" | "black";
-/**
- * A width to use for fonts that have multiple widths.
- */
-type FontWidth = "compressed" | "condensed" | "expanded" | "standard";
-type FontDesign = 'default' | 'monospaced' | 'rounded' | 'serif';
-type TextAlignment = 'leading' | 'center' | 'trailing';
-/**
- * The type of truncation to apply to a line of text when it’s too long to fit in the available space.
- *  - `head`: Truncate at the beginning of the line.
- *  - `middle`: Truncate in the middle of the line.
- *  - `tail`: Truncate at the end of the line.
- */
-type TruncationMode = "head" | "middle" | "tail";
-
-type KeyboardType = 'default' | 'numberPad' | 'phonePad' | 'namePhonePad' | 'URL' | 'decimalPad' | 'asciiCapable' | 'asciiCapableNumberPad' | 'emailAddress' | 'numbersAndPunctuation' | 'twitter' | 'webSearch';
-/**
- * The kind of autocapitalization behavior applied during text input.
- *  - `never`: Defines an autocapitalizing behavior that will not capitalize anything.
- *  - `characters`: Defines an autocapitalizing behavior that will capitalize every letter.
- *  - `sentences`: Defines an autocapitalizing behavior that will capitalize the first letter in every sentence.
- *  - `words`: Defines an autocapitalizing behavior that will capitalize the first letter of every word.
- */
-type TextInputAutocapitalization = "never" | "characters" | "sentences" | "words";
-type TextContentType = "cellularEID" | "cellularIMEI" | "URL" | "namePrefix" | "name" | "nameSuffix" | "givenName" | "middleName" | "familyName" | "nickname" | "organizationName" | "jobTitle" | "location" | "fullStreetAddress" | "streetAddressLine1" | "streetAddressLine2" | "addressCity" | "addressCityAndState" | "addressState" | "postalCode" | "sublocality" | "countryName" | "username" | "password" | "newPassword" | "oneTimeCode" | "emailAddress" | "telephoneNumber" | "creditCardNumber" | "creditCardExpiration" | "creditCardExpirationMonth" | "creditCardExpirationYear" | "creditCardSecurityCode" | "creditCardType" | "creditCardName" | "creditCardGivenName" | "creditCardMiddleName" | "creditCardFamilyName" | "birthdate" | "birthdateDay" | "birthdateMonth" | "birthdateYear" | "dateTime" | "flightNumber" | "shipmentTrackingNumber";
-/**
- * A type that defines various triggers that result in the firing of a submission action.
- *  - `search`: Defines triggers originating from search fields constructed from `searchable` modifiers.
- *  - `text`: Defines triggers originating from text input controls like `TextField` and `SecureField`.
- */
-type SubmitTriggers = "search" | "text";
-
-/**
- * A type that defines the placement of a toolbar item.
- *  - `automatic`: The system places the item automatically, depending on many factors including the platform, size class, or presence of other items.
- *  - `bottomBar`: Places the item in the bottom toolbar.
- *  - `cancellationAction`: The item represents a cancellation action for a modal interface.
- *  - `confirmationAction`: The item represents a confirmation action for a modal interface.
- *  - `destructiveAction`: The item represents a destructive action for a modal interface.
- *  - `keyboard`: The item is placed in the keyboard section.
- *  - `navigation`: The item represents a navigation action.
- *  - `primaryAction`: The item represents a primary action.
- *  - `principal`: The system places the item in the principal item section.
- *  - `secondaryAction`: The item represents a secondary action.
- *  - `status`: The item represents a change in status for the current context.
- *  - `topBarLeading`: Places the item in the leading edge of the top bar.
- *  - `topBarTrailing`: Places the item in the trailing edge of the top bar.
- */
-/**
- * The placement of the toolbar item.
- */
-type ToolbarItemPlacement = 'automatic' | 'bottomBar' | 'cancellationAction' | 'confirmationAction' | 'destructiveAction' | 'keyboard' | 'navigation' | 'primaryAction' | 'principal' | 'topBarLeading' | 'topBarTrailing' | 'secondaryAction' | 'status' | 'largeSubtitle' | 'largeTitle' | 'subtitle' | 'title';
-/**
- *  - `automatic`: The system places the item automatically, depending on many factors including the platform, size class, or presence of other items.
- *  - `bottomBar`: Places the item in the bottom toolbar.
- *  - `cancellationAction`: The item represents a cancellation action for a modal interface.
- *  - `confirmationAction`: The item represents a confirmation action for a modal interface.
- *  - `destructiveAction`: The item represents a destructive action for a modal interface.
- *  - `keyboard`: The item is placed in the keyboard section.
- *  - `navigation`: The item represents a navigation action.
- *  - `primaryAction`: The item represents a primary action.
- *  - `principal`: The system places the item in the principal item section.
- *  - `topBarLeading`: Places the item in the leading edge of the top bar.
- *  - `topBarTrailing`: Places the item in the trailing edge of the top bar.
- */
-type ToolBarProps = {
-    bottomBar?: VirtualNode | VirtualNode[];
-    cancellationAction?: VirtualNode | VirtualNode[];
-    confirmationAction?: VirtualNode | VirtualNode[];
-    destructiveAction?: VirtualNode | VirtualNode[];
-    keyboard?: VirtualNode | VirtualNode[];
-    navigation?: VirtualNode | VirtualNode[];
-    primaryAction?: VirtualNode | VirtualNode[];
-    principal?: VirtualNode | VirtualNode[];
-    topBarLeading?: VirtualNode | VirtualNode[];
-    topBarTrailing?: VirtualNode | VirtualNode[];
+type ViewVisibilityProps = {
+    /**
+     * Hidden views are invisible and can’t receive or respond to interactions. However, they do remain in the view hierarchy and affect layout.
+     */
+    hidden?: boolean;
+    /**
+     * Hides the labels of any controls contained within this view.
+     */
+    labelsHidden?: boolean;
 };
-/**
- * A type that defines the behavior of title of a toolbar.
- */
-type ToolbarTitleDisplayMode = 'automatic' | 'inline' | 'inlineLarge' | 'large';
-type ToolbarPlacement = "automatic" | "tabBar" | "bottomBar" | "navigationBar";
-/**
- * Defines the implementation of all IndexView instances within a view hierarchy.
- */
-type IndexViewStyle = 'page' | 'pageBackgroundAutomaticDisplay' | 'pageBackgroundAlwaysDisplay' | 'pageBackgroundNeverDisplay' | 'pageBackgroundInteractiveDisplay';
-type AdaptableTabBarPlacement = 'automatic' | 'tabBar' | 'sidebar';
-type TabPlacement = 'automatic' | 'pinned' | 'sidebarOnly';
-type TabCustomizationBehavior = 'automatic' | 'disabled' | 'reorderable';
+
+type ImageViewProps = {
+    /**
+     * Scales this view to fit its parent.
+     */
+    scaleToFit?: boolean;
+    /**
+     * Scales this view to fill its parent.
+     */
+    scaleToFill?: boolean;
+    /**
+     * Constrains this view’s dimensions to the specified aspect ratio.
+     */
+    aspectRatio?: {
+        /**
+         * The ratio of width to height to use for the resulting view. Use null to maintain the current aspect ratio in the resulting view.
+         */
+        value?: number | null;
+        /**
+         * A flag that indicates whether this view fits or fills the parent context.
+         */
+        contentMode: ContentMode;
+    };
+    /**
+     * Scales images within the view according to one of the relative sizes available including small, medium, and large images sizes.
+     */
+    imageScale?: ImageScale;
+};
 
 type ToggleStyle = 'automatic' | 'switch' | 'button';
 type ButtonBorderShape = 'automatic' | 'capsule' | 'circle' | 'roundedRectangle' | 'buttonBorder' | {
@@ -1838,6 +1745,3646 @@ type TabViewStyle = "automatic" | "page" | "sidebarAdaptable" | "tabBarOnly" | "
  *  - `stepperField`: Only available in macOS. A system style that displays the components in an editable field, with adjoining stepper that can increment/decrement the selected component.
  */
 type DatePickerStyle = 'automatic' | 'compact' | 'graphical' | 'wheel' | 'field' | 'stepperField';
+
+type ViewStyleProps = {
+    /**
+     * Sets the style for control groups within this view.
+     */
+    controlGroupStyle?: ControlGroupStyle;
+    /**
+     * Sets the style for menus within this view.
+     */
+    menuStyle?: MenuStyle;
+    /**
+     * The style to apply to this tab view.
+     */
+    tabViewStyle?: TabViewStyle;
+    /**
+     * Sets the size for controls within this view.
+     */
+    controlSize?: ControlSize;
+    /**
+     * A type that applies custom interaction behavior and a custom appearance to all buttons within a view hierarchy.
+     */
+    buttonStyle?: ButtonStyle;
+    /**
+     * The border shape affects buttons of the `bordered` and `borderedProminent` styles.
+     *  - `automatic`: A shape that defers to the system to determine an appropriate shape for the given context and platform.
+     *  - `capsule`: A capsule shape.
+     *  - `circle`: A circular shape.
+     *  - `roundedRectangle`: A rounded rectangle shape.
+     *  - `buttonBorder`: A shape that defers to the environment to determine the resolved button border shape.
+     */
+    buttonBorderShape?: ButtonBorderShape;
+    /**
+     * Sets the style for labels within this view.
+     */
+    labelStyle?: LabelStyle;
+    /**
+     * The appearance and behavior of a toggle.
+     */
+    toggleStyle?: ToggleStyle;
+    /**
+     * Sets the style for pickers within this view.
+     */
+    pickerStyle?: PickerStyle;
+    /**
+     * Sets the style for forms in a view hierarchy.
+     */
+    formStyle?: FormStyle;
+    datePickerStyle?: DatePickerStyle;
+    /**
+     * Sets the style for text fields within this view.
+     */
+    textFieldStyle?: TextFieldStyle;
+    /**
+     * The gauge view style to use for this view.
+     */
+    gaugeStyle?: GaugeStyle;
+    /**
+     * The style describes the behavior and appearance of a list.
+     */
+    listStyle?: ListStyle;
+    /**
+     * The progress view style to use for this view.
+     */
+    progressViewStyle?: ProgressViewStyle;
+    /**
+     * Adds a context menu with a custom preview to a view.
+     *
+     * @example
+     * ```tsx
+     * function View() {
+     *   return <Text
+     *     contextMenu={{
+     *       menuItems: <Group>
+     *         <Button
+     *           title="Add"
+     *           action={() => {
+     *             // Add
+     *           }}
+     *         />
+     *         <Button
+     *           title="Delete"
+     *           role="destructive"
+     *           action={() => {
+     *             // Delete
+     *           }}
+     *         />
+     *       </Group>
+     *     }}
+     *   >Long Press to Open Context Menu</Text>
+     * }
+     * ```
+     */
+    contextMenu?: {
+        /**
+         * The menu’s contents
+         */
+        menuItems: VirtualNode;
+        /**
+         * A view that the system displays along with the menu.
+         */
+        preview?: VirtualNode;
+    };
+    /**
+     * Sets the menu indicator visibility for controls within this view.
+     */
+    menuIndicator?: Visibility;
+    /**
+     * Set the width reserved for icons in labels.
+     * Requires iOS 26+.
+     */
+    labelReservedIconWidth?: number;
+    /**
+     * Set the spacing between the icon and title in labels.
+     */
+    labelIconToTitleSpacing?: number;
+    /**
+     * Sets the visibility of the slider thumb.
+     * Requires iOS 26+
+     */
+    sliderThumbVisibility?: Visibility;
+};
+
+type KeyboardType = 'default' | 'numberPad' | 'phonePad' | 'namePhonePad' | 'URL' | 'decimalPad' | 'asciiCapable' | 'asciiCapableNumberPad' | 'emailAddress' | 'numbersAndPunctuation' | 'twitter' | 'webSearch';
+/**
+ * The kind of autocapitalization behavior applied during text input.
+ *  - `never`: Defines an autocapitalizing behavior that will not capitalize anything.
+ *  - `characters`: Defines an autocapitalizing behavior that will capitalize every letter.
+ *  - `sentences`: Defines an autocapitalizing behavior that will capitalize the first letter in every sentence.
+ *  - `words`: Defines an autocapitalizing behavior that will capitalize the first letter of every word.
+ */
+type TextInputAutocapitalization = "never" | "characters" | "sentences" | "words";
+type TextContentType = "cellularEID" | "cellularIMEI" | "URL" | "namePrefix" | "name" | "nameSuffix" | "givenName" | "middleName" | "familyName" | "nickname" | "organizationName" | "jobTitle" | "location" | "fullStreetAddress" | "streetAddressLine1" | "streetAddressLine2" | "addressCity" | "addressCityAndState" | "addressState" | "postalCode" | "sublocality" | "countryName" | "username" | "password" | "newPassword" | "oneTimeCode" | "emailAddress" | "telephoneNumber" | "creditCardNumber" | "creditCardExpiration" | "creditCardExpirationMonth" | "creditCardExpirationYear" | "creditCardSecurityCode" | "creditCardType" | "creditCardName" | "creditCardGivenName" | "creditCardMiddleName" | "creditCardFamilyName" | "birthdate" | "birthdateDay" | "birthdateMonth" | "birthdateYear" | "dateTime" | "flightNumber" | "shipmentTrackingNumber";
+/**
+ * A type that defines various triggers that result in the firing of a submission action.
+ *  - `search`: Defines triggers originating from search fields constructed from `searchable` modifiers.
+ *  - `text`: Defines triggers originating from text input controls like `TextField` and `SecureField`.
+ */
+type SubmitTriggers = "search" | "text";
+
+type TextFieldViewProps = {
+    /**
+     * A Boolean value that indicates whether autocorrection is disabled for this view. The default value is true.
+     */
+    autocorrectionDisabled?: boolean;
+    /**
+     * Sets how often the shift key in the keyboard is automatically enabled.
+     */
+    textInputAutocapitalization?: TextInputAutocapitalization;
+    /**
+     * Sets the text content type for this view, which the system uses to offer suggestions while the user enters text on an iOS or tvOS device.
+     */
+    textContentType?: TextContentType;
+    /**
+     * Sets the keyboard type for this view.
+     */
+    keyboardType?: KeyboardType;
+    /**
+     * Adds an action to perform when the user submits a value to this view. If you specify a function as the action, the `triggers` defaults to `text`.
+     */
+    onSubmit?: (() => void) | {
+        /**
+         * The triggers that should invoke the provided action.
+         */
+        triggers: SubmitTriggers;
+        /**
+         * The action to perform on submission of a value.
+         */
+        action: () => void;
+    };
+    /**
+     * Prevents submission triggers originating from this view to invoke a submission action configured by a submission modifier higher up in the view hierarchy. A boolean that indicates whether this scope is actively blocking submission triggers from reaching higher submission actions.
+     */
+    submitScope?: boolean;
+    /**
+     * The label to use for the submit button.
+     */
+    submitLabel?: "continue" | "return" | "send" | "go" | "search" | "join" | "done" | "next" | "route";
+};
+
+type Font = "largeTitle" | "title" | "title2" | "title3" | "headline" | "subheadline" | "body" | "callout" | "footnote" | "caption" | "caption2";
+type FontWeight = "ultraLight" | "thin" | "light" | "regular" | "medium" | "semibold" | "bold" | "heavy" | "black";
+/**
+ * A width to use for fonts that have multiple widths.
+ */
+type FontWidth = "compressed" | "condensed" | "expanded" | "standard";
+type FontDesign = 'default' | 'monospaced' | 'rounded' | 'serif';
+type TextAlignment = 'leading' | 'center' | 'trailing';
+/**
+ * The type of truncation to apply to a line of text when it’s too long to fit in the available space.
+ *  - `head`: Truncate at the beginning of the line.
+ *  - `middle`: Truncate in the middle of the line.
+ *  - `tail`: Truncate at the end of the line.
+ */
+type TruncationMode = "head" | "middle" | "tail";
+
+type TextViewProps = {
+    /**
+     * When specify to number, will apply as system font with size. When specify to `Font`, will apply as specified system font. If you provide both `name` and `size`, will apply as custom font family and font size.
+     */
+    font?: Font | number | {
+        /**
+         * Custom font name.
+         */
+        name: string;
+        /**
+         * Custom font size.
+         */
+        size: number;
+    };
+    /**
+     * Sets the font width of the text in this view.
+     */
+    fontWidth?: FontWidth | number;
+    /**
+     * One of the available font weights. Providing null removes the effect of any font weight modifier applied higher in the view hierarchy.
+     */
+    fontWeight?: FontWeight;
+    /**
+     * One of the available font designs. Providing null removes the effect of any font design modifier applied higher in the view hierarchy.
+     */
+    fontDesign?: FontDesign;
+    /**
+     * A fraction between 0 and 1 (inclusive) you use to specify the minimum amount of text scaling that this view permits.
+     */
+    minScaleFactor?: number;
+    /**
+     * Applies a bold font weight to the text in this view.
+     */
+    bold?: boolean;
+    /**
+     * Sets the vertical offset for the text relative to its baseline in this view.
+     */
+    baselineOffset?: number;
+    /**
+     * Sets the spacing, or kerning, between characters for the text in this view.
+     */
+    kerning?: number;
+    /**
+     * Applies italics to the text in this view.
+     */
+    italic?: boolean;
+    /**
+     * Modifies the fonts of all child views to use the fixed-width variant of the current font, if possible.
+     */
+    monospaced?: boolean;
+    /**
+     * Modifies the fonts of all child views to use fixed-width digits, if possible, while leaving other characters proportionally spaced.
+     */
+    monospacedDigit?: boolean;
+    /**
+     * Applies a strikethrough with a specified color to the text.
+     */
+    strikethrough?: Color | {
+        pattern: LineStylePattern;
+        color: Color;
+    };
+    /**
+     * Applies a underline with a specified color to the text.
+     */
+    underline?: Color | {
+        pattern: LineStylePattern;
+        color: Color;
+    };
+    /**
+     * Sets the maximum number of lines that text can occupy in this view.
+     */
+    lineLimit?: number | {
+        min?: number;
+        max: number;
+        /**
+         * Whether text reserves space so that it always occupies the height required to display the specified number of lines.
+         */
+        reservesSpace?: boolean;
+    };
+    /**
+     * Sets the alignment of a text view that contains multiple lines of text.
+     */
+    multilineTextAlignment?: TextAlignment;
+    /**
+     * Sets the spacing between lines of text in this view.
+     */
+    lineSpacing?: number;
+    /**
+     * Sets the truncation mode for lines of text that are too long to fit in the available space.
+     */
+    truncationMode?: TruncationMode;
+    /**
+     * Sets whether text in this view can compress the space between characters when necessary to fit text in a line.
+     */
+    allowsTightening?: boolean;
+    /**
+     * Sets whether this view mirrors its contents horizontally when the layout direction is right-to-left.
+     */
+    flipsForRightToLeftLayoutDirection?: boolean;
+    /**
+     * Sets a transform for the case of the text contained in this view when displayed. The default is null.
+     */
+    textCase?: 'uppercase' | 'lowercase' | null;
+    /**
+     * Controls whether people can select text within this view.
+     */
+    textSelection?: boolean;
+};
+
+type ShapeViewProps = {
+    /**
+     * Sets the container shape to use for any container relative shape within this view.
+     */
+    containerShape?: Shape;
+    /**
+     * The resolved shape of the content to which this shape can apply.
+     *
+     * For example, if this shape applies an effect to a button, the `contentShape` might represent the bounding shape of that button’s background. You typically size a dynamic shape relative to the bounding rectangle of the `contentShape`.
+     */
+    contentShape?: Shape | {
+        kind: ContentShapeKinds;
+        shape: Shape | 'concentricRect' | ({
+            type: 'concentricRect';
+        } & ConcentricRectangleShape);
+    };
+    /**
+     * The clipping shape to use for this view. The shape fills the view’s frame, while maintaining its aspect ratio.
+     */
+    clipShape?: Shape | 'concentricRect' | ({
+        type: 'concentricRect';
+    } & ConcentricRectangleShape);
+    /**
+     * Clips this view to its bounding rectangular frame. If specify `null` or `undefined`, this modifier will be ignored. Specify a boolean value that indicates whether the rendering system applies smoothing to the edges of the clipping rectangle.
+     */
+    clipped?: boolean;
+};
+
+type ChartScrollPosition<T> = {
+    value: T;
+    onChanged: (newValue: T) => void;
+};
+/**
+ * Snap scroll deceleration to chart-data boundaries. Mirrors SwiftUI Charts'
+ * `chartScrollTargetBehavior(.valueAligned(unit:matching:majorAlignment:))`.
+ *
+ * The two stop-step forms are mutually exclusive — pick `unit` for numeric axes,
+ * `matching` for date axes. `majorAlignment` controls the secondary "page" snap point
+ * (e.g. snap by day, but page by month).
+ *
+ * @example
+ * ```ts
+ * // Numeric axis: snap every 1 unit, page-align in chunks
+ * chartScrollTargetBehavior={{ unit: 1, majorAlignment: 'page' }}
+ *
+ * // Date axis: snap by day, major-align by month
+ * chartScrollTargetBehavior={{
+ *   matching: new DateComponents({ day: 1 }),
+ *   majorAlignment: { matching: new DateComponents({ month: 1 }) },
+ * }}
+ * ```
+ */
+type ChartScrollTargetBehavior = {
+    /** Numeric stop step. Each scroll deceleration snaps to a multiple of `unit`. */
+    unit?: number;
+    /** Date stop step. Each scroll deceleration snaps to a date matching these components. */
+    matching?: DateComponents;
+    /**
+     * Major alignment, the secondary "page" snap point.
+     * - `'page'` snaps to viewport pages.
+     * - `'unit'` snaps to the same `unit` / `matching` step (i.e. no separate page).
+     * - `{ unit: number }` snaps pages every N numeric units.
+     * - `{ matching: DateComponents }` snaps pages on those calendar boundaries.
+     *
+     * Defaults to `'unit'` if omitted.
+     */
+    majorAlignment?: 'page' | 'unit' | {
+        unit: number;
+    } | {
+        matching: DateComponents;
+    };
+};
+/**
+ * Bridge view of SwiftUI Charts' `ChartProxy`. Use it inside `<ChartOverlay>{(proxy) => …}</ChartOverlay>`
+ * to convert between screen coordinates and chart data values for hit-testing, custom tooltips,
+ * or computed overlays.
+ *
+ * All methods are synchronous and return `null` when the type token does not match the chart's
+ * actual axis data type (no crash, silent fallback).
+ */
+interface ChartProxy {
+    /**
+     * Reverse-lookup a data value at a given screen point along an axis.
+     * Pass either `atX` or `atY` (relative to the chart's plot area), and a type token telling
+     * the bridge how to decode the underlying `Plottable` value.
+     */
+    value(args: {
+        atX?: number;
+        atY?: number;
+        as: 'string' | 'number' | 'date';
+    }): string | number | Date | null;
+    /**
+     * Forward-lookup the screen coordinate for a data value.
+     * Pass exactly one of `x` / `y` (the plottable value) and the bridge returns the matching
+     * coordinate within the plot area, or `null` when out of range.
+     */
+    position(args: {
+        x?: string | number | Date;
+        y?: string | number | Date;
+    }): {
+        x: number;
+        y: number;
+    } | null;
+    /**
+     * Size of the chart's plot area in points.
+     */
+    readonly plotAreaSize: {
+        width: number;
+        height: number;
+    };
+    /**
+     * Frame of the chart's plot area relative to the chart view's coordinate space.
+     * Resolved by the bridge through a `GeometryReader` so the closure receives a concrete
+     * rect rather than a SwiftUI `Anchor`.
+     */
+    readonly plotAreaFrame: {
+        x: number;
+        y: number;
+        width: number;
+        height: number;
+    };
+    /**
+     * Programmatically set the X-axis range selection from screen-space pixel coordinates.
+     * Pair with `chartXSelection({ valueType, from, to, onChanged })` to receive the bound
+     * data values through the binding. Typically called inside a `<ChartGesture>{(proxy) => …}`
+     * closure, e.g. `proxy.selectXRange({ from: v.startLocation.x, to: v.location.x })`.
+     *
+     * NOTE: `from` / `to` are **screen pixels** along the chart's coordinate space, not data values.
+     */
+    selectXRange(args: {
+        from: number;
+        to: number;
+    }): void;
+    /**
+     * Programmatically set the Y-axis range selection from screen-space pixel coordinates.
+     */
+    selectYRange(args: {
+        from: number;
+        to: number;
+    }): void;
+    /**
+     * Programmatically set the single X-axis selection from a screen-space pixel coordinate.
+     * Pair with `chartXSelection({ valueType, value, onChanged })`.
+     */
+    selectXValue(args: {
+        at: number;
+    }): void;
+    /**
+     * Programmatically set the single Y-axis selection from a screen-space pixel coordinate.
+     */
+    selectYValue(args: {
+        at: number;
+    }): void;
+    /**
+     * Programmatically set the angle selection (pie / donut charts) from an angle in radians.
+     * Pair with `chartAngleSelection`.
+     */
+    selectAngleValue(args: {
+        atRadians: number;
+    }): void;
+}
+type ChartStringSelection = {
+    valueType: 'string';
+} & ({
+    value: string | undefined | null;
+    onChanged: (newValue: string | undefined | null) => void;
+} | {
+    value: Observable<string | null>;
+});
+type ChartNumberSelection = {
+    valueType: 'number';
+} & ({
+    value: number | undefined | null;
+    onChanged: (newValue: number | undefined | null) => void;
+} | {
+    value: Observable<number | null>;
+});
+type ChartSelection = ChartStringSelection | ChartNumberSelection;
+/**
+ * Range selection on a chart axis. Provide a `string` / `number` / `date` type token plus a
+ * `from` and `to` initial bound, and the bridge wires the selection to SwiftUI Charts'
+ * `chartXSelection(range:)` / `chartYSelection(range:)`. The `onChanged` callback fires whenever
+ * the selection changes; it receives `null` when the selection is cleared.
+ *
+ * Mutually exclusive with the single-value form (`ChartSelection`).
+ *
+ * NOTE: SwiftUI Charts' **default range gestures** (two-finger tap on iOS, drag on macOS) only
+ * respond on **continuous axes** (number / date). On categorical String axes the binding itself
+ * is valid, but the default gesture won't fire — drive it manually with `<ChartGesture>` +
+ * `proxy.selectXRange(...)` instead.
+ */
+type ChartStringRangeSelection = {
+    valueType: 'string';
+} & ({
+    from: string | undefined | null;
+    to: string | undefined | null;
+    onChanged: (newValue: {
+        from: string;
+        to: string;
+    } | null) => void;
+} | {
+    value: Observable<{
+        from: string;
+        to: string;
+    } | null>;
+});
+type ChartNumberRangeSelection = {
+    valueType: 'number';
+} & ({
+    from: number | undefined | null;
+    to: number | undefined | null;
+    onChanged: (newValue: {
+        from: number;
+        to: number;
+    } | null) => void;
+} | {
+    value: Observable<{
+        from: number;
+        to: number;
+    } | null>;
+});
+type ChartDateRangeSelection = {
+    valueType: 'date';
+} & ({
+    from: Date | undefined | null;
+    to: Date | undefined | null;
+    onChanged: (newValue: {
+        from: Date;
+        to: Date;
+    } | null) => void;
+} | {
+    value: Observable<{
+        from: Date;
+        to: Date;
+    } | null>;
+});
+type ChartRangeSelection = ChartStringRangeSelection | ChartNumberRangeSelection | ChartDateRangeSelection;
+type ClosedRange<T> = {
+    from: T;
+    to: T;
+};
+/**
+ *  - `category`: A scale that has discrete domain values as inputs.
+ *  - `date`: A date scale where each range value y can be expressed as a function of the domain value x’s timestamp, with y = a * x.timeIntervalSinceReferenceDate + b.
+ *  - `linear`: A number scale where each range value y can be expressed as a linear function of the domain value x, with y = a * x + b.
+ *  - `log`: A number scale where each range value y can be expressed as a logarithmic function of the domain value x, with y = a * log(x) + b.
+ *  - `squareRoot`: A number scale where each range value y can be expressed as a square root function of the domain value x, with y = a * sqrt(x) + b. This is equivalent to a power scale with exponent 0.5.
+ *  - `symmetricLog`: A number scale where each range value y can be expressed as a symmetric log function of the domain value x, with y = a * sign(x) * log(1 + |x * slopeAtZero|) + b. The constant slopeAtZero defaults to 1.
+ */
+type ChartAxisScaleType = 'category' | 'date' | 'linear' | 'log' | 'squareRoot' | 'symmetricLog';
+/**
+ * The ways in which you can stack marks in a chart.
+ *  - `standard`: Stack marks starting at zero.
+ *  - `normal`: Create normalized stacked bar and area charts.
+ *  - `center`: Stack marks using a center offset.
+ *  - `unstacked`: Don’t stack marks.
+ */
+type ChartMarkStackingMethod = 'standard' | 'normalized' | 'center' | 'unstacked';
+type ChartInterpolationMethod = "cardinal" | "catmullRom" | "linear" | "monotone" | "stepCenter" | "stepEnd" | "stepStart";
+type ChartSymbolShape = "asterisk" | "circle" | "cross" | "diamond" | "pentagon" | "plus" | "square" | "triangle";
+/**
+ * The position of an annotation.
+ */
+type AnnotationPosition = "automatic" | "bottom" | "bottomLeading" | "bottomTrailing" | "leading" | "overlay" | "top" | "topLeading" | "topTrailing" | "trailing";
+type AnnotationOverflowResolution = {
+    /**
+     * The strategy to resolve X overflow.
+     */
+    x?: AnnotationOverflowResolutionStrategy;
+    /**
+     * The strategy to resolve Y overflow.
+     */
+    y?: AnnotationOverflowResolutionStrategy;
+};
+/**
+ *  - `fit`: Fits the annotation automatically, adjusting its position to ensure it doesn't overflow.
+ *  - `fitTo**`: Fits the annotation to the given boundary, adjusting its position to ensure it doesn't overflow.
+ *  - `padScale`: Pads the scale of the chart to make space for the annotation.
+ *  - `disabled`: Places the annotation "as-is".
+ *  - `automatic`: Automatically chooses a overflow resolution.
+ */
+type AnnotationOverflowResolutionStrategy = 'automatic' | 'fit' | 'fitToPlot' | 'fitToChart' | 'fitToAutomatic' | 'padScale' | 'disabled';
+/**
+ * The various components of a calendar date.
+ *
+ * Specifying Years and Months
+ *
+ *  - `era`: Identifier for the era unit.
+ *  - `year`: Identifier for the year unit.
+ *  - `yearForWeekOfYear`: Identifier for the week-counting year unit.
+ *  - `quarter`: Identifier for the quarter of the calendar.
+ *  - `month`: Identifier for the month unit.
+ *
+ * Specifying Weeks and Days
+ *
+ *  - `weekOfYear`: Identifier for the week of the year unit.
+ *  - `weekOfMonth`: Identifier for the week of the month calendar unit.
+ *  - `weekday`: Identifier for the weekday unit.
+ *  - `weekdayOrdinal`: Identifier for the weekday ordinal unit.
+ *  - `day`: Identifier for the day unit.
+ *
+ * Specifying Hours, Minutes, and Seconds
+ *
+ *  - `hour`: Identifier for the hour unit.
+ *  - `minute`: Identifier for the minute unit.
+ *  - `second`: Identifier for the second unit.
+ *  - `nanosecond`: Identifier for the nanosecond unit.
+ *
+ * Specifying Calendars and Time Zones
+ *
+ *  - `calendar`: Identifier for the calendar unit.
+ *  - `timeZone`: Identifier for the time zone unit.
+ */
+type CalendarComponent = "era" | "year" | "month" | "day" | "hour" | "minute" | "second" | "weekday" | "weekdayOrdinal" | "quarter" | "weekOfMonth" | "weekOfYear" | "yearForWeekOfYear" | "nanosecond" | "calendar" | "timeZone";
+/**
+ * Position of axis marks within the chart.
+ *  - `automatic`: System-chosen position.
+ *  - `leading` / `trailing`: For Y axis.
+ *  - `top` / `bottom`: For X axis.
+ */
+type AxisMarkPosition = 'automatic' | 'leading' | 'trailing' | 'top' | 'bottom';
+/**
+ * Visual presentation preset of axis marks.
+ *  - `automatic`: System-chosen preset.
+ *  - `aligned`: Axis aligns at the plot edge.
+ *  - `extended`: Axis extends past the plot edge.
+ *  - `inset`: Axis sits inside the plot region.
+ */
+type AxisMarkPreset = 'automatic' | 'aligned' | 'extended' | 'inset';
+/**
+ * Orientation of an axis value label.
+ */
+type AxisMarkOrientation = 'automatic' | 'horizontal' | 'vertical' | 'verticalReversed';
+/**
+ * Strategy used when axis value labels collide.
+ *  - `automatic`: System default (currently `greedy`).
+ *  - `greedy`: Hide later labels that overlap earlier ones.
+ *  - `truncate`: Truncate the label text.
+ *  - `disabled`: Allow overlap.
+ */
+type AxisValueLabelCollisionResolution = 'automatic' | 'greedy' | 'truncate' | 'disabled';
+/**
+ * Format token for an axis value label. Maps 1-1 to a SwiftUI format style on the bridge side.
+ *  - `number` → numeric default.
+ *  - `percent` → percent style.
+ *  - `currency` → currency (uses device locale).
+ *  - `date` / `time` / `dateTime` → date format styles.
+ */
+type AxisLabelFormat = 'number' | 'percent' | 'currency' | 'date' | 'time' | 'dateTime' | ChartAxisLabelFormat;
+/**
+ * Where the axis marks should be placed.
+ *  - `'automatic'`: Default automatic distribution.
+ *  - `{ type: 'automatic', desiredCount?, roundLowerBound?, roundUpperBound? }`: Automatic with hints.
+ *  - `{ type: 'stride', by, count? }`: Numeric stride for `Double` data.
+ *  - `{ type: 'strideDate', by, count? }`: Calendar-component stride for `Date` data.
+ *  - `{ type: 'values', values }`: Explicit list of values.
+ */
+type AxisMarkValues = 'automatic' | {
+    type: 'automatic';
+    desiredCount?: number;
+    roundLowerBound?: boolean;
+    roundUpperBound?: boolean;
+} | {
+    type: 'stride';
+    by: number;
+    count?: number;
+} | {
+    type: 'strideDate';
+    by: CalendarComponent;
+    count?: number;
+} | {
+    type: 'values';
+    values: number[] | string[] | Date[];
+};
+/**
+ * Configuration for an axis grid line. `true` means use the default grid line; `false` means hide it; an object enables fine-grained control.
+ */
+type AxisGridLineConfig = boolean | {
+    /**
+     * Centers the grid line on the data value.
+     */
+    centered?: boolean;
+    /**
+     * Stroke style of the grid line.
+     */
+    stroke?: StrokeStyle;
+};
+/**
+ * Configuration for an axis tick. `true` means use the default tick; `false` means hide it; an object enables fine-grained control.
+ */
+type AxisTickConfig = boolean | {
+    /**
+     * Centers the tick on the data value.
+     */
+    centered?: boolean;
+    /**
+     * Length of the tick line.
+     */
+    length?: number;
+    /**
+     * Stroke style of the tick line.
+     */
+    stroke?: StrokeStyle;
+};
+/**
+ * Configuration for axis value labels. Several forms are accepted:
+ *  - `false` → hide value labels.
+ *  - `true` → use defaults.
+ *  - `string` → use a literal string for every label (rarely useful, but supported).
+ *  - object → fine-grained control. Set `content` to a `VirtualNode` to render a custom view per tick (note: each tick re-renders).
+ */
+type AxisValueLabelConfig = boolean | string | {
+    /**
+     * Format token applied to the data value. Mutually exclusive with `content`.
+     */
+    format?: AxisLabelFormat;
+    /**
+     * Centers the label on the data value.
+     */
+    centered?: boolean;
+    /**
+     * Anchor used to align the label relative to its tick.
+     */
+    anchor?: 'topLeading' | 'top' | 'topTrailing' | 'leading' | 'center' | 'trailing' | 'bottomLeading' | 'bottom' | 'bottomTrailing';
+    /**
+     * Horizontal spacing between the label and its tick.
+     */
+    horizontalSpacing?: number;
+    /**
+     * Vertical spacing between the label and its tick.
+     */
+    verticalSpacing?: number;
+    /**
+     * Strategy when adjacent labels overlap.
+     */
+    collisionResolution?: AxisValueLabelCollisionResolution;
+    /**
+     * If `true`, the labels affect the layout offset of marks.
+     */
+    offsetsMarks?: boolean;
+    /**
+     * Orientation of the label text.
+     */
+    orientation?: AxisMarkOrientation;
+    /**
+     * Alignment of the label container, mirroring SwiftUI Charts' `AxisValueLabel(multiLabelAlignment:)`.
+     * Accepts the full 9-direction `Alignment` (e.g. `'leading' / 'center' / 'topTrailing'`).
+     */
+    multiLabelAlignment?: Alignment;
+    /**
+     * Custom content for the label. When set, `format` is ignored. Be aware: the content view is re-rendered for every tick.
+     */
+    content?: VirtualNode;
+};
+/**
+ * A declarative description of `chartXAxis(content:)` / `chartYAxis(content:)` content,
+ * mapped to SwiftUI Charts' `AxisMarks` + `AxisGridLine` + `AxisTick` + `AxisValueLabel` on the bridge side.
+ */
+type AxisMarksConfig = {
+    /**
+     * Where the axis sits relative to the plot region.
+     */
+    position?: AxisMarkPosition;
+    /**
+     * Visual presentation preset.
+     */
+    preset?: AxisMarkPreset;
+    /**
+     * Where to place axis marks. Defaults to `'automatic'` if omitted.
+     */
+    values?: AxisMarkValues;
+    /**
+     * Default stroke applied to grid line and tick when each of them does not specify its own stroke.
+     */
+    stroke?: StrokeStyle;
+    /**
+     * Grid line configuration. Defaults to `true` (use the default grid line) when omitted.
+     */
+    gridLine?: AxisGridLineConfig;
+    /**
+     * Tick configuration. Defaults to `true` (use the default tick) when omitted.
+     */
+    tick?: AxisTickConfig;
+    /**
+     * Value label configuration. Defaults to `true` when omitted.
+     */
+    valueLabel?: AxisValueLabelConfig;
+};
+
+type ChartViewProps = {
+    /**
+     * Configures the x axis. Pass a `Visibility` to toggle, or an `AxisMarksConfig` object to fully customize axis marks (grid lines, ticks, value labels, stride/values).
+     */
+    chartXAxis?: Visibility | AxisMarksConfig;
+    /**
+     * Configures the y axis. Pass a `Visibility` to toggle, or an `AxisMarksConfig` object to fully customize axis marks (grid lines, ticks, value labels, stride/values).
+     */
+    chartYAxis?: Visibility | AxisMarksConfig;
+    /**
+     * Adds x axis label for charts in the view.
+     */
+    chartXAxisLabel?: {
+        position?: AnnotationPosition;
+        alignment?: Alignment;
+        spacing?: number;
+        content: VirtualNode;
+    };
+    /**
+     * Adds y axis label for charts in the view.
+     */
+    chartYAxisLabel?: {
+        position?: AnnotationPosition;
+        alignment?: Alignment;
+        spacing?: number;
+        content: VirtualNode;
+    };
+    /**
+     * Configures the legend for charts.
+     */
+    chartLegend?: Visibility | {
+        position: AnnotationPosition;
+        alignment?: Alignment;
+        spacing?: number;
+        content?: VirtualNode;
+    };
+    /**
+     * Configures the x scale for charts.
+     */
+    chartXScale?: ClosedRange<number> | ClosedRange<Date> | string[] | ChartAxisScaleType | {
+        /**
+         * The possible data values along the x axis in the chart. You can define the domain with a ClosedRange for number or Date values (e.g., {from: 0, to: 500}), and with an array for string values (e.g., ["A", "B", "C"])
+         */
+        domain: ClosedRange<number> | ClosedRange<Date> | string[];
+        /**
+         * The scale type.
+         */
+        type: ChartAxisScaleType;
+    };
+    /**
+     * Configures the y scale for charts.
+     */
+    chartYScale?: ClosedRange<number> | ClosedRange<Date> | string[] | ChartAxisScaleType | {
+        /**
+         * The possible data values along the y axis in the chart. You can define the domain with a ClosedRange for number or Date values (e.g., {from: 0, to: 500}), and with an array for string values (e.g., ["A", "B", "C"])
+         */
+        domain: ClosedRange<number> | ClosedRange<Date> | string[];
+        /**
+         * The scale type.
+         */
+        type: ChartAxisScaleType;
+    };
+    /**
+     * Adds a background to a view that contains a chart.
+     */
+    chartBackground?: VirtualNode | {
+        /**
+         * The alignment of the content.
+         */
+        alignment: Alignment;
+        /**
+         * The content of the background.
+         */
+        content: VirtualNode;
+    };
+    /**
+     * For many charts, the default configuration works well. However, in this case, the colors that the framework assigns to each mark don’t match the shape colors that they represent.
+     * You can customize the chart to override the default color scale by adding this property.
+     */
+    chartForegroundStyleScale?: Record<string, ShapeStyle | DynamicShapeStyle>;
+    /**
+     * Configures the symbol style scale for charts.
+     */
+    chartSymbolScale?: Record<string, ChartSymbolShape>;
+    /**
+     * Configures the symbol size scale for charts.
+     */
+    chartSymbolSizeScale?: Record<string, number>;
+    /**
+     * Configures the line style scale for charts.
+     */
+    chartLineStyleScale?: Record<string, StrokeStyle>;
+    /**
+     * The set of chart axes to enable scrolling.
+     */
+    chartScrollableAxes?: AxisSet;
+    /**
+     * X-axis selection. Pass a `ChartSelection` for single-value selection (tap / press) or a
+     * `ChartRangeSelection` for range selection (drag-select). The two forms are mutually exclusive
+     * — the bridge dispatches based on the presence of `from` / `to`.
+     */
+    chartXSelection?: ChartSelection | ChartRangeSelection;
+    /**
+     * Y-axis selection. See `chartXSelection`.
+     */
+    chartYSelection?: ChartSelection | ChartRangeSelection;
+    chartAngleSelection?: ChartSelection;
+    /**
+     * The length of the visible domain measured in data units. For categorical data, this should be the number of visible categories.
+     *
+     * When the `label` type of the chart marks is `Date`, this number should be fixed with your `unit`! See [Swift Charts' chartXVisibleDomain hangs or crashes](https://stackoverflow.com/questions/77236097/swift-charts-chartxvisibledomain-hangs-or-crashes)
+     */
+    chartXVisibleDomain?: number;
+    /**
+     * The length of the visible domain measured in data units. For categorical data, this should be the number of visible categories.
+     *
+     * When the `label` type of the chart marks is `Date`, this number should be fixed with your `unit`! See [Swift Charts' chartXVisibleDomain hangs or crashes](https://stackoverflow.com/questions/77236097/swift-charts-chartxvisibledomain-hangs-or-crashes)
+     */
+    chartYVisibleDomain?: number;
+    /**
+     * Sets the initial scroll position along the x-axis if you provide a `string`, `number` or `Date` value. Once the user scrolls the scroll view, the value provided to this modifier will have no effect. Specify an object with `value` and `onChange` will associate a binding to be updated when the chart scrolls along the x-axis.
+     */
+    chartScrollPositionX?: number | string | Date | ChartScrollPosition<string> | ChartScrollPosition<number> | ChartScrollPosition<Date> | Observable<number> | Observable<string> | Observable<Date>;
+    /**
+     * Sets the initial scroll position along the y-axis if you provide a `string`, `number` or `Date` value. Once the user scrolls the scroll view, the value provided to this modifier will have no effect. Specify an object with `value` and `onChange` will associate a binding to be updated when the chart scrolls along the y-axis.
+     */
+    chartScrollPositionY?: number | string | Date | ChartScrollPosition<string> | ChartScrollPosition<number> | ChartScrollPosition<Date> | Observable<number> | Observable<string> | Observable<Date>;
+    /**
+     * Snap scroll deceleration to chart-data boundaries. Mirrors SwiftUI Charts'
+     * `chartScrollTargetBehavior(.valueAligned(...))`. Pair with `chartScrollableAxes`
+     * (otherwise no scrolling, no snapping). Only the `valueAligned` behavior is bridged
+     * — pick `unit` for numeric axes and `matching` for date axes.
+     */
+    chartScrollTargetBehavior?: ChartScrollTargetBehavior;
+};
+
+/**
+ * A kind of toolbar item a View adds by default.
+ *  - `sidebarToggle`: The sidebar toggle toolbar item a NavigationSplitView adds by default.
+ *  - `search`: The search item added by a `searchable` modifier.
+ *  - `title`: The title and subtitle shown in title bar / navigation bar.
+ */
+type ToolbarDefaultItemKind = "sidebarToggle" | "search" | "title";
+type DefaultToolbarItemProps = {
+    kind: ToolbarDefaultItemKind;
+    /**
+     * Defaults to `automatic`.
+     */
+    placement?: ToolbarItemPlacement;
+    /**
+     * Controls the visibility of the glass background effect on items in the toolbar. In certain contexts, such as the navigation bar on iOS and the window toolbar on macOS, toolbar items will be given a glass background effect that is shared with other items in the same logical grouping.
+     */
+    sharedBackgroundVisibility?: Visibility;
+};
+declare const DefaultToolbarItem: FunctionComponent<DefaultToolbarItemProps>;
+
+/**
+ * A type that defines the placement of a toolbar item.
+ *  - `automatic`: The system places the item automatically, depending on many factors including the platform, size class, or presence of other items.
+ *  - `bottomBar`: Places the item in the bottom toolbar.
+ *  - `cancellationAction`: The item represents a cancellation action for a modal interface.
+ *  - `confirmationAction`: The item represents a confirmation action for a modal interface.
+ *  - `destructiveAction`: The item represents a destructive action for a modal interface.
+ *  - `keyboard`: The item is placed in the keyboard section.
+ *  - `navigation`: The item represents a navigation action.
+ *  - `primaryAction`: The item represents a primary action.
+ *  - `principal`: The system places the item in the principal item section.
+ *  - `secondaryAction`: The item represents a secondary action.
+ *  - `status`: The item represents a change in status for the current context.
+ *  - `topBarLeading`: Places the item in the leading edge of the top bar.
+ *  - `topBarTrailing`: Places the item in the trailing edge of the top bar.
+ */
+/**
+ * The placement of the toolbar item.
+ */
+type ToolbarItemPlacement = 'automatic' | 'bottomBar' | 'cancellationAction' | 'confirmationAction' | 'destructiveAction' | 'keyboard' | 'navigation' | 'primaryAction' | 'principal' | 'topBarLeading' | 'topBarTrailing' | 'secondaryAction' | 'status' | 'largeSubtitle' | 'largeTitle' | 'subtitle' | 'title';
+/**
+ *  - `automatic`: The system places the item automatically, depending on many factors including the platform, size class, or presence of other items.
+ *  - `bottomBar`: Places the item in the bottom toolbar.
+ *  - `cancellationAction`: The item represents a cancellation action for a modal interface.
+ *  - `confirmationAction`: The item represents a confirmation action for a modal interface.
+ *  - `destructiveAction`: The item represents a destructive action for a modal interface.
+ *  - `keyboard`: The item is placed in the keyboard section.
+ *  - `navigation`: The item represents a navigation action.
+ *  - `primaryAction`: The item represents a primary action.
+ *  - `principal`: The system places the item in the principal item section.
+ *  - `topBarLeading`: Places the item in the leading edge of the top bar.
+ *  - `topBarTrailing`: Places the item in the trailing edge of the top bar.
+ */
+type ToolBarProps = {
+    bottomBar?: VirtualNode | VirtualNode[];
+    cancellationAction?: VirtualNode | VirtualNode[];
+    confirmationAction?: VirtualNode | VirtualNode[];
+    destructiveAction?: VirtualNode | VirtualNode[];
+    keyboard?: VirtualNode | VirtualNode[];
+    navigation?: VirtualNode | VirtualNode[];
+    primaryAction?: VirtualNode | VirtualNode[];
+    principal?: VirtualNode | VirtualNode[];
+    topBarLeading?: VirtualNode | VirtualNode[];
+    topBarTrailing?: VirtualNode | VirtualNode[];
+};
+/**
+ * A type that defines the behavior of title of a toolbar.
+ */
+type ToolbarTitleDisplayMode = 'automatic' | 'inline' | 'inlineLarge' | 'large';
+type ToolbarPlacement = "automatic" | "tabBar" | "bottomBar" | "navigationBar";
+/**
+ * Defines the implementation of all IndexView instances within a view hierarchy.
+ */
+type IndexViewStyle = 'page' | 'pageBackgroundAutomaticDisplay' | 'pageBackgroundAlwaysDisplay' | 'pageBackgroundNeverDisplay' | 'pageBackgroundInteractiveDisplay';
+type AdaptableTabBarPlacement = 'automatic' | 'tabBar' | 'sidebar';
+type TabPlacement = 'automatic' | 'pinned' | 'sidebarOnly';
+type TabCustomizationBehavior = 'automatic' | 'disabled' | 'reorderable';
+
+type ToolbarsProps = {
+    /**
+     * Controls the visibility of bottom bar.
+     */
+    bottomBarVisibility?: Visibility;
+    /**
+     * Controls the visibility of navigation bar.
+     */
+    navigationBarVisibility?: Visibility;
+    /**
+     * Controls the visibility of tab bar.
+     */
+    tabBarVisibility?: Visibility;
+    /**
+     * Populates the toolbar or navigation bar with the specified items.
+     * @example
+     * ```tsx
+     * <List
+     *   toolbar={<Toolbar>
+     *     <ToolbarItem
+     *       placement="topBarLeading"
+     *     >
+     *       <Button
+     *         title="Close"
+     *         action={dismiss}
+     *       />
+     *     </ToolbarItem>
+     *   </Toolbar>}
+     * >
+     *  ...
+     * </List>
+     * ```
+     */
+    toolbar?: ToolBarProps | VirtualNode;
+    /**
+     * This will construct a menu that can be presented by tapping the navigation title in the app’s navigation bar.
+     */
+    toolbarTitleMenu?: VirtualNode;
+    /**
+     * Specifies the preferred shape style of the background of the tabbar
+     */
+    toolbarBackground?: ShapeStyle | DynamicShapeStyle | {
+        style: ShapeStyle | DynamicShapeStyle;
+        bars?: ToolbarPlacement[];
+    };
+    /**
+     * (iOS 18.0+) Specifies the preferred visibility of backgrounds on a bar.
+     */
+    toolbarBackgroundVisibility?: Visibility | {
+        /**
+         * The preferred visibility of the background of the bar.
+         */
+        visibility: Visibility;
+        /**
+         * The bars to update the color scheme of or automatic if empty.
+         */
+        bars?: ToolbarPlacement[];
+    };
+    /**
+     * Specifies the preferred color scheme of a bar.
+     */
+    toolbarColorScheme?: ColorScheme | {
+        /**
+         * The preferred color scheme of the background of the bar.
+         */
+        colorScheme: ColorScheme | null;
+        /**
+         * The bars to update the color scheme of or automatic if empty.
+         */
+        bars?: ToolbarPlacement[];
+    };
+    /**
+     * Configures the toolbar title display mode for this view.
+     */
+    toolbarTitleDisplayMode?: ToolbarTitleDisplayMode;
+    /**
+     * Remove the specified toolbar items present by default.
+     */
+    toolbarRemoving?: {
+        [K in ToolbarDefaultItemKind]?: boolean;
+    };
+    /**
+     * Configures the semantic role for the content populating the toolbar.
+     */
+    toolbarRole?: 'automatic' | 'browser' | 'editor' | 'navigationStack';
+    /**
+     * Sets the behavior for tab bar minimization.
+     * @available iOS 26.0+
+     */
+    tabBarMinimizeBehavior?: 'automatic' | 'never' | 'onScrollDown' | 'onScrollUp';
+    /**
+     * Places a view as the bottom accessory of the tab view.
+     * @available iOS 26.0+
+     */
+    tabViewBottomAccessory?: VirtualNode;
+    /**
+     * Configures the activation and deactivation behavior of search in the search tab.
+     * @available iOS 26.0+
+     */
+    tabViewSearchActivation?: 'automatic' | 'searchTabSelection';
+    /**
+     * Specifies the customizations to apply to the sidebar representation of the tab view.
+     * @available iOS 18.0+
+     */
+    tabViewCustomization?: Observable<TabViewCustomization>;
+    /**
+     * Places a view as the header of the sidebar tab view.
+     * @available iOS 18.0+
+     */
+    tabViewSidebarHeader?: VirtualNode;
+    /**
+     * Places a view as the footer of the sidebar tab view.
+     * @available iOS 18.0+
+     */
+    tabViewSidebarFooter?: VirtualNode;
+    /**
+     * Places a view as the bottom bar of the sidebar tab view.
+     * @available iOS 18.0+
+     */
+    tabViewSidebarBottomBar?: VirtualNode;
+    /**
+     * Sets the style for the index view within the current environment.
+     */
+    indexViewStyle?: IndexViewStyle;
+};
+
+/**
+ * The visibility of scroll indicators of a UI element.
+ *  - `automatic`: Scroll indicator visibility depends on the policies of the component accepting the visibility configuration.
+ *  - `visible`: The actual visibility of the indicators depends on platform conventions like auto-hiding behaviors in iOS or user preference behaviors in macOS.
+ *  - `hidden`: By default, scroll views in macOS show indicators when a mouse is connected. Use `never` to indicate a stronger preference that can override this behavior.
+ *  - `never`: Scroll indicators should never be visible.
+ */
+type ScrollScrollIndicatorVisibility = "automatic" | "visible" | "hidden" | "never";
+/**
+ * The ways that scrollable content can interact with the software keyboard.
+ *  - `automatic`: Determine the mode automatically based on the surrounding context.
+ *  - `immediately`: Dismiss the keyboard as soon as scrolling starts.
+ *  - `interactively`: Enable people to interactively dismiss the keyboard as part of the scroll operation.
+ *  - `never`: Never dismiss the keyboard automatically as a result of scrolling.
+ */
+type ScrollDismissesKeyboardMode = "automatic" | "immediately" | "interactively" | "never";
+/**
+ * A type that defines the scroll behavior of a scrollable view.
+ *  - `paging`: The scroll behavior that aligns scroll targets to container-based geometry.
+ *  - `viewAligned`: The scroll behavior that aligns scroll targets to view-based geometry.
+ *  - `viewAlignedLimitAutomatic`: By default, the behavior will be limited in compact horizontal size classes and will not be limited otherwise.
+ *  - `viewAlignedLimitAlways`: Always limit the amount of views that can be scrolled.
+ *  - `viewAlignedLimitNever`: Never limit the amount of views that can be scrolled.
+ *  - `viewAlignedLimitAlwaysByFew`: (iOS 18.0+) Limit the number of views that can be scrolled by a single interaction to a small number of views, rather than a single view at a time. The number of views is determined automatically.
+ *  - `viewAlignedLimitAlwaysByOne`: (iOS 18.0+) Limit the number of views that can be scrolled by a single interaction to a single view.
+ */
+type ScrollTargetBehavior = "paging" | "viewAligned" | "viewAlignedLimitAutomatic" | "viewAlignedLimitAlways" | "viewAlignedLimitNever" | "viewAlignedLimitAlwaysByFew" | "viewAlignedLimitAlwaysByOne";
+/**
+ * A set of view types that may be pinned to the bounds of a scroll view.
+ */
+type PinnedScrollViews = 'sectionHeaders' | 'sectionFooters' | 'sectionHeadersAndFooters';
+/**
+ * The placement of margins.
+ */
+type ContentMarginPlacement = "automatic" | "scrollContent" | "scrollIndicators";
+
+/**
+ * - `hard`: A scroll edge effect with a hard cutoff and dividing line.
+ * - `soft`: A scroll edge effect with a soft edge.
+ */
+type ScrollEdgeEffectStyle = "automatic" | "hard" | "soft";
+type ScrollProps = {
+    /**
+     * Marks this view as refreshable. An asynchronous handler that framework executes when the user requests a refresh. Use this handler to initiate an update of model data displayed in the modified view. Use await in front of any asynchronous calls inside the handler.
+     */
+    refreshable?: () => Promise<void>;
+    /**
+     * Use this modifier to hide or show scroll indicators on scrollable content in views like a `ScrollView` or `List`. This modifier applies the prefered visibility to any scrollable content within a view hierarchy.
+     */
+    scrollIndicator?: ScrollScrollIndicatorVisibility | {
+        /**
+         * The visibility to apply to scrollable views.
+         */
+        visibility: ScrollScrollIndicatorVisibility;
+        /**
+         * The axes of scrollable views that the visibility applies to.
+         */
+        axes: AxisSet;
+    };
+    /**
+     * Disables or enables scrolling in scrollable views.
+     */
+    scrollDisabled?: boolean;
+    /**
+     * Sets whether a scroll view clips its content to its bounds.
+     */
+    scrollClipDisabled?: boolean;
+    /**
+     * Configures the behavior in which scrollable content interacts with the software keyboard.
+     */
+    scrollDismissesKeyboard?: ScrollDismissesKeyboardMode;
+    /**
+     * Use this modifier to specify an anchor to control both which part of the scroll view’s content should be visible initially and how the scroll view handles content size changes.
+     */
+    defaultScrollAnchor?: KeywordPoint | Point;
+    /**
+     * Apply this modifier to layout containers like `LazyHStack` or `VStack` within a `ScrollView` that contain the main repeating content of your `ScrollView`.
+     */
+    scrollTargetLayout?: boolean;
+    /**
+     * Sets the scroll behavior of views scrollable in the provided axes.
+     */
+    scrollTargetBehavior?: ScrollTargetBehavior;
+    /**
+     * Two-way binds the leading visible item's id to a state. Mirrors SwiftUI's
+     * `.scrollPosition(id:anchor:)`. Requires the scroll content to mark items with
+     * `.id` and the container with `scrollTargetLayout`.
+     *
+     * Forms:
+     * - `Observable<string | number>` — direct binding, `anchor` defaults to leading.
+     * - `{ value, onChanged, anchor? }` — explicit value/callback pair.
+     * - `{ value: Observable<...>, anchor? }` — observable + custom anchor.
+     *
+     * @example
+     * ```tsx
+     * const visibleId = useObservable<string | null>(null)
+     * <ScrollView scrollPosition={visibleId} scrollTargetLayout>
+     *   {ids.map(id => <Item id={id} key={id} />)}
+     * </ScrollView>
+     * ```
+     */
+    scrollPosition?: Observable<string> | Observable<number> | Observable<string | null> | Observable<number | null> | {
+        value: Observable<string> | Observable<number> | Observable<string | null> | Observable<number | null>;
+        anchor?: KeywordPoint | Point;
+    } | {
+        value: string | number | null;
+        onChanged: (newValue: string | number | null) => void;
+        anchor?: KeywordPoint | Point;
+    };
+    /**
+     * Triggers a callback when the set of scroll targets that meet the visibility
+     * threshold changes. Mirrors SwiftUI's `.onScrollTargetVisibilityChange(idType:threshold:_:)`.
+     * Requires iOS 18+. Children must be marked with `key=` (mapped to SwiftUI `.id()`)
+     * and the layout container must enable `scrollTargetLayout`.
+     *
+     * @available iOS 18.0+
+     *
+     * @example
+     * ```tsx
+     * <ScrollView
+     *   onScrollTargetVisibilityChange={{
+     *     idType: "string",
+     *     threshold: 0.5,
+     *     onChanged: (ids) => console.log("visible:", ids),
+     *   }}
+     * >
+     *   <LazyVStack scrollTargetLayout>
+     *     {items.map(it => <Row key={it.id} />)}
+     *   </LazyVStack>
+     * </ScrollView>
+     * ```
+     */
+    onScrollTargetVisibilityChange?: {
+        /** Discriminator for the underlying `key` type. JS `key={...}` of strings → "string"; of numbers → "number". */
+        idType: "string" | "number";
+        /** Fraction of the view's bounds that must be visible to count as "visible". 0.0 to 1.0, default 0.5. */
+        threshold?: number;
+        /** Called with the array of currently-visible ids whenever the visibility set changes. */
+        onChanged: (ids: string[] | number[]) => void;
+    };
+    /**
+     * Specifies the visibility of the background for scrollable views within this view.
+     */
+    scrollContentBackground?: Visibility;
+    /**
+     * Configures the scroll edge effect style for scroll views within this hierarchy.
+     * @available iOS 26.0+
+     */
+    scrollEdgeEffectStyle?: EdgeSet | ScrollEdgeEffectStyle | {
+        style: ScrollEdgeEffectStyle;
+        edges: EdgeSet;
+    };
+    /**
+     * Hides any scroll edge effects for scroll views within this hierarchy.
+     * @available iOS 26.0+
+     */
+    scrollEdgeEffectHidden?: boolean | EdgeSet | {
+        edges: EdgeSet;
+        hidden: boolean;
+    };
+};
+
+type SafeAreaProps = {
+    /**
+     * Adds the provided insets into the safe area of this view. Use this modifier when you would like to add a fixed amount of space to the safe area a view sees.
+     * When specify to true, will apply the default padding.
+     */
+    safeAreaPadding?: true | number | {
+        horizontal?: number | true;
+        vertical?: number | true;
+        leading?: number | true;
+        trailing?: number | true;
+        top?: number | true;
+        bottom?: number | true;
+    };
+    /**
+     * Shows the specified content beside the modified view.
+     */
+    safeAreaInset?: {
+        top?: {
+            /**
+             * The alignment guide used to position content horizontally.
+             */
+            alignment?: HorizontalAlignment;
+            /**
+             * Extra distance placed between the two views, or nil to use the default amount of spacing.
+             */
+            spacing?: number;
+            /**
+             * The view to display in the inset space of the modified view.
+             */
+            content: VirtualNode;
+        };
+        bottom?: {
+            /**
+             * The alignment guide used to position content horizontally.
+             */
+            alignment?: HorizontalAlignment;
+            /**
+             * Extra distance placed between the two views, or nil to use the default amount of spacing.
+             */
+            spacing?: number;
+            /**
+             * The view to display in the inset space of the modified view.
+             */
+            content: VirtualNode;
+        };
+        leading?: {
+            /**
+             * The alignment guide used to position content vertically.
+             */
+            alignment?: VerticalAlignment;
+            /**
+             * Extra distance placed between the two views, or nil to use the default amount of spacing.
+             */
+            spacing?: number;
+            /**
+             * The view to display in the inset space of the modified view.
+             */
+            content: VirtualNode;
+        };
+        trailing?: {
+            /**
+             * The alignment guide used to position content vertically.
+             */
+            alignment?: VerticalAlignment;
+            /**
+             * Extra distance placed between the two views, or nil to use the default amount of spacing.
+             */
+            spacing?: number;
+            /**
+             * The view to display in the inset space of the modified view.
+             */
+            content: VirtualNode;
+        };
+    };
+    /**
+     * Expands the safe area of a view.
+     */
+    ignoresSafeArea?: boolean | {
+        /**
+         * The regions to expand the view’s safe area into. The modifier expands into all safe area region types by default.
+         */
+        regions?: SafeAreaRegions;
+        /**
+         * The set of edges to expand. Any edges that you don’t include in this set remain unchanged. The set includes all edges by default.
+         */
+        edges?: EdgeSet;
+    };
+    /**
+     * Shows the specified content as a custom bar beside the modified view.
+     * @available iOS 26.0+
+     */
+    safeAreaBar?: {
+        edge: HorizontalEdge;
+        alignment?: VerticalAlignment;
+        spacing?: number | null;
+        content: VirtualNode;
+    } | {
+        edge: VerticalEdge;
+        alignment?: HorizontalAlignment;
+        spacing?: number | null;
+        content: VirtualNode;
+    };
+};
+
+type WidgetProps = {
+    /**
+     * The URL to open in the containing app when the user clicks the widget. Widgets support one `widgetURL` modifier in their view hierarchy. If multiple views have widgetURL modifiers, the behavior is undefined. If you want to add URL for multiple views, use `Link` view to wrap them.
+     */
+    widgetURL?: string;
+    /**
+     * Adds the view and all of its subviews to the accented group.
+     *
+     * When the system renders the widget using the WidgetKit/WidgetRenderingMode/accented mode, it divides the widget’s view hierarchy into two groups: the accented group and the default group. It then applies a different color to each group.
+     *
+     * When applying the colors, the system treats the widget’s views as if they were template images. It ignores the view’s color — rendering the new colors based on the view’s alpha channel.
+     *
+     * To control your view’s appearance, add the `widgetAccentable` modifier to part of your view’s hierarchy. If the accentable parameter is true, the system adds that view and all of its subviews to the accent group. It puts all other views in the default group.
+     *
+     * @example
+     * ```tsx
+     * <VStack>
+     *   <Text
+     *     widgetAccentable
+     *     font="caption"
+     *   >MON</Text>
+     *   <Text
+     *     font="title"
+     *   >6</Text>
+     * </VStack>
+     * ```
+     */
+    widgetAccentable?: boolean;
+    /**
+     * This view modifier is used in widgets to set the background of views. When a widget is rendered in `accented` mode, the system displays all colors as white (or as the tinted color if `widgetAccentable` is applied to the view). By using this modifier, the background will be hidden in `accented` mode but will appear normally in all other modes.
+     */
+    widgetBackground?: ShapeStyle | DynamicShapeStyle | {
+        style: ShapeStyle | DynamicShapeStyle;
+        shape: Shape | 'concentricRect' | ({
+            type: 'concentricRect';
+        } & ConcentricRectangleShape);
+    };
+};
+
+/**
+ * The SwingAnimation type defines the configuration for animating a view in a swinging motion along the X and Y axes.
+ */
+type SwingAnimation = {
+    /**
+     * The animation duration, in seconds.
+     */
+    duration: DurationInSeconds;
+    /**
+     * The distance the view swings along the given axis.
+     */
+    distance: number;
+};
+type ClockHandRotationEffectPeriod = DurationInSeconds | "hourHand" | "minuteHand" | "secondHand";
+
+type ExtensionProps = {
+    /**
+     * Defines the animation configuration for swinging the view along the X and/or Y axis. Each axis can have its own animation settings:
+     *
+     *  - x: The animation configuration for the horizontal axis.
+     *  - y: The animation configuration for the vertical axis.
+     *
+     * @example
+     * ```tsx
+     * <Circle
+     *   fill="systemRed"
+     *   frame={{width: 50, height: 50}}
+     *   swingAnimation={{
+     *     x: {
+     *       duration: 4,
+     *       distance: 250
+     *     },
+     *     y: {
+     *       duration: 2,
+     *       distance: 50
+     *     }
+     *   }}
+     * />
+     * ```
+     */
+    swingAnimation?: {
+        /**
+         * The horizontal axis animation.
+         */
+        x?: SwingAnimation;
+        /**
+         * The vertical axis animation.
+         */
+        y?: SwingAnimation;
+    };
+    /**
+     * Defines the rotation effect for simulating a clock hand. You can specify the anchor point (optional) and the period (e.g., "hourHand", "minuteHand", "secondHand"), or provide a custom duration for the rotation.
+     */
+    clockHandRotationEffect?: ClockHandRotationEffectPeriod | {
+        anchor: KeywordPoint | Point;
+        period: ClockHandRotationEffectPeriod;
+    };
+    /**
+     * Provides a host for translation service. This should be applied to the root view of your current page.
+     *
+     * Why use a translation host?
+     *
+     * - If the source or target language aren’t installed, the framework asks the person for permission to download the languages.
+     * - If the source parameter is null and the framework can’t detect the source language from the content, the framework prompts the person to choose the source language.
+     *
+     * @example
+     * ```tsx
+     * function View() {
+     *   const translation = useMemo(() => new Translation(), [])
+     *   const [translated, setTranslated] = useState<{[key: string]: string}>({})
+     *   const texts = ["Hello", "Goodbye"]
+     *
+     *   useEffect(() => {
+     *     translation.translateBatch({
+     *       texts,
+     *       target: "fr",
+     *       source: "en"
+     *     }).then(result => {
+     *       const map: {[key: string]: string} = {}
+     *       result.forEach((item, index) => {
+     *         map[texts[index]] = item
+     *       })
+     *       setTranslated(map)
+     *     })
+     *   }, [])
+     *
+     *
+     *   return <VStack
+     *     translationHost={translation}
+     *   >
+     *    {texts.map(text => (
+     *       <Text key={text}>
+     *         {translated[text] || text}
+     *       </Text>
+     *     ))}
+     *   </VStack>
+     * }
+     * ```
+     */
+    translationHost?: Translation;
+};
+
+type ViewAppearProps = {
+    /**
+     * The exact moment that framework calls this method depends on the specific view type that you apply it to, but the action closure completes before the first rendered frame appears.
+     */
+    onAppear?: () => void;
+    /**
+     * The exact moment that framework calls this method depends on the specific view type that you apply it to, but the action closure doesn’t execute until the view disappears from the interface.
+     */
+    onDisappear?: () => void;
+};
+
+type GridViewProps = {
+    /**
+     * Tells a view that acts as a cell in a grid to span the specified number of columns.
+     */
+    gridCellColumns?: number;
+    /**
+     * Specifies a custom alignment anchor for a view that acts as a grid cell.
+     */
+    gridCellAnchor?: KeywordPoint | Point;
+    /**
+     * Asks grid layouts not to offer the view extra size in the specified axes.
+     */
+    gridCellUnsizedAxes?: AxisSet;
+    /**
+     * Overrides the default horizontal alignment of the grid column that the view appears in.
+     */
+    gridColumnAlignment?: HorizontalAlignment;
+};
+
+/**
+ * A type that represents a height where a sheet naturally rests.
+ *  - `large`: The system detent for a sheet at full height.
+ *  - `medium`: The system detent for a sheet that’s approximately half the height of the screen, and is inactive in compact height.
+ *  - When the value `0 < number <= 1`, it indicates a custom detent with the specified fractional height.
+ *  - When the value `number > 1`, it indicates a custom detent with the specified height.
+ */
+type PresentationDetent = "large" | "medium" | number;
+/**
+ * Strategies for adapting a presentation to a different size class.
+ *  - `automatic`: Use the default presentation adaptation.
+ *  - `fullScreenCover`: Prefer a full-screen-cover appearance when adapting for size classes.
+ *  - `none`: Don’t adapt for the size class, if possible.
+ *  - `popover`: Prefer a popover appearance when adapting for size classes.
+ *  - `sheet`: Prefer a sheet appearance when adapting for size classes.
+ */
+type PresentationAdaptation = "automatic" | "fullScreenCover" | "none" | "popover" | "sheet";
+/**
+ * The kinds of interaction available to views behind a presentation.
+ *  - `automatic`: The default background interaction for the presentation.
+ *  - `disabled`: People can’t interact with the view behind a presentation.
+ *  - `enabled`: People can interact with the view behind a presentation.
+ *  - `enabledUpThrough`: People can interact with the view behind a presentation up through a specified detent.
+ */
+type PresentationBackgroundInteraction = "automatic" | "disabled" | "enabled" | {
+    enabledUpThrough: PresentationDetent;
+};
+/**
+ * A behavior that you can use to influence how a presentation responds to swipe gestures.
+ *  - `automatic`: The default swipe behavior for the presentation.
+ *  - `resizes`: A behavior that prioritizes resizing a presentation when swiping, rather than scrolling the content of the presentation.
+ *  - `scrolls`: A behavior that prioritizes scrolling the content of a presentation when swiping, rather than resizing the presentation.
+ */
+type PresentationContentInteraction = "automatic" | "resizes" | "scrolls";
+type ModalPresentation = {
+    /**
+     * The modal content.
+     */
+    content: VirtualNode;
+} & ({
+    /**
+     * A boolean value that determines whether to present the modal content.
+     */
+    isPresented: boolean;
+    /**
+     * The `isPresented` changed callback.
+     */
+    onChanged: (isPresented: boolean) => void;
+} | {
+    isPresented: Observable<boolean>;
+    onChanged?: never;
+});
+type PopoverPresentation = ModalPresentation & {
+    /**
+     * The edge of the attachmentAnchor that defines the location of the popover’s arrow. The default is `top`.
+     */
+    arrowEdge?: Edge;
+    /**
+     * If you want to display the content as popover presentation, you must use this property.
+     */
+    presentationCompactAdaptation?: PresentationAdaptation | {
+        /**
+         * The adaptation to use in a horizontally compact size class.
+         */
+        horizontal: PresentationAdaptation;
+        /**
+         * The adaptation to use in a vertically compact size class. In a size class that is both horizontally and vertically compact, system uses the verticalAdaptation value.
+         */
+        vertical: PresentationAdaptation;
+    };
+};
+
+type ModalPresentationViewProps = {
+    /**
+     * A Boolean value that indicates whether to prevent nonprogrammatic dismissal of the containing view hierarchy when presented in a sheet or popover.
+     */
+    interactiveDismissDisabled?: boolean;
+    /**
+     * Presents a popover when the `isPresented` condition is true. Register multiple modals by specify an array of `ModalPresentation`.
+     */
+    popover?: PopoverPresentation | PopoverPresentation[];
+    /**
+     * Presents a sheet when the `isPresented` that you provide is true. Register multiple modals by specify an array of `ModalPresentation`.
+     */
+    sheet?: ModalPresentation | ModalPresentation[];
+    /**
+     * Presents a modal view that covers as much of the screen as possible when the `isPresented` that you provide is true. Register multiple modals by specify an array of `ModalPresentation`.
+     */
+    fullScreenCover?: ModalPresentation | ModalPresentation[];
+    /**
+     * The adaptation to use in either a horizontally or vertically compact size class.
+     * Some presentations adapt their appearance depending on the context. For example, a sheet presentation over a vertically-compact view uses a full-screen-cover appearance by default.
+     */
+    presentationCompactAdaptation?: PresentationAdaptation | {
+        /**
+         * The adaptation to use in a horizontally compact size class.
+         */
+        horizontal: PresentationAdaptation;
+        /**
+         * The adaptation to use in a vertically compact size class. In a size class that is both horizontally and vertically compact, system uses the verticalAdaptation value.
+         */
+        vertical: PresentationAdaptation;
+    };
+    /**
+     * Sets the visibility of the drag indicator on top of a sheet.
+     */
+    presentationDragIndicator?: Visibility;
+    /**
+     * A set of supported detents for the sheet. If you provide more that one detent, people can drag the sheet to resize it.
+     */
+    presentationDetents?: PresentationDetent[];
+    /**
+     * A specification of how people can interact with the view behind a presentation.
+     */
+    presentationBackgroundInteraction?: PresentationBackgroundInteraction;
+    /**
+     * By default, when a person swipes up on a scroll view in a resizable presentation, the presentation grows to the next detent. A scroll view embedded in the presentation only scrolls after the presentation reaches its largest size. Use this modifier to control which action takes precedence.
+     */
+    presentationContentInteraction?: PresentationContentInteraction;
+    /**
+     * Requests that the presentation have a specific corner radius.
+     */
+    presentationCornerRadius?: number;
+};
+
+type TransformAndEffectProps = {
+    /**
+     * Override the default accent color for this view with a given styling. Unlike an app’s accent color, which can be overridden by user preference, tint is always respected and should be used as a way to provide additional meaning to the control.
+     */
+    tint?: ShapeStyle | DynamicShapeStyle;
+    /**
+     * Sets the transparency of this view.
+     */
+    opacity?: number;
+    /**
+     * Inverts the colors in this view.
+     */
+    colorConvert?: boolean;
+    /**
+     * Controls the display order of overlapping views.
+     * A relative front-to-back ordering for this view; the default is 0.
+     */
+    zIndex?: number;
+    /**
+     * Layers the views that you specify in front of this view.
+     */
+    overlay?: VirtualNode | {
+        alignment: Alignment;
+        content: VirtualNode;
+    };
+    /**
+     * Masks this view using the alpha channel of the given view.
+     */
+    mask?: VirtualNode | {
+        alignment: Alignment;
+        content: VirtualNode;
+    };
+    /**
+     * Positions the center of this view at the specified coordinates in its parent’s coordinate space.
+     */
+    position?: {
+        /**
+         * The x-coordinate at which to place the center of this view.
+         */
+        x: number;
+        /**
+         * The y-coordinate at which to place the center of this view.
+         */
+        y: number;
+    };
+    /**
+     * Offset this view by the specified horizontal and vertical distances.
+     */
+    offset?: {
+        /**
+         * The horizontal distance to offset this view.
+         */
+        x: number;
+        /**
+         * The vertical distance to offset this view.
+         */
+        y: number;
+    };
+    /**
+     * Rotates a view’s rendered output in two dimensions around the specified point.
+     */
+    rotationEffect?: number | {
+        degrees: number;
+        /**
+         * A unit point within the view about which to perform the rotation. The default value is `center`.
+         */
+        anchor: KeywordPoint | Point;
+    };
+    /**
+     * Scales this view’s rendered output by the given horizontal and vertical amounts, relative to an anchor point.
+     */
+    scaleEffect?: number | {
+        x: number;
+        y: number;
+        anchor?: KeywordPoint | Point;
+    };
+    /**
+     * Adds a shadow to this view.
+     */
+    shadow?: {
+        /**
+         * The shadow’s color.
+         */
+        color: Color;
+        /**
+         * A measure of how much to blur the shadow. Larger values result in more blur.
+         */
+        radius: number;
+        /**
+         * An amount to offset the shadow horizontally from the view.
+         */
+        x?: number;
+        /**
+         * An amount to offset the shadow vertically from the view.
+         */
+        y?: number;
+    };
+    /**
+     * Applies a Gaussian blur to this view.
+     */
+    blur?: number | {
+        /**
+         * The radial size of the blur. A blur is more diffuse when its radius is large.
+         */
+        radius: number;
+        /**
+         * A Boolean value that indicates whether the blur renderer permits transparency in the blur output. Set to true to create an opaque blur, or set to false to permit transparency.
+         */
+        opaque: boolean;
+    };
+};
+
+/**
+ * A type that specifies the appearance and interaction of navigation split views within a view hierarchy.
+ *  - `automatic`: A navigation split style that resolves its appearance automatically based on the current context.
+ *  - `balanced`: A navigation split style that reduces the size of the detail content to make room when showing the leading column or columns.
+ *  - `prominentDetail`: A navigation split style that attempts to maintain the size of the detail content when hiding or showing the leading columns.
+ */
+type NavigationSplitViewStyle = "automatic" | "balanced" | "prominentDetail";
+
+type NavigationDestinationWithPresentation = {
+    /**
+     * A view to present.
+     */
+    content: VirtualNode;
+} & ({
+    isPresented: boolean;
+    onChanged: (isPresented: boolean) => void;
+} | {
+    isPresented: Observable<boolean>;
+    onChanged?: never;
+});
+type NavigationProps = {
+    /**
+     * A background placement inside a NavigationStack. (iOS 18.0+)
+     */
+    navigationContainerBackground?: ShapeStyle | DynamicShapeStyle | VirtualNode;
+    /**
+     * A background placement inside a NavigationSplitView. (iOS 18.0+)
+     */
+    navigationSplitViewContainerBackground?: ShapeStyle | DynamicShapeStyle | VirtualNode;
+    /**
+     * Sets a fixed, preferred width for the column containing this view.
+     */
+    navigationSplitViewColumnWidth?: number | {
+        min?: number;
+        ideal: number;
+        max?: number;
+    };
+    /**
+     * Sets the style for navigation split views within this view.
+     */
+    navigationSplitViewStyle?: NavigationSplitViewStyle;
+    /**
+     * Associates a destination view with a binding that can be used to push the view onto a NavigationStack.
+     */
+    navigationDestination?: NavigationDestinationWithPresentation | VirtualNode;
+    /**
+     * Configures the view’s title for purposes of navigation.
+     * On iOS, when a view is navigated to inside of a navigation view, that view’s title is displayed in the navigation bar.
+     * On iPadOS, the primary destination’s navigation title is reflected as the window’s title in the App Switcher.
+     */
+    navigationTitle?: string;
+    /**
+     * Configures the view’s subtitle for purposes of navigation.
+     * @available iOS 26.0+
+     */
+    navigationSubtitle?: string;
+    /**
+     * The style to use for displaying the title.
+     */
+    navigationBarTitleDisplayMode?: NavigationBarTitleDisplayMode;
+    /**
+     * Hides the navigation bar back button for the view.
+     */
+    navigationBarBackButtonHidden?: boolean;
+    /**
+     * Sets the navigation transition style for this view.
+     * @available iOS 18.0+
+     */
+    navigationTransition?: 'automatic' | {
+        type: 'zoom';
+        sourceID: string | number;
+        namespace: NamespaceID;
+    };
+    /**
+     * Sets the tab bar item associated with this view.
+     */
+    tabItem?: VirtualNode;
+};
+
+/**
+ * The spacing options between two adjacent sections in a list. When you specify a number value, it indicates that the amount of spacing to use.
+ */
+type ListSectionSpacing = number | 'default' | 'compact';
+
+/**
+ * The visual prominence of a badge.
+ *  - `standard`: The standard level of prominence for a badge.
+ *  - `increased`: The highest level of prominence for a badge.
+ *  - `decreased`: The lowest level of prominence for a badge.
+ */
+type BadgeProminence = "standard" | "increased" | "decreased";
+/**
+ * A type indicating the prominence of a view hierarchy.
+ */
+type Prominence = "standard" | "increased";
+
+type ListViewProps = {
+    /**
+     * Generates a badge for the view from an integer or a string value.
+     */
+    badge?: number | string;
+    /**
+     * Specifies the prominence of badges created by this view.
+     */
+    badgeProminence?: BadgeProminence;
+    /**
+       * The color to use to tint the content. Use null to avoid overriding the inherited tint.
+       */
+    listItemTint?: Color;
+    /**
+     * Applies an inset to the rows in a list.
+     */
+    listRowInsets?: number | EdgeInsets;
+    /**
+     * Sets the vertical spacing between two adjacent rows in a List.
+     */
+    listRowSpacing?: number;
+    /**
+     * Sets the display mode for the separator associated with this specific row.
+     */
+    listRowSeparator?: Visibility | {
+        /**
+         * The visibility of this row’s separators.
+         */
+        visibility: Visibility;
+        /**
+         * The set of row edges for which this preference applies. The list style might already decide to not display separators for some edges, typically the top edge. The default is all.
+         */
+        edges: VerticalEdgeSet;
+    };
+    /**
+     * Sets the tint color associated with a row.
+     */
+    listRowSeparatorTint?: Color | {
+        /**
+         * The color to use to tint the row separators, or null to use the default color for the current list style.
+         */
+        color: Color;
+        /**
+         * The set of row edges for which the tint applies. The list style might decide to not display certain separators, typically the top edge. The default is all.
+         */
+        edges: VerticalEdgeSet;
+    };
+    /**
+     * Sets the spacing between adjacent sections in a List to a custom value.
+     */
+    listSectionSpacing?: ListSectionSpacing;
+    /**
+     * Sets whether to hide the separator associated with a list section.
+     */
+    listSectionSeparator?: Visibility | {
+        /**
+         * The visibility of this section’s separators.
+         */
+        visibility: Visibility;
+        /**
+         * The set of row edges for which the preference applies. The list style might already decide to not display separators for some edges. The default is all.
+         */
+        edges: VerticalEdgeSet;
+    };
+    /**
+     * Sets the tint color associated with a section.
+     */
+    listSectionSeparatorTint?: Color | {
+        /**
+         * The color to use to tint the section separators, or nil to use the default color for the current list style.
+         */
+        color: Color;
+        /**
+         * The set of row edges for which the tint applies. The list style might decide to not display certain separators, typically the top edge. The default is all.
+         */
+        edges: VerticalEdgeSet;
+    };
+    /**
+     * Places a custom background view behind a list row item.
+     */
+    listRowBackground?: VirtualNode;
+    /**
+     * Configures the content margin for a provided placement.
+     */
+    contentMargins?: EdgeInsets | number | {
+        /**
+         * The edges to add the margins to.
+         */
+        edges?: EdgeSet;
+        /**
+         * The amount of margins to add.
+         */
+        insets: EdgeInsets | number;
+        /**
+         * Where the margins should be added.
+         */
+        placement?: ContentMarginPlacement;
+    };
+    /**
+     * Sets the visibility of the list section index.
+     * @available iOS 26.0+.
+     */
+    listSectionIndexVisibility?: Visibility;
+    /**
+     * Set the section margins for the specific edges.
+     * The default section margins are based on the list style, list section spacing and content margins of the list. Using this modifier overrides these default values completely.
+     *
+     * For sections that have headers or footers, the section margins are applied around these.
+     * @available iOS 26.0+.
+     */
+    listSectionMargins?: number | EdgeSet | {
+        edges: EdgeSet;
+        length: number;
+    };
+    /**
+     * Sets the label that is used in a section index to point to this section, typically only a single character long.
+     * @available iOS 26.0+.
+     */
+    sectionIndexLabel?: string;
+    /**
+     * Adds custom actions to a section.
+     * @available iOS 18.0+
+     */
+    sectionActions?: VirtualNode;
+};
+
+type EditActionsProps = {
+    /**
+     * Adds a condition for whether the view’s view hierarchy is movable.
+     */
+    moveDisabled?: boolean;
+    /**
+     * Adds a condition for whether the view’s view hierarchy is deletable.
+     */
+    deleteDisabled?: boolean;
+    /**
+     * Adds a condition that controls whether users can select this view.
+     */
+    selectionDisabled?: boolean;
+    /**
+     * Use this property to add leading swipe actions to a view that acts as a row in a list.
+     */
+    leadingSwipeActions?: {
+        /**
+         * A Boolean value that indicates whether a full swipe automatically performs the first action. The default is true.
+         */
+        allowsFullSwipe?: boolean;
+        /**
+         * The content of the swipe actions.
+         */
+        actions: VirtualNode[];
+    };
+    /**
+     * Use this property to add trailing swipe actions to a view that acts as a row in a list.
+     */
+    trailingSwipeActions?: {
+        /**
+         * A Boolean value that indicates whether a full swipe automatically performs the first action. The default is true.
+         */
+        allowsFullSwipe?: boolean;
+        /**
+         * The content of the swipe actions.
+         */
+        actions: VirtualNode[];
+    };
+};
+
+/**
+ * Makes symbols within the view show a particular variant.
+ *  - `none`: No variant for a symbol.
+ *  - `circle`: A variant that encapsulates the symbol in a circle.
+ *  - `square`: A variant that encapsulates the symbol in a square.
+ *  - `rectangle`: A variant that encapsulates the symbol in a rectangle.
+ *  - `fill`: A variant that fills the symbol.
+ *  - `slash`: A variant that draws a slash through the symbol.
+ */
+type SymbolVariants = 'none' | 'circle' | 'square' | 'rectangle' | 'fill' | 'slash';
+/**
+ *  - `hierarchical`: A mode that renders symbols as multiple layers, with different opacities applied to the foreground style.
+ *  - `monochrome`: A mode that renders symbols as a single layer filled with the foreground style.
+ *  - `multicolor`: A mode that renders symbols as multiple layers with their inherit styles.
+ *  - `palette`: A mode that renders symbols as multiple layers, with different styles applied to the layers.
+ */
+type SymbolRenderingMode = 'hierarchical' | 'monochrome' | 'multicolor' | 'palette';
+/**
+ * Trigger-style symbol effects. These are activated by an `isActive` boolean —
+ * flipping it false→true plays the effect once, and (where applicable) true→false
+ * plays the reverse animation.
+ *
+ * - `appear*` / `disappear*` / `scale*`: iOS 17+
+ * - `drawOn*` / `drawOff*`: iOS 26+ (SF Symbols 7). Silently no-ops on earlier iOS.
+ */
+type TriggerSymbolEffect = "appear" | "appearByLayer" | "appearDown" | "appearUp" | "appearWholeSymbol" | "disappear" | "disappearByLayer" | "disappearDown" | "disappearUp" | "disappearWholeSymbol"
+/** @deprecated Typo retained for backward compatibility — prefer `disappear`. */
+ | "disppear" | "scale" | "scaleByLayer" | "scaleDown" | "scaleUp" | "scaleWholeSymbol" | "drawOn" | "drawOnByLayer" | "drawOnWholeSymbol" | "drawOnIndividually" | "drawOff" | "drawOffByLayer" | "drawOffWholeSymbol" | "drawOffIndividually";
+/**
+ * Discrete symbol effects bound to a value — the animation replays each time
+ * the value changes.
+ */
+type DiscreteSymbolEffect = "bounce" | "bounceByLayer" | "bounceDown" | "bounceUp" | "bounceWholeSymbol" | "breathe" | "breatheByLayer" | "breathePlain" | "breathePulse" | "breatheWholeSymbol" | "pulse" | "pulseByLayer" | "pulseWholeSymbol" | "rotate" | "rotateByLayer" | "rotateClockwise" | "rotateCounterClockwise" | "rotateWholeSymbol" | "variableColor" | "variableColorCumulative" | "variableColorDimInactiveLayers" | "variableColorHideInactiveLayers" | "variableColorIterative" | "variableColorNonReversing" | "variableColorReversing" | "wiggle" | "wiggleRight" | "wiggleLeft" | "wiggleBackward" | "wiggleByLayer" | "wiggleClockwise" | "wiggleCounterClockwise" | "wiggleDown" | "wiggleForward" | "wiggleUp" | "wiggleWholeSymbol";
+/**
+ * Options that customize the timing & repetition of a symbol effect.
+ *
+ * Mirrors SwiftUI's `SymbolEffectOptions`. Maps to a builder chain on the
+ * native side (`.default → .speed(...) → (.repeat(...) | .nonRepeating)`).
+ *
+ * - `speed`: Animation speed multiplier. `2` = twice as fast.
+ * - `nonRepeating`: Force a one-shot animation. Mutually exclusive with `repeat`;
+ *   if both are set, `nonRepeating` wins and a warning is emitted.
+ * - `repeat`: Repetition policy.
+ *   - `"continuous"`: Loop forever (iOS 18+; on iOS 17 falls back to `.repeating`).
+ *   - `{ count, delay? }`: Repeat `count` times with optional `delay` (seconds) between cycles
+ *     (iOS 18 `RepeatBehavior.periodic`; on iOS 17 falls back to count-only).
+ *   - `{ delay }`: Periodic with a delay only.
+ */
+type SymbolEffectOptions = {
+    speed?: number;
+    nonRepeating?: boolean;
+    repeat?: "continuous" | {
+        count: number;
+        delay?: number;
+    } | {
+        delay: number;
+        count?: number;
+    };
+};
+type SymbolEffect = "appear" | "appearByLayer" | "appearDown" | "appearUp" | "appearWholeSymbol" | "disappear" | "disappearByLayer" | "disappearDown" | "disappearUp" | "disappearWholeSymbol"
+/** @deprecated Typo retained for backward compatibility — prefer `disappear`. */
+ | "disppear" | "scale" | "scaleByLayer" | "scaleDown" | "scaleUp" | "scaleWholeSymbol"
+/**
+ * Value-bound discrete effect. The animation replays each time `value` changes.
+ */
+ | {
+    effect: DiscreteSymbolEffect;
+    /**
+     * The value to monitor for changes. The animation is triggered each time the value changes.
+     */
+    value: string | number | boolean;
+    options?: SymbolEffectOptions;
+}
+/**
+ * Trigger effect. Animation runs when `isActive` flips false→true (and reverses on
+ * true→false where the effect supports it). Use this form for `drawOn` / `drawOff`
+ * (iOS 26+) and as an alternative to the no-arg form for `appear` / `disappear` / `scale`.
+ */
+ | {
+    effect: TriggerSymbolEffect;
+    isActive: boolean;
+    options?: SymbolEffectOptions;
+};
+
+type SymbolProps = {
+    /**
+     * Sets the rendering mode for symbol images within this view.
+     */
+    symbolRenderingMode?: SymbolRenderingMode;
+    /**
+     * Makes symbols within the view show a particular variant.
+     */
+    symbolVariant?: SymbolVariants;
+    /**
+     * Add a symbol effect to the view.
+     */
+    symbolEffect?: SymbolEffect;
+};
+
+/**
+ * A kind of transition that applies to the content within a single view, rather than to the insertion or removal of a view.
+ *  - `identity`: The identity content transition, which indicates that content changes shouldn’t animate.
+ *  - `interpolate`: A content transition that indicates the views attempt to interpolate their contents during transitions, where appropriate.
+ *  - `opacity`: A content transition that indicates content fades from transparent to opaque on insertion, and from opaque to transparent on removal.
+ *  - `numericText`: Creates a content transition intended to be used with Text views displaying numbers.
+ *  - `numericTextCountsDown`: Creates a content transition intended to be used with Text views displaying numeric text. In certain environments changes to the text will enable a nonstandard transition tailored to numeric characters that count down.
+ *  - `numericTextCountsUp`: Creates a content transition intended to be used with Text views displaying numeric text. In certain environments changes to the text will enable a nonstandard transition tailored to numeric characters that count up.
+ *  - `symbolEffect`: A content transition that applies the default symbol effect transition to symbol images within the inserted or removed view hierarchy. Other views are unaffected by this transition.
+ *  - `symbolEffectAutomatic`: A transition that applies the default animation to a symbol-based image in a context-sensitive manner.
+ *  - `symbolEffectReplace`: An effect that replaces the layers of one symbol-based image with those of another.
+ */
+type ContentTransition = "identity" | "interpolate" | "opacity" | "symbolEffect" | "numericText" | "numericTextCountsDown" | "numericTextCountsUp" | "symbolEffectAutomatic" | "symbolEffectReplace" | "symbolEffectAppear" | "symbolEffectDisappear" | "symbolEffectScale";
+type MatchedGeometryProperties = 'frame' | 'position' | 'size';
+
+/**
+ * The size in the minor axis of one or more rows or columns in a grid layout.
+ * A number value indicates that a single item with the specified fixed size.
+ */
+type GridSize = number | {
+    /**
+     * Multiple items in the space of a single flexible item.
+     */
+    type: 'adaptive';
+    min: number;
+    max?: number | 'infinity';
+} | {
+    /**
+     * A single flexible item.
+     */
+    type: 'flexible';
+    min?: number;
+    max?: number | 'infinity';
+};
+type GridItem = {
+    /**
+     * The alignment to use when placing each view.
+     */
+    alignment?: Alignment;
+    /**
+     * The spacing to the next item.
+     */
+    spacing?: number;
+    /**
+     * The size of the item, which is the width of a column item or the height of a row item.
+     */
+    size: GridSize;
+};
+
+declare abstract class ScreenshotMaker {
+    abstract screenshot(): UIImage | null;
+}
+
+/**
+ * The placement of a search field in a view hierarchy.
+ */
+type SearchFieldPlacement = 'automatic' | 'navigationBarDrawer' | 'sidebar' | 'toolbar' | 'navigationBarDrawerAlwaysDisplay' | 'navigationBarDrawerAutomaticDisplay';
+type SearchSuggestionsPlacementSet = 'content' | 'menu' | 'all';
+
+/**
+ * Represents a type of haptic and/or audio feedback that can be played.
+ *  - `start`: Indicates that an activity started.
+ *  - `stop`:  Indicates that an activity stopped.
+ *  - `alignment`: Indicates the alignment of a dragged item.
+ *  - `decrease`: Indicates that an important value decreased below a significant threshold.
+ *  - `increase`: Indicates that an important value increased above a significant threshold.
+ *  - `levelChange`: Indicates movement between discrete levels of pressure.
+ *  - `selection`: Indicates that a UI element’s values are changing.
+ *  - `success`: Indicates that a task or action has completed.
+ *  - `warning`: Indicates that a task or action has produced a warning of some kind.
+ *  - `error`: Indicates that an error has occurred.
+ *  - `impact`: Provides a physical metaphor you can use to complement a visual experience.
+ *  - `impactRigid`: Indicates a collision between hard or inflexible UI objects.
+ *  - `impactSoft`: Indicates a collision between soft or flexible UI objects.
+ *  - `impactSolid`: Indicates a collision between solid UI objects of medium flexibility.
+ */
+type SensoryFeedback = 'start' | 'stop' | 'alignment' | 'decrease' | 'increase' | 'levelChange' | 'selection' | 'success' | 'warning' | 'error' | 'impact' | 'impactRigid' | 'impactSoft' | 'impactSolid';
+
+type TransitionProps = {
+    /**
+     * The transition to apply when animating the content change.
+     */
+    contentTransition?: ContentTransition;
+    /**
+     * The transition to apply when animating the view.
+     */
+    transition?: Transition;
+    /**
+     * Isolates the geometry (e.g. position and size) of the view from its parent view.
+     */
+    geometryGroup?: boolean;
+    /**
+     * Wraps this view in a compositing group.
+     */
+    compositingGroup?: boolean;
+    /**
+     * Composites this view’s contents into an offscreen image before final display.
+     */
+    drawingGroup?: boolean | {
+        opaque: boolean;
+        /**
+         * The color rendering mode of the view. Defaults to `nonLinear`.
+         */
+        colorMode?: ColorRenderingMode;
+    };
+    /**
+     * Identifies this view as the source of a navigation transition, such as a zoom transition.
+     * @available iOS 18.0+
+     */
+    matchedTransitionSource?: {
+        id: string | number;
+        namespace: NamespaceID;
+    };
+    /**
+     * Defines a group of views with synchronized geometry using an identifier and namespace that you provide.
+     *  - `id`: The identifier, often derived from the identifier of the data being displayed by the view.
+     *  - `namespace`: The namespace in which defines the id. New namespaces are created by `NamespaceReader` views.
+     *  - `properties`: The properties to copy from the source view. Defaults to 'frame'.
+     *  - `anchor`: The relative location in the view used to produce its shared position value. Defaults to 'center'.
+     *  - `isSource`: True if the view should be used as the source of geometry for other views in the group. Defaults to true.
+     */
+    matchedGeometryEffect?: {
+        id: string | number;
+        namespace: NamespaceID;
+        properties?: MatchedGeometryProperties;
+        anchor?: Point | KeywordPoint;
+        isSource?: boolean;
+    };
+};
+
+/**
+ * The reasons to apply a redaction to data displayed on screen.
+ *  - `placeholder`: Displayed data should appear as generic placeholders.
+ *  - `invalidated`: Displayed data should appear as invalidated and pending a new update.
+ *  - `privacy`: Displayed data should be obscured to protect private information.
+ */
+type RedactedReason = "placeholder" | "invalidated" | "privacy";
+
+type DialogProps = {
+    toast?: {
+        /**
+         * The duration of the toast in seconds. Defaults to 2.
+         */
+        duration?: number | null;
+        /**
+         * The position of the toast. Defaults to `bottom`.
+         */
+        position?: "top" | "bottom" | "center";
+        /**
+         * The background color of the toast.
+         */
+        backgroundColor?: Color | null;
+        /**
+         * The text color of the toast.
+         */
+        textColor?: Color | null;
+        /**
+         * The corner radius of the toast. Defaults to 16.
+         */
+        cornerRadius?: number | null;
+        /**
+         * The shadow color of the toast. Defaults to 4.
+         */
+        shadowRadius?: number | null;
+    } & ({
+        message: string;
+        content?: never;
+    } | {
+        message?: never;
+        content: VirtualNode;
+    }) & ({
+        /**
+         * An observable Boolean value that determines whether to present the toast. When the user presses or taps one of the toast’s actions, the system sets this value to false and dismisses.
+         */
+        isPresented: Observable<boolean>;
+    } | {
+        /**
+         * A Boolean value that determines whether to present the toast. When the user presses or taps one of the toast’s actions, the system sets this value to false and dismisses.
+         */
+        isPresented: boolean;
+        onChanged: (isPresented: boolean) => void;
+    });
+    /**
+     * Presents an alert with a message when a given condition is true using a string variable as a title.
+     */
+    alert?: {
+        /**
+         * A text string used as the title of the alert.
+         */
+        title: string;
+        /**
+         * The alert’s actions.
+         */
+        actions: VirtualNode;
+        /**
+         * The message for the alert.
+         */
+        message?: VirtualNode;
+    } & ({
+        /**
+         * A Boolean value that determines whether to present the alert. When the user presses or taps one of the alert’s actions, the system sets this value to false and dismisses.
+         */
+        isPresented: boolean;
+        /**
+         * A callback when the `isPresented` changed. You must update `isPresented` value when the user make the alert dismissed.
+         */
+        onChanged: (isPresented: boolean) => void;
+    } | {
+        isPresented: Observable<boolean>;
+    });
+    /**
+     * Presents a confirmation dialog with a message when a given condition is true, using a string variable for the title.
+     */
+    confirmationDialog?: {
+        /**
+         * A text string used as the title of the dialog.
+         */
+        title: string;
+        /**
+         * The visibility of the dialog’s title. The default value is `automatic`.
+         */
+        titleVisibility?: Visibility;
+        /**
+         * The dialog’s actions.
+         */
+        actions: VirtualNode;
+        /**
+         * The message for the dialog.
+         */
+        message?: VirtualNode;
+    } & ({
+        /**
+         * A Boolean value hat determines whether to present the dialog. When the user presses or taps the dialog’s default action button, the system sets this value to false, dismissing the dialog.
+         */
+        isPresented: boolean;
+        /**
+         * A callback when the `isPresented` changed. You must update `isPresented` value when the user make the alert dismissed.
+         */
+        onChanged: (isPresented: boolean) => void;
+    } | {
+        isPresented: Observable<boolean>;
+    });
+};
+
+type SearchableProps = {
+    /**
+       * Marks this view as searchable, which configures the display of a search field.
+       */
+    searchable?: {
+        /**
+         * The preferred placement of the search field within the containing view hierarchy.
+         */
+        placement?: SearchFieldPlacement;
+        /**
+         * The prompt of the search field which provides users with guidance on what to search for.
+         */
+        prompt?: string;
+        /**
+         * The presented state of the search field. When the user taps the search field, the system sets this value to true and presents the search field.
+         * When the user taps the search field’s cancel button, the system sets this value to false and dismisses the search field.
+         */
+        presented?: {
+            /**
+             * A Boolean value that indicates whether the search field is presented.
+             */
+            value: boolean;
+            /**
+             * A callback when the `presented` value changed.
+             * You must update `presented.value` when the user make the search field dismissed.
+             * @param value A Boolean value that indicates whether the search field is presented.
+             */
+            onChanged: (value: boolean) => void;
+        } | Observable<boolean>;
+    } & ({
+        /**
+         * The text to display and edit in the search field.
+         */
+        value: string;
+        /**
+         * The text changed callback.
+         */
+        onChanged: (value: string) => void;
+    } | {
+        value: Observable<string>;
+        onChanged?: never;
+    });
+    /**
+     * A view that produces content that populates a list of suggestions.
+     */
+    searchSuggestions?: VirtualNode;
+    /**
+     * Configures how to display search suggestions within this view.
+     */
+    searchSuggestionsVisibility?: {
+        /**
+         * The visibility of the search suggestions for the specified locations.
+         */
+        visibility: Visibility;
+        /**
+         * The set of locations in which to set the visibility of search suggestions.
+         */
+        placements: SearchSuggestionsPlacementSet;
+    };
+    /**
+     * Associates a fully formed string with the value of this view when used as a search suggestion.
+     */
+    searchCompletion?: string;
+    /**
+     * Configures the behavior for search in the toolbar.
+     * - `minimize`: A search toolbar behavior that prefers rendering a search field as a button-like control.
+     */
+    searchToolbarBehavior?: 'automatic' | 'minimize';
+};
+
+type ViewAnimationProps = {
+    animation?: {
+        animation: Animation;
+        value: boolean | string | number;
+    };
+};
+
+type LiveActivityProps = {
+    /**
+     * Sets the tint color for the background of a Live Activity that appears on the Lock Screen.
+     */
+    activityBackgroundTint?: Color | {
+        light: Color;
+        dark: Color;
+    };
+    /**
+     * The text color for the auxiliary action button that the system shows next to a Live Activity on the Lock Screen.
+     */
+    activitySystemActionForegroundColor?: Color | {
+        light: Color;
+        dark: Color;
+    };
+};
+
+type EnvironmentsProps = {
+    environments?: {
+        /**
+         * Sets the layout direction of the environment.
+         * @example
+         * ```tsx
+         * <HStack
+         *   environments={{
+         *     layoutDirection: "rightToLeft"
+         *   }}
+         * >
+         *   <Text>First</Text>
+         *   <Text>Second</Text>
+         * </HStack>
+         * ```
+         */
+        layoutDirection?: LayoutDirection;
+        /**
+         * Sets the edit mode of the environment.
+         * @example
+         * ```tsx
+         * const editMode = useObservable(() => EditMode.active())
+         * <List
+         *   environments={{
+         *     editMode: editMode
+         *   }}
+         * >
+         *   <ForEach
+         *     editActions="all"
+         *     data={items}
+         *     builder={item => <Text key={item.id}>{item}</Text>}
+         *   />
+         * </List>
+         * ```
+         */
+        editMode?: Observable<EditMode>;
+        /**
+         * Sets a custom open URL action for the environment.
+         * @example
+         * ```tsx
+         * <Group
+         *   environments={{
+         *     openURL:(url) => {
+         *       return OpenURLActionResult.systemAction({
+         *         url,
+         *         prefersInApp: false
+         *       })
+         *     }
+         *   }}
+         * >
+         * {urls.map(url =>
+         *   <Link
+         *     url={url}
+         *   >{url}</Link>
+         * )}
+         * </Group>
+         * ```
+         */
+        openURL?: (url: string) => OpenURLActionResult;
+    };
+};
+
+/**
+ * - `identify`: The identity transition specifying no changes.
+ * - `materialize`: The materialize glass effect transition which will fade in content and animate in or out the glass material but will not attempt to match the geometry of any other glass effects.
+ * - `matchedGeometry`: The matched geometry transition allows the geometries of glass shapes during an appearance or disappearance phase of a transition to be derived from the geometry of a nearby shape within the glass container.
+ */
+type GlassEffectTransition = 'identity' | 'materialize' | 'matchedGeometry';
+/**
+ * @available iOS 26.0+
+ */
+type GlassProps = {
+    /**
+     * Applies the Liquid Glass effect to a view.
+     * @available iOS 26.0+
+     */
+    glassEffect?: boolean | UIGlass | Shape | {
+        glass: UIGlass;
+        shape: Shape;
+    };
+    /**
+     * Associates a glass effect transition with any glass effects defined within this view.
+     * @available iOS 26.0+
+     */
+    glassEffectTransition?: GlassEffectTransition;
+    /**
+     * Associates an identity value to Liquid Glass effects defined within this view.
+     * @available iOS 26.0+
+     */
+    glassEffectID?: {
+        id: string | number;
+        namespace: NamespaceID;
+    };
+    /**
+     * Associates any Liquid Glass effects defined within this view to a union with the provided identifier.
+     * @available iOS 26.0+
+     */
+    glassEffectUnion?: {
+        id: string | number;
+        namespace: NamespaceID;
+    };
+};
+
+type ScreenshotProps = {
+    screenshotRef?: RefObject<ScreenshotMaker>;
+};
+
+type PiPProps = {
+    /**
+     * Marks the view as a PiP view, it will be presented in a PiP window when the PiP view is presented.
+     */
+    pip?: {
+        /**
+         * Should the PiP view be presented.
+         */
+        isPresented: Observable<boolean>;
+        /**
+         * The maximum number of times the PiP view can be updated per second. Defaults to 30.
+         */
+        maximumUpdatesPerSecond?: number;
+        /**
+         * The content to display in the PiP window.
+         */
+        content: VirtualNode;
+    };
+    /**
+     * Called when the PiP view is presented.
+     */
+    onPipStart?: () => void;
+    /**
+     * Called when the PiP view is dismissed.
+     */
+    onPipStop?: () => void;
+    /**
+     * Called when the PiP play/pause toggle is tapped.
+     */
+    onPipPlayPauseToggle?: (isPlaying: boolean) => void;
+    /**
+     * Called when the PiP skip button is tapped. The `isForward` parameter indicates whether to skip forward or backward.
+     */
+    onPipSkip?: (isForward: boolean) => void;
+    /**
+     * Called when the PiP render size changes.
+     * @param size The new PiP window render size, you can use it to layout the PiP view.
+     */
+    onPipRenderSizeChanged?: (size: Size) => void;
+    /**
+     * When the application is moved to the foreground, and if picture-in-picture is active, stop it.
+     */
+    pipHideOnForeground?: boolean;
+};
+
+/**
+ * The operation that was performed by the drag-and-drop operation.
+ *   - `cancel`: Cancel the drag operation and transfer no data.
+ *   - `copy`: Copy the data to the modified view.
+ *   - `move`: Move the data represented by the drag items instead of copying it.
+ *   - `forbidden`: The drop activity is not allowed at this time or location.
+ */
+type DropOperation = "cancel" | "copy" | "forbidden" | "move";
+type DragDropProps = {
+    /**
+     * Set the current view to receive files or pictures dragged from other apps.
+     * @param onDropContent.types The uniform type identifiers that describe the types of content this view can accept through drag and drop. If the drag-and-drop operation doesn’t contain any of the supported types, then this drop destination doesn’t activate and isTargeted doesn’t update.
+     * @param onDropContent.isTarget A binding object that updates when a drag and drop operation enters or exits the drop target area. The binding’s value is true when the cursor is inside the area, and false when the cursor is outside.
+     * @param onDropContent.perform A callback that takes the dropped content and responds appropriately. The parameter to function contains the dropped items, with types specified by `types`. Return true if the drop operation was successful; otherwise, return false. Make sure to start loading the contents of `ItemProvider` instances within the scope of the function. Do not perform loading asynchronously on a different callback. Loading the contents may finish later, but it must start here. For security reasons, the drop receiver can access the dropped payload only before this function returns.
+     * @example
+     * ```tsx
+     * const isTarget = useObservable(false)
+     *
+     * return <VStack
+     *   onDropContent={{
+     *     types: ["public.image", "public.movie"],
+     *     isTarget: isTarget,
+     *     perform: (attachments) => {
+     *       const images: UIImage[] = []
+     *       const videos: string[] = []
+     *
+     *       let found = false
+     *
+     *       for (const attachment of attachments) {
+     *          if (attachment.hasItemConformingToType("public.png")) {
+     *            found = true
+     *            attachment.loadUIImage().then(image => {
+     *              if (image != null) {
+     *                images.push(image)
+     *              }
+     *            })
+     *          } else if (attachment.hasItemConformingToType("public.movie")) {
+     *            found = true
+     *            attachment.loadFilePath().then(filePath => {
+     *              if (filePath != null) {
+     *                // Get access the the Security-Scoped resource
+     *                // FileManager.addFileBookmark(filePath)
+     *                videos.push(filePath)
+     *              }
+     *            })
+     *          }
+     *       }
+     *       return found
+     *     }
+     *   }}
+     * >
+     * ...
+     * </VStack>
+     * ```
+     */
+    onDropContent?: {
+        types: UTType[];
+        isTarget: {
+            value: boolean;
+            onChanged: (value: boolean) => void;
+        } | Observable<boolean>;
+        perform: (attachments: ItemProvider[]) => boolean;
+    };
+    /**
+     * Activates this view as the source of a drag and drop operation.
+     * @param onDrag.data A callback that returns a single `ItemProvider` that represents the draggable data from this view.
+     * @param onDrag.preview A View to use as the source for the dragging preview, once the drag operation has begun. The preview is centered over the source view.
+     */
+    onDrag?: {
+        data: () => ItemProvider;
+        preview: VirtualNode;
+    };
+    /**
+     * Defines the destination of a drag and drop operation using behavior controlled by the actions that you provide.
+     * @param onDrop.types The uniform type identifiers that describe the types of content this view can accept through drag and drop. If the drag and drop operation doesn’t contain any of the supported types, then this drop destination doesn’t activate and isTargeted doesn’t update.
+     * @param onDrop.validateDrop A callback that returns true if the drag-and-drop operation should begin. Specify the expected types when you apply the drop modifier to the view. The default implementation returns true.
+     * @param onDrop.dropEntered A callback that is called when the drag-and-drop operation enters the drop target area. The default implementation does nothing.
+     * @param onDrop.dropUpdated A callback that is called when a validated drop moved inside the modified view. Use this callback to return a drop proposal containing the operation the action intends to perform at the drop location. The default implementation of this method returns null, which tells the drop to use the last valid returned value or else `DropOperation.copy`.
+     * @param onDrop.dropExited A callback that is called when the drag-and-drop operation exits the drop target area.
+     * @param onDrop.performDrop A callback that is called when you can request the item provider data from the given information. A Boolean that is true if the drop was successful, false otherwise. Make sure to start loading the contents of `ItemProvider` instances from `DropInfo` within the scope of this method. Do not perform loading asynchronously on a different callback. Loading the contents may finish later, but it must start here. For security reasons, the drop receiver can access the dropped payload only before this method returns.
+     */
+    onDrop?: {
+        types: UTType[];
+        validateDrop?: (info: DropInfo) => boolean;
+        dropEntered?: (info: DropInfo) => void;
+        dropUpdated?: (info: DropInfo) => DropOperation | null;
+        dropExited?: (info: DropInfo) => void;
+        performDrop: (info: DropInfo) => boolean;
+    };
+};
+
+type StandardKeyboardShortcut = "defaultAction" | "cancelAction";
+type KeyEquivalent = "return" | "tab" | "escape" | "space" | "delete" | "deleteForward" | "home" | "end" | "pageUp" | "pageDown" | "leftArrow" | "rightArrow" | "upArrow" | "downArrow" | "clear";
+type SingleCharacterKeyEquivalent = "a" | "b" | "c" | "d" | "e" | "f" | "g" | "h" | "i" | "j" | "k" | "l" | "m" | "n" | "o" | "p" | "q" | "r" | "s" | "t" | "u" | "v" | "w" | "x" | "y" | "z" | "A" | "B" | "C" | "D" | "E" | "F" | "G" | "H" | "I" | "J" | "K" | "L" | "M" | "N" | "O" | "P" | "Q" | "R" | "S" | "T" | "U" | "V" | "W" | "X" | "Y" | "Z" | "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9";
+type KeyboardshortcutEventModifier = "all" | "shift" | "command" | "option" | "control" | "capsLock" | "numberPad";
+type KeyboardShortcut = {
+    key: KeyEquivalent | SingleCharacterKeyEquivalent;
+    modifiers: KeyboardshortcutEventModifier[];
+};
+type KeyPressResult = "handled" | "ignored";
+type KeyPressAction = () => KeyPressResult;
+type KeyboardShortcutProps = {
+    /**
+     * The keyboard shortcut to use.
+     * @example
+     * ```tsx
+     * <Button
+     *   title="Sign in"
+     *   action={signIn}
+     *   keyboardShortcut={{
+     *     key: "return",
+     *     modifiers: ["all"]
+     *   }}
+     * />
+     * ```
+     */
+    keyboardShortcut?: StandardKeyboardShortcut | KeyboardShortcut;
+    /**
+     * The key and action to use for the keyboard shortcut.
+     * @example
+     * ```tsx
+     * <Text
+     *   onKeyPress={{
+     *     key: "return",
+     *     action: () => {
+     *       // do something
+     *       return "handled"
+     *     }
+     *   }}
+     * >Content</Text>
+     * ```
+     */
+    onKeyPress?: KeyPressAction | {
+        key: KeyEquivalent | SingleCharacterKeyEquivalent;
+        action: KeyPressAction;
+    };
+};
+
+type CommonViewProps = DialogProps & GesturesProps & FrameSizeProps & ForeAndBackgroundProps & PaddingAndBorderProps & ViewVisibilityProps & ImageViewProps & ViewStyleProps & TextFieldViewProps & TextViewProps & ShapeViewProps & ChartViewProps & ScrollProps & ToolbarsProps & SafeAreaProps & WidgetProps & ExtensionProps & ViewAppearProps & GridViewProps & ModalPresentationViewProps & TransformAndEffectProps & NavigationProps & ListViewProps & EditActionsProps & SymbolProps & TransitionProps & SearchableProps & ViewAnimationProps & LiveActivityProps & EnvironmentsProps & GlassProps & ScreenshotProps & PiPProps & DragDropProps & KeyboardShortcutProps & {
+    disabled?: boolean;
+    /**
+     * Sets whether this view mirrors its contents based on the layout direction.
+     * @available iOS 18.0+
+     */
+    layoutDirectionBehavior?: LayoutDirectionBehavior;
+    /**
+     * A value that indicates the visibility of the non-transient system views overlaying the app.
+     */
+    preferredColorScheme?: ColorScheme;
+    /**
+     * Sets the unique tag value of this view.
+     * Use this modifier to differentiate among certain selectable views, like the possible values of a `Picker`.
+     * @example
+     * ```tsx
+     * function View() {
+     *   const [value, setValue] = useState<number>()
+     *
+     *   return <Picker
+     *      value={value}
+     *      onChanged={newValue => setValue(newValue)}
+     *   >
+     *     <Text tag={0}>Item1</Text>
+     *     <Text tag={1}>Item2</Text>
+     *     <Text tag={2}>Item3</Text>
+     *     <Text tag={3}>Item4</Text>
+     *   </Picker>
+     * }
+     * ```
+     */
+    tag?: number | string;
+    /**
+     * Plays the specified feedback when the provided trigger value changes.
+     */
+    sensoryFeedback?: {
+        /**
+         * A value to monitor for changes to determine when to play.
+         */
+        trigger: number | string | boolean;
+        /**
+         * Which type of feedback to play.
+         */
+        feedback: SensoryFeedback;
+    };
+    /**
+     * Sets the header prominence for this view.
+     */
+    headerProminence?: Prominence;
+    /**
+     * Adds a reason to apply a redaction to this view hierarchy.
+     */
+    redacted?: RedactedReason | null;
+    /**
+     * If true, removes any reason to apply a redaction to this view hierarchy.
+     */
+    unredacted?: boolean;
+    /**
+     * Sets the priority by which a parent layout should apportion space to this child.
+     */
+    layoutPriority?: number;
+    /**
+     * The modifiers to apply to the view. The modifiers are applied in the order they are specified.
+     *
+     * It is useful to apply a same modifier multiple times to a view.
+     *
+     * @example
+     * ```tsx
+     * function View() {
+     *   return <VStack
+     *     modifiers={
+     *      modifiers()
+     *        .padding()
+     *        .background("red")
+     *        .padding()
+     *        .background("blue")
+     *     }
+     *   >
+     *     <Text>Hello</Text>
+     *   </VStack>
+     * }
+     * ```
+     */
+    modifiers?: ViewModifiers;
+};
+
+declare function modifiers(): ViewModifiers;
+declare class ViewModifiers {
+    readonly modifiers: {
+        name: string;
+        value: any;
+    }[];
+    frame(value: CommonViewProps["frame"]): this;
+    containerRelativeFrame(value: CommonViewProps["containerRelativeFrame"]): this;
+    foregroundStyle(value: CommonViewProps["foregroundStyle"]): this;
+    background(value: CommonViewProps["background"]): this;
+    padding(value?: CommonViewProps["padding"]): this;
+    border(value: CommonViewProps["border"]): this;
+    tint(value: CommonViewProps["tint"]): this;
+    opacity(value: CommonViewProps["opacity"]): this;
+    hidden(value?: CommonViewProps["hidden"]): this;
+    labelsHidden(value?: CommonViewProps["labelsHidden"]): this;
+    disabled(value?: CommonViewProps["disabled"]): this;
+    preferredColorScheme(value: CommonViewProps["preferredColorScheme"]): this;
+    scaleToFit(value?: CommonViewProps["scaleToFit"]): this;
+    scaleToFill(value?: CommonViewProps["scaleToFill"]): this;
+    aspectRatio(value: CommonViewProps["aspectRatio"]): this;
+    imageScale(value: CommonViewProps["imageScale"]): this;
+    controlSize(value: CommonViewProps["controlSize"]): this;
+    buttonStyle(value: CommonViewProps["buttonStyle"]): this;
+    buttonBorderShape(value: CommonViewProps["buttonBorderShape"]): this;
+    labelStyle(value: CommonViewProps["labelStyle"]): this;
+    toggleStyle(value: CommonViewProps["toggleStyle"]): this;
+    pickerStyle(value: CommonViewProps["pickerStyle"]): this;
+    formStyle(value: CommonViewProps["formStyle"]): this;
+    datePickerStyle(value: CommonViewProps["datePickerStyle"]): this;
+    gaugeStyle(value: CommonViewProps["gaugeStyle"]): this;
+    listStyle(value: CommonViewProps["listStyle"]): this;
+    progressViewStyle(value: CommonViewProps["progressViewStyle"]): this;
+    autocorrectionDisabled(value?: CommonViewProps["autocorrectionDisabled"]): this;
+    textInputAutocapitalization(value: CommonViewProps["textInputAutocapitalization"]): this;
+    textContentType(value: CommonViewProps["textContentType"]): this;
+    allowsHitTesting(value: CommonViewProps["allowsHitTesting"]): this;
+    textFieldStyle(value: CommonViewProps["textFieldStyle"]): this;
+    keyboardType(value: CommonViewProps["keyboardType"]): this;
+    keyboardShortcut(value: CommonViewProps["keyboardShortcut"]): this;
+    onKeyPress(value: CommonViewProps["onKeyPress"]): this;
+    contentShape(value: CommonViewProps["contentShape"]): this;
+    colorConvert(value?: CommonViewProps["colorConvert"]): this;
+    clipShape(value: CommonViewProps["clipShape"]): this;
+    clipped(value?: CommonViewProps["clipped"]): this;
+    fixedSize(value: CommonViewProps["fixedSize"]): this;
+    font(value: CommonViewProps["font"]): this;
+    fontWidth(value: CommonViewProps["fontWidth"]): this;
+    fontWeight(value: CommonViewProps["fontWeight"]): this;
+    fontDesign(value: CommonViewProps["fontDesign"]): this;
+    minScaleFactor(value: CommonViewProps["minScaleFactor"]): this;
+    bold(value?: CommonViewProps["bold"]): this;
+    baselineOffset(value: CommonViewProps["baselineOffset"]): this;
+    kerning(value: CommonViewProps["kerning"]): this;
+    italic(value?: CommonViewProps["italic"]): this;
+    monospaced(value?: CommonViewProps["monospaced"]): this;
+    monospacedDigit(value?: CommonViewProps["monospacedDigit"]): this;
+    strikethrough(value: CommonViewProps["strikethrough"]): this;
+    underline(value: CommonViewProps["underline"]): this;
+    lineLimit(value: CommonViewProps["lineLimit"]): this;
+    multilineTextAlignment(value: CommonViewProps["multilineTextAlignment"]): this;
+    truncationMode(value: CommonViewProps["truncationMode"]): this;
+    allowsTightening(value?: CommonViewProps["allowsTightening"]): this;
+    flipsForRightToLeftLayoutDirection(value?: CommonViewProps["flipsForRightToLeftLayoutDirection"]): this;
+    layoutDirectionBehavior(value: CommonViewProps["layoutDirectionBehavior"]): this;
+    chartXAxis(value: CommonViewProps["chartXAxis"]): this;
+    chartYAxis(value: CommonViewProps["chartYAxis"]): this;
+    chartXAxisLabel(value: CommonViewProps["chartXAxisLabel"]): this;
+    chartYAxisLabel(value: CommonViewProps["chartYAxisLabel"]): this;
+    chartLegend(value: CommonViewProps["chartLegend"]): this;
+    chartXScale(value: CommonViewProps["chartXScale"]): this;
+    chartYScale(value: CommonViewProps["chartYScale"]): this;
+    chartBackground(value: CommonViewProps["chartBackground"]): this;
+    chartForegroundStyleScale(value: CommonViewProps["chartForegroundStyleScale"]): this;
+    chartSymbolScale(value: CommonViewProps["chartSymbolScale"]): this;
+    chartSymbolSizeScale(value: CommonViewProps["chartSymbolSizeScale"]): this;
+    chartLineStyleScale(value: CommonViewProps["chartLineStyleScale"]): this;
+    chartScrollableAxes(value: CommonViewProps["chartScrollableAxes"]): this;
+    chartXSelection(value: CommonViewProps["chartXSelection"]): this;
+    chartYSelection(value: CommonViewProps["chartYSelection"]): this;
+    chartAngleSelection(value: CommonViewProps["chartAngleSelection"]): this;
+    chartXVisibleDomain(value: CommonViewProps["chartXVisibleDomain"]): this;
+    chartYVisibleDomain(value: CommonViewProps["chartYVisibleDomain"]): this;
+    chartScrollPositionX(value: CommonViewProps["chartScrollPositionX"]): this;
+    chartScrollPositionY(value: CommonViewProps["chartScrollPositionY"]): this;
+    chartScrollTargetBehavior(value: CommonViewProps["chartScrollTargetBehavior"]): this;
+    onSubmit(value: CommonViewProps["onSubmit"]): this;
+    submitScope(value?: CommonViewProps["submitScope"]): this;
+    submitLabel(value: CommonViewProps["submitLabel"]): this;
+    onAppear(value: CommonViewProps["onAppear"]): this;
+    onDisappear(value: CommonViewProps["onDisappear"]): this;
+    onTapGesture(value: CommonViewProps["onTapGesture"]): this;
+    onLongPressGesture(value: CommonViewProps["onLongPressGesture"]): this;
+    onDragGesture(value: CommonViewProps["onDragGesture"]): this;
+    onDropContent(value: CommonViewProps["onDropContent"]): this;
+    tag(value: CommonViewProps["tag"]): this;
+    refreshable(value: CommonViewProps["refreshable"]): this;
+    scrollIndicator(value: CommonViewProps["scrollIndicator"]): this;
+    scrollDisabled(value?: CommonViewProps["scrollDisabled"]): this;
+    scrollClipDisabled(value?: CommonViewProps["scrollClipDisabled"]): this;
+    scrollDismissesKeyboard(value: CommonViewProps["scrollDismissesKeyboard"]): this;
+    defaultScrollAnchor(value: CommonViewProps["defaultScrollAnchor"]): this;
+    scrollTargetLayout(value?: CommonViewProps["scrollTargetLayout"]): this;
+    scrollTargetBehavior(value: CommonViewProps["scrollTargetBehavior"]): this;
+    scrollPosition(value: CommonViewProps["scrollPosition"]): this;
+    onScrollTargetVisibilityChange(value: CommonViewProps["onScrollTargetVisibilityChange"]): this;
+    scrollContentBackground(value: CommonViewProps["scrollContentBackground"]): this;
+    interactiveDismissDisabled(value?: CommonViewProps["interactiveDismissDisabled"]): this;
+    safeAreaPadding(value: CommonViewProps["safeAreaPadding"]): this;
+    safeAreaInset(value: CommonViewProps["safeAreaInset"]): this;
+    ignoresSafeArea(value?: CommonViewProps["ignoresSafeArea"]): this;
+    bottomBarVisibility(value: CommonViewProps["bottomBarVisibility"]): this;
+    navigationBarVisibility(value: CommonViewProps["navigationBarVisibility"]): this;
+    tabBarVisibility(value: CommonViewProps["tabBarVisibility"]): this;
+    toolbar(value: CommonViewProps["toolbar"]): this;
+    toolbarTitleMenu(value: CommonViewProps["toolbarTitleMenu"]): this;
+    toolbarBackground(value: CommonViewProps["toolbarBackground"]): this;
+    toolbarBackgroundVisibility(value: CommonViewProps["toolbarBackgroundVisibility"]): this;
+    toolbarColorScheme(value: CommonViewProps["toolbarColorScheme"]): this;
+    toolbarTitleDisplayMode(value: CommonViewProps["toolbarTitleDisplayMode"]): this;
+    textSelection(value?: CommonViewProps["textSelection"]): this;
+    textCase(value: CommonViewProps["textCase"]): this;
+    widgetURL(value: CommonViewProps["widgetURL"]): this;
+    widgetAccentable(value?: CommonViewProps["widgetAccentable"]): this;
+    widgetBackground(value: CommonViewProps["widgetBackground"]): this;
+    swingAnimation(value: CommonViewProps["swingAnimation"]): this;
+    clockHandRotationEffect(value: CommonViewProps["clockHandRotationEffect"]): this;
+    toast(options: CommonViewProps["toast"]): this;
+    alert(options: CommonViewProps["alert"]): this;
+    confirmationDialog(options: CommonViewProps["confirmationDialog"]): this;
+    contextMenu(options: CommonViewProps["contextMenu"]): this;
+    menuStyle(value: CommonViewProps["menuStyle"]): this;
+    menuIndicator(value: CommonViewProps["menuIndicator"]): this;
+    controlGroupStyle(value: CommonViewProps["controlGroupStyle"]): this;
+    tabItem(value: CommonViewProps["tabItem"]): this;
+    tabViewStyle(value: CommonViewProps["tabViewStyle"]): this;
+    gridCellColumns(value: CommonViewProps["gridCellColumns"]): this;
+    gridCellAnchor(value: CommonViewProps["gridCellAnchor"]): this;
+    gridCellUnsizedAxes(value: CommonViewProps["gridCellUnsizedAxes"]): this;
+    gridColumnAlignment(value: CommonViewProps["gridColumnAlignment"]): this;
+    zIndex(value: CommonViewProps["zIndex"]): this;
+    overlay(value: CommonViewProps["overlay"]): this;
+    mask(value: CommonViewProps["mask"]): this;
+    popover(value: CommonViewProps["popover"]): this;
+    sheet(value: CommonViewProps["sheet"]): this;
+    fullScreenCover(value: CommonViewProps["fullScreenCover"]): this;
+    position(value: CommonViewProps["position"]): this;
+    offset(value: CommonViewProps["offset"]): this;
+    rotationEffect(value: CommonViewProps["rotationEffect"]): this;
+    scaleEffect(value: CommonViewProps["scaleEffect"]): this;
+    shadow(value: CommonViewProps["shadow"]): this;
+    blur(value: CommonViewProps["blur"]): this;
+    sliderThumbVisibility(value: CommonViewProps["sliderThumbVisibility"]): this;
+    searchable(value: CommonViewProps["searchable"]): this;
+    searchSuggestions(value: CommonViewProps["searchSuggestions"]): this;
+    searchSuggestionsVisibility(value: CommonViewProps["searchSuggestionsVisibility"]): this;
+    searchCompletion(value: CommonViewProps["searchCompletion"]): this;
+    sensoryFeedback(value: CommonViewProps["sensoryFeedback"]): this;
+    moveDisabled(value?: CommonViewProps["moveDisabled"]): this;
+    deleteDisabled(value?: CommonViewProps["deleteDisabled"]): this;
+    selectionDisabled(value?: CommonViewProps["selectionDisabled"]): this;
+    leadingSwipeActions(value: CommonViewProps["leadingSwipeActions"]): this;
+    trailingSwipeActions(value: CommonViewProps["trailingSwipeActions"]): this;
+    symbolRenderingMode(value: CommonViewProps["symbolRenderingMode"]): this;
+    symbolVariant(value: CommonViewProps["symbolVariant"]): this;
+    symbolEffect(value: CommonViewProps["symbolEffect"]): this;
+    presentationCompactAdaptation(value: CommonViewProps["presentationCompactAdaptation"]): this;
+    presentationDragIndicator(value: CommonViewProps["presentationDragIndicator"]): this;
+    presentationDetents(value: CommonViewProps["presentationDetents"]): this;
+    presentationBackgroundInteraction(value: CommonViewProps["presentationBackgroundInteraction"]): this;
+    presentationContentInteraction(value: CommonViewProps["presentationContentInteraction"]): this;
+    presentationCornerRadius(value: CommonViewProps["presentationCornerRadius"]): this;
+    navigationContainerBackground(value: CommonViewProps["navigationContainerBackground"]): this;
+    navigationSplitViewContainerBackground(value: CommonViewProps["navigationSplitViewContainerBackground"]): this;
+    listItemTint(value: CommonViewProps["listItemTint"]): this;
+    listRowInsets(value: CommonViewProps["listRowInsets"]): this;
+    listRowSpacing(value: CommonViewProps["listRowSpacing"]): this;
+    listRowSeparator(value: CommonViewProps["listRowSeparator"]): this;
+    listRowSeparatorTint(value: CommonViewProps["listRowSeparatorTint"]): this;
+    listSectionSpacing(value: CommonViewProps["listSectionSpacing"]): this;
+    listSectionSeparator(value: CommonViewProps["listSectionSeparator"]): this;
+    listSectionSeparatorTint(value: CommonViewProps["listSectionSeparatorTint"]): this;
+    listRowBackground(value: CommonViewProps["listRowBackground"]): this;
+    contentMargins(value: CommonViewProps["contentMargins"]): this;
+    contentTransition(value: CommonViewProps["contentTransition"]): this;
+    badge(value: CommonViewProps["badge"]): this;
+    badgeProminence(value: CommonViewProps["badgeProminence"]): this;
+    headerProminence(value: CommonViewProps["headerProminence"]): this;
+    navigationSplitViewColumnWidth(value: CommonViewProps["navigationSplitViewColumnWidth"]): this;
+    navigationSplitViewStyle(value: CommonViewProps["navigationSplitViewStyle"]): this;
+    navigationDestination(value: CommonViewProps["navigationDestination"]): this;
+    navigationTitle(value: CommonViewProps["navigationTitle"]): this;
+    navigationSubtitle(value: CommonViewProps["navigationSubtitle"]): this;
+    navigationBarTitleDisplayMode(value: CommonViewProps["navigationBarTitleDisplayMode"]): this;
+    navigationBarBackButtonHidden(value?: CommonViewProps["navigationBarBackButtonHidden"]): this;
+    navigationTransition(value: CommonViewProps["navigationTransition"]): this;
+    redacted(value: CommonViewProps["redacted"]): this;
+    unredacted(value?: CommonViewProps["unredacted"]): this;
+    translationHost(value: CommonViewProps["translationHost"]): this;
+    layoutPriority(value: CommonViewProps["layoutPriority"]): this;
+    gesture(value: CommonViewProps["gesture"]): this;
+    simultaneousGesture(value: CommonViewProps["simultaneousGesture"]): this;
+    highPriorityGesture(value: CommonViewProps["highPriorityGesture"]): this;
+    defersSystemGestures(value: CommonViewProps["defersSystemGestures"]): this;
+    animation(value: CommonViewProps["animation"]): this;
+    transition(value: CommonViewProps["transition"]): this;
+    matchedTransitionSource(value: CommonViewProps["matchedTransitionSource"]): this;
+    matchedGeometryEffect(value: CommonViewProps["matchedGeometryEffect"]): this;
+    activityBackgroundTint(value: CommonViewProps['activityBackgroundTint']): this;
+    activitySystemActionForegroundColor(value: CommonViewProps['activitySystemActionForegroundColor']): this;
+    environments(value: CommonViewProps["environments"]): this;
+    toolbarRemoving(value: CommonViewProps["toolbarRemoving"]): this;
+    toolbarRole(value: CommonViewProps["toolbarRole"]): this;
+    tabBarMinimizeBehavior(value: CommonViewProps["tabBarMinimizeBehavior"]): this;
+    tabViewBottomAccessory(value: CommonViewProps["tabViewBottomAccessory"]): this;
+    tabViewSearchActivation(value: CommonViewProps["tabViewSearchActivation"]): this;
+    tabViewCustomization(value: CommonViewProps["tabViewCustomization"]): this;
+    tabViewSidebarHeader(value: CommonViewProps["tabViewSidebarHeader"]): this;
+    tabViewSidebarFooter(value: CommonViewProps["tabViewSidebarFooter"]): this;
+    tabViewSidebarBottomBar(value: CommonViewProps["tabViewSidebarBottomBar"]): this;
+    indexViewStyle(value: CommonViewProps["indexViewStyle"]): this;
+    labelReservedIconWidth(value: CommonViewProps["labelReservedIconWidth"]): this;
+    labelIconToTitleSpacing(value: CommonViewProps["labelIconToTitleSpacing"]): this;
+    containerShape(value: CommonViewProps["containerShape"]): this;
+    searchToolbarBehavior(value: CommonViewProps["searchToolbarBehavior"]): this;
+    listSectionIndexVisibility(value: CommonViewProps["listSectionIndexVisibility"]): this;
+    listSectionMargins(value: CommonViewProps["listSectionMargins"]): this;
+    sectionIndexLabel(value: CommonViewProps["sectionIndexLabel"]): this;
+    sectionActions(value: CommonViewProps["sectionActions"]): this;
+    scrollEdgeEffectStyle(value: CommonViewProps["scrollEdgeEffectStyle"]): this;
+    scrollEdgeEffectHidden(value?: CommonViewProps["scrollEdgeEffectHidden"]): this;
+    safeAreaBar(value: CommonViewProps["safeAreaBar"]): this;
+    backgroundExtensionEffect(value?: CommonViewProps["backgroundExtensionEffect"]): this;
+    glassEffect(value?: CommonViewProps["glassEffect"]): this;
+    glassEffectTransition(value: CommonViewProps["glassEffectTransition"]): this;
+    glassEffectID(value: CommonViewProps["glassEffectID"]): this;
+    glassEffectUnion(value: CommonViewProps["glassEffectUnion"]): this;
+    pip(value: CommonViewProps["pip"]): this;
+    onPipStart(value: CommonViewProps["onPipStart"]): this;
+    onPipStop(value: CommonViewProps["onPipStop"]): this;
+    onPipPlayPauseToggle(value: CommonViewProps["onPipPlayPauseToggle"]): this;
+    onPipSkip(value: CommonViewProps["onPipSkip"]): this;
+    onPipRenderSizeChanged(value: CommonViewProps["onPipRenderSizeChanged"]): this;
+    pipHideOnForeground(value?: CommonViewProps["pipHideOnForeground"]): this;
+    onDrag(value: CommonViewProps["onDrag"]): this;
+    onDrop(value: CommonViewProps["onDrop"]): this;
+    geometryGroup(value?: CommonViewProps["geometryGroup"]): this;
+    compositingGroup(value?: CommonViewProps["compositingGroup"]): this;
+    drawingGroup(value?: CommonViewProps["drawingGroup"]): this;
+}
+
+type GradientStop = {
+    offset: number;
+    color: string;
+};
+type LinearGradientWire = {
+    type: "linearGradient";
+    x0: number;
+    y0: number;
+    x1: number;
+    y1: number;
+    stops: GradientStop[];
+};
+type RadialGradientWire = {
+    type: "radialGradient";
+    x0: number;
+    y0: number;
+    r0: number;
+    x1: number;
+    y1: number;
+    r1: number;
+    stops: GradientStop[];
+};
+type ConicGradientWire = {
+    type: "conicGradient";
+    startAngle: number;
+    x: number;
+    y: number;
+    stops: GradientStop[];
+};
+type PatternWire = {
+    type: "pattern";
+    src: CanvasImageSourceWire;
+    repetition: "repeat" | "repeat-x" | "repeat-y" | "no-repeat";
+};
+type ShadingWire = string | LinearGradientWire | RadialGradientWire | ConicGradientWire | PatternWire;
+/**
+ * Subset of Web `globalCompositeOperation` we map to SwiftUI's `BlendMode`. Values outside
+ * this list are accepted by TypeScript but silently fall back to `"source-over"` on the
+ * native side — Web has porter-duff modes that SwiftUI doesn't expose 1:1.
+ */
+type GlobalCompositeOperation = "source-over" | "multiply" | "screen" | "overlay" | "darken" | "lighten" | "color-dodge" | "color-burn" | "hard-light" | "soft-light" | "difference" | "exclusion" | "hue" | "saturation" | "color" | "luminosity" | "plus-lighter" | "destination-over";
+type StylePatch = {
+    fillStyle?: ShadingWire;
+    strokeStyle?: ShadingWire;
+    lineWidth?: number;
+    lineCap?: "butt" | "round" | "square";
+    lineJoin?: "miter" | "round" | "bevel";
+    miterLimit?: number;
+    lineDash?: number[];
+    lineDashOffset?: number;
+    globalAlpha?: number;
+    font?: Font | string | number;
+    textAlign?: "left" | "right" | "center" | "start" | "end";
+    textBaseline?: "top" | "middle" | "bottom" | "alphabetic" | "hanging" | "ideographic";
+    shadowOffsetX?: number;
+    shadowOffsetY?: number;
+    shadowBlur?: number;
+    shadowColor?: string;
+    globalCompositeOperation?: GlobalCompositeOperation;
+    imageSmoothingEnabled?: boolean;
+};
+type CanvasCommand = {
+    op: "save";
+} | {
+    op: "restore";
+} | {
+    op: "translate";
+    x: number;
+    y: number;
+} | {
+    op: "rotate";
+    angle: number;
+} | {
+    op: "scale";
+    x: number;
+    y: number;
+} | {
+    op: "transform";
+    a: number;
+    b: number;
+    c: number;
+    d: number;
+    e: number;
+    f: number;
+} | {
+    op: "setTransform";
+    a: number;
+    b: number;
+    c: number;
+    d: number;
+    e: number;
+    f: number;
+} | {
+    op: "resetTransform";
+} | {
+    op: "beginPath";
+} | {
+    op: "closePath";
+} | {
+    op: "moveTo";
+    x: number;
+    y: number;
+} | {
+    op: "lineTo";
+    x: number;
+    y: number;
+} | {
+    op: "quadraticCurveTo";
+    cpx: number;
+    cpy: number;
+    x: number;
+    y: number;
+} | {
+    op: "bezierCurveTo";
+    cp1x: number;
+    cp1y: number;
+    cp2x: number;
+    cp2y: number;
+    x: number;
+    y: number;
+} | {
+    op: "arc";
+    x: number;
+    y: number;
+    radius: number;
+    startAngle: number;
+    endAngle: number;
+    counterclockwise?: boolean;
+} | {
+    op: "arcTo";
+    x1: number;
+    y1: number;
+    x2: number;
+    y2: number;
+    radius: number;
+} | {
+    op: "rect";
+    x: number;
+    y: number;
+    w: number;
+    h: number;
+} | {
+    op: "ellipse";
+    x: number;
+    y: number;
+    rx: number;
+    ry: number;
+    rotation: number;
+    startAngle: number;
+    endAngle: number;
+    counterclockwise?: boolean;
+} | {
+    op: "fill";
+    rule?: "nonzero" | "evenodd";
+} | {
+    op: "stroke";
+} | {
+    op: "fillRect";
+    x: number;
+    y: number;
+    w: number;
+    h: number;
+} | {
+    op: "strokeRect";
+    x: number;
+    y: number;
+    w: number;
+    h: number;
+} | {
+    op: "clearRect";
+    x: number;
+    y: number;
+    w: number;
+    h: number;
+} | {
+    op: "clip";
+    rule?: "nonzero" | "evenodd";
+} | {
+    op: "fillText";
+    text: string;
+    x: number;
+    y: number;
+    maxWidth?: number;
+} | {
+    op: "strokeText";
+    text: string;
+    x: number;
+    y: number;
+    maxWidth?: number;
+} | {
+    op: "drawImage";
+    src: CanvasImageSourceWire;
+    sx?: number;
+    sy?: number;
+    sw?: number;
+    sh?: number;
+    dx: number;
+    dy: number;
+    dw?: number;
+    dh?: number;
+} | {
+    op: "setStyle";
+    patch: StylePatch;
+};
+type CanvasImageSourceWire = {
+    systemName: string;
+} | {
+    filePath: string;
+} | {
+    image: any;
+};
+/** A linear, radial, or conic gradient created via `ctx.createLinearGradient` / `createRadialGradient` / `createConicGradient`. */
+declare class CanvasGradient {
+    private _wire;
+    constructor(wire: LinearGradientWire | RadialGradientWire | ConicGradientWire);
+    addColorStop(offset: number, color: string): void;
+    /** @internal — used by `Canvas` to serialize the gradient into the command wire. */
+    _toWire(): LinearGradientWire | RadialGradientWire | ConicGradientWire;
+}
+/** What `ctx.drawImage` accepts. Mirrors the `Image` component's source props (excluding remote URL). */
+type CanvasImageSource = {
+    systemName: string;
+} | {
+    filePath: string;
+} | {
+    image: any;
+};
+/**
+ * A tiled-image fill created via `ctx.createPattern(image, repetition)`. Assign to
+ * `fillStyle` or `strokeStyle` like a `CanvasGradient`.
+ */
+declare class CanvasPattern {
+    private _wire;
+    constructor(wire: PatternWire);
+    /** @internal */
+    _toWire(): PatternWire;
+}
+/**
+ * Returned by `CanvasRenderingContext.measureText`. Read-only metrics describing the
+ * text as it would render with the current `ctx.font`. Sizes are in CSS pixels (= SwiftUI
+ * points on iOS).
+ *
+ * `actualBoundingBoxAscent` / `actualBoundingBoxDescent` are the glyph-bound distances
+ * from the alphabetic baseline to the top / bottom of the rendered glyphs (always
+ * non-negative). `fontBoundingBoxAscent` / `Descent` are the font-design ascent /
+ * descent of the resolved `UIFont`.
+ */
+declare class TextMetrics {
+    readonly width: number;
+    readonly actualBoundingBoxAscent: number;
+    readonly actualBoundingBoxDescent: number;
+    readonly fontBoundingBoxAscent: number;
+    readonly fontBoundingBoxDescent: number;
+    /** @internal */
+    constructor(wire: {
+        width?: number;
+        actualBoundingBoxAscent?: number;
+        actualBoundingBoxDescent?: number;
+        fontBoundingBoxAscent?: number;
+        fontBoundingBoxDescent?: number;
+    });
+}
+/**
+ * Web-style Canvas 2D rendering context. All methods / setters push commands into an
+ * internal queue; nothing actually draws until SwiftUI replays the queue on the native
+ * side. The context is one-shot per Canvas closure invocation — you receive a fresh
+ * instance on every redraw.
+ *
+ * No readable state. Setters DO update an internal mirror so the
+ * value is observable to your own draw code (e.g. compounding transforms via
+ * `setLineDash` + `getLineDash`), but you cannot inspect the actual pixels.
+ */
+declare class CanvasRenderingContext {
+    /** @internal */
+    _commands: CanvasCommand[];
+    private _fillStyle;
+    private _strokeStyle;
+    private _lineWidth;
+    private _lineCap;
+    private _lineJoin;
+    private _miterLimit;
+    private _lineDash;
+    private _lineDashOffset;
+    private _globalAlpha;
+    private _font;
+    private _textAlign;
+    private _textBaseline;
+    private _shadowOffsetX;
+    private _shadowOffsetY;
+    private _shadowBlur;
+    private _shadowColor;
+    private _globalCompositeOperation;
+    private _imageSmoothingEnabled;
+    get fillStyle(): string | CanvasGradient | CanvasPattern;
+    set fillStyle(v: string | CanvasGradient | CanvasPattern);
+    get strokeStyle(): string | CanvasGradient | CanvasPattern;
+    set strokeStyle(v: string | CanvasGradient | CanvasPattern);
+    get lineWidth(): number;
+    set lineWidth(v: number);
+    get lineCap(): "butt" | "round" | "square";
+    set lineCap(v: "butt" | "round" | "square");
+    get lineJoin(): "miter" | "round" | "bevel";
+    set lineJoin(v: "miter" | "round" | "bevel");
+    get miterLimit(): number;
+    set miterLimit(v: number);
+    get lineDashOffset(): number;
+    set lineDashOffset(v: number);
+    get globalAlpha(): number;
+    set globalAlpha(v: number);
+    get font(): Font | string | number;
+    set font(v: Font | string | number);
+    get textAlign(): "left" | "right" | "center" | "start" | "end";
+    set textAlign(v: "left" | "right" | "center" | "start" | "end");
+    get textBaseline(): "top" | "middle" | "bottom" | "alphabetic" | "hanging" | "ideographic";
+    set textBaseline(v: "top" | "middle" | "bottom" | "alphabetic" | "hanging" | "ideographic");
+    get shadowOffsetX(): number;
+    set shadowOffsetX(v: number);
+    get shadowOffsetY(): number;
+    set shadowOffsetY(v: number);
+    get shadowBlur(): number;
+    set shadowBlur(v: number);
+    get shadowColor(): string;
+    set shadowColor(v: string);
+    get globalCompositeOperation(): GlobalCompositeOperation;
+    set globalCompositeOperation(v: GlobalCompositeOperation);
+    get imageSmoothingEnabled(): boolean;
+    set imageSmoothingEnabled(v: boolean);
+    setLineDash(segments: number[]): void;
+    getLineDash(): number[];
+    save(): void;
+    restore(): void;
+    translate(x: number, y: number): void;
+    rotate(angle: number): void;
+    scale(x: number, y: number): void;
+    transform(a: number, b: number, c: number, d: number, e: number, f: number): void;
+    setTransform(a: number, b: number, c: number, d: number, e: number, f: number): void;
+    resetTransform(): void;
+    beginPath(): void;
+    closePath(): void;
+    moveTo(x: number, y: number): void;
+    lineTo(x: number, y: number): void;
+    quadraticCurveTo(cpx: number, cpy: number, x: number, y: number): void;
+    bezierCurveTo(cp1x: number, cp1y: number, cp2x: number, cp2y: number, x: number, y: number): void;
+    arc(x: number, y: number, radius: number, startAngle: number, endAngle: number, counterclockwise?: boolean): void;
+    arcTo(x1: number, y1: number, x2: number, y2: number, radius: number): void;
+    rect(x: number, y: number, w: number, h: number): void;
+    ellipse(x: number, y: number, rx: number, ry: number, rotation: number, startAngle: number, endAngle: number, counterclockwise?: boolean): void;
+    fill(rule?: "nonzero" | "evenodd"): void;
+    stroke(): void;
+    fillRect(x: number, y: number, w: number, h: number): void;
+    strokeRect(x: number, y: number, w: number, h: number): void;
+    clearRect(x: number, y: number, w: number, h: number): void;
+    clip(rule?: "nonzero" | "evenodd"): void;
+    fillText(text: string, x: number, y: number, maxWidth?: number): void;
+    strokeText(text: string, x: number, y: number, maxWidth?: number): void;
+    /**
+     * Synchronously measure the given text using the context's current `font`. Unlike the
+     * drawing methods this is NOT a queued command — it round-trips to the host immediately
+     * and returns metrics, so you can compute layout (line breaks, centering) before
+     * issuing further draw commands.
+     *
+     * @param text The string to measure.
+     * @returns A `TextMetrics` describing the rendered size at the current font.
+     */
+    measureText(text: string): TextMetrics;
+    drawImage(image: CanvasImageSource, dx: number, dy: number): void;
+    drawImage(image: CanvasImageSource, dx: number, dy: number, dw: number, dh: number): void;
+    drawImage(image: CanvasImageSource, sx: number, sy: number, sw: number, sh: number, dx: number, dy: number, dw: number, dh: number): void;
+    createLinearGradient(x0: number, y0: number, x1: number, y1: number): CanvasGradient;
+    createRadialGradient(x0: number, y0: number, r0: number, x1: number, y1: number, r1: number): CanvasGradient;
+    /**
+     * Create a conic (angular) gradient swept around `(x, y)` starting at `startAngle` radians.
+     * SwiftUI-only — not in classic Web Canvas, but added because SwiftUI maps cleanly to
+     * `AngularGradient` and conic gradients are a common request.
+     */
+    createConicGradient(startAngle: number, x: number, y: number): CanvasGradient;
+    /**
+     * Create a tiled-image fill. Pass the same image source forms as `drawImage`
+     * (`{ systemName }` / `{ filePath }` / `{ image }`). `repetition` mirrors Web semantics:
+     *
+     * - `"repeat"` (default): tile in both axes
+     * - `"repeat-x"` / `"repeat-y"`: tile only along one axis
+     * - `"no-repeat"`: draw the image once at the origin and leave the rest empty
+     *
+     * Assign the returned pattern to `fillStyle` or `strokeStyle`.
+     */
+    createPattern(image: CanvasImageSource, repetition?: "repeat" | "repeat-x" | "repeat-y" | "no-repeat"): CanvasPattern;
+    private _shadingWire;
+    /** @internal */
+    _consumeCommands(): CanvasCommand[];
+}
+type CanvasSize = {
+    width: number;
+    height: number;
+};
+type CanvasProps = {
+    /**
+     * Called every time SwiftUI re-evaluates the Canvas closure (state / layout changes).
+     * Issue Web-style drawing commands on `ctx`; the return value is ignored.
+     *
+     * `ctx` is a command collector — there is no readable pixel state and no `measureText`.
+     * The function must be pure with respect to React state (no `setState`); side-effecting
+     * during a draw closure is undefined behavior.
+     */
+    draw: (ctx: CanvasRenderingContext, size: CanvasSize) => void;
+    /**
+     * Whether the Canvas is treated as fully opaque by SwiftUI. Defaults to `true`,
+     * matching SwiftUI's default. Set to `false` to allow transparent regions to compose
+     * with the underlying view.
+     */
+    opaque?: boolean;
+};
+/**
+ * A SwiftUI-backed 2D drawing canvas with a Web-Canvas-like API.
+ *
+ * @example
+ * ```tsx
+ * <Canvas
+ *   frame={{ width: 300, height: 200 }}
+ *   draw={(ctx, size) => {
+ *     ctx.fillStyle = "systemBlue"
+ *     ctx.fillRect(0, 0, size.width, size.height)
+ *
+ *     ctx.save()
+ *     ctx.translate(size.width / 2, size.height / 2)
+ *     ctx.rotate(Math.PI / 4)
+ *     ctx.strokeStyle = "white"
+ *     ctx.lineWidth = 4
+ *     ctx.strokeRect(-40, -40, 80, 80)
+ *     ctx.restore()
+ *   }}
+ * />
+ * ```
+ *
+ * Sizing is controlled by view modifiers (e.g. `frame`, `padding`) — Canvas itself has no
+ * width / height props. The actual draw size is passed as the second argument to `draw`.
+ */
+declare const Canvas: FunctionComponent<CanvasProps>;
+/**
+ * How often the `TimelineCanvas` should advance.
+ *
+ * - `"animation"` (default): SwiftUI `TimelineSchedule.animation`, ~60fps while the view is visible.
+ * - `"periodic"`: SwiftUI `TimelineSchedule.periodic` with a 1s interval — handy for clocks.
+ * - `{ minimumInterval }`: SwiftUI `TimelineSchedule.animation(minimumInterval:)` in seconds — e.g.
+ *   `{ minimumInterval: 1/30 }` for ~30fps.
+ */
+type TimelineCanvasSchedule = "animation" | "periodic" | {
+    minimumInterval: number;
+};
+type TimelineCanvasDrawSize = {
+    width: number;
+    height: number;
+    time: number;
+};
+type TimelineCanvasProps = {
+    /**
+     * Called every tick. `time` is the elapsed seconds since the view first appeared (a relative
+     * clock — never `Date.now()`-sized — so multiplications / modulos stay precision-safe).
+     *
+     * The closure must be pure with respect to React state. Issue Web-style commands on `ctx`
+     * exactly like `<Canvas>`; keep per-frame state in `useRef` / module scope.
+     */
+    draw: (ctx: CanvasRenderingContext, size: CanvasSize, time: number) => void;
+    /**
+     * Pause / resume the timeline. When `true`, SwiftUI stops ticking and the last drawn frame
+     * stays on screen. Defaults to `false`. Two-way: flipping this from your `useState` halts
+     * or resumes the animation immediately.
+     */
+    paused?: boolean;
+    /** Tick cadence. Defaults to `"animation"` (~60fps). See {@link TimelineCanvasSchedule}. */
+    schedule?: TimelineCanvasSchedule;
+    /**
+     * Whether the canvas is treated as fully opaque by SwiftUI. Defaults to `true`,
+     * matching `<Canvas>`.
+     */
+    opaque?: boolean;
+};
+/**
+ * A SwiftUI-`TimelineView`-backed Canvas variant for per-frame animation.
+ *
+ * @example
+ * ```tsx
+ * const stateRef = useRef({ x: 0, vx: 120 })
+ *
+ * <TimelineCanvas
+ *   frame={{ width: 320, height: 200 }}
+ *   draw={(ctx, size, time) => {
+ *     // simple bouncing ball — state held in a ref
+ *     const s = stateRef.current
+ *     s.x += s.vx * (1 / 60)
+ *     if (s.x < 20 || s.x > size.width - 20) s.vx = -s.vx
+ *
+ *     ctx.fillStyle = "systemBackground"
+ *     ctx.fillRect(0, 0, size.width, size.height)
+ *     ctx.fillStyle = "systemBlue"
+ *     ctx.beginPath()
+ *     ctx.arc(s.x, size.height / 2, 20, 0, Math.PI * 2)
+ *     ctx.fill()
+ *   }}
+ * />
+ * ```
+ *
+ * For data-driven (non-animated) drawing use {@link Canvas} instead — it only re-runs
+ * the closure on React state / layout changes, which is much cheaper.
+ */
+declare const TimelineCanvas: FunctionComponent<TimelineCanvasProps>;
 
 type ChartMarkProps = {
     /**
@@ -2028,6 +5575,19 @@ type ChartMarkProps = {
          */
         label: string;
     };
+    /**
+     * VoiceOver-spoken label for this mark. Overrides the SDK's default label (which is
+     * synthesized from the mark's data values). Mirrors SwiftUI's `.accessibilityLabel(_:)`.
+     */
+    accessibilityLabel?: string;
+    /**
+     * VoiceOver-spoken value for this mark. Mirrors SwiftUI's `.accessibilityValue(_:)`.
+     */
+    accessibilityValue?: string;
+    /**
+     * If `true`, this mark is excluded from VoiceOver. Mirrors SwiftUI's `.accessibilityHidden(_:)`.
+     */
+    accessibilityHidden?: boolean;
 };
 type BarChartProps = {
     /**
@@ -2232,6 +5792,79 @@ declare const DonutChart: FunctionComponent<{
         angularInset?: number;
     } & ChartMarkProps>;
 }>;
+/** Single-variable function form: `y = fn(x)` over `domain`. */
+type LinePlotFunctionProps = {
+    /** X-axis label. */
+    x: string;
+    /** Y-axis label. */
+    y: string;
+    /** Optional `[from, to]` x range; defaults to chart's visible domain. */
+    domain?: [number, number];
+    /** Function evaluated at each sample x. Must be pure — no setState inside. */
+    fn: (x: number) => number;
+} & ChartMarkProps;
+/** Parametric form: `(x, y) = fn(t)` over `domain`. */
+type LinePlotParametricProps = {
+    x: string;
+    y: string;
+    /** Parameter axis label. */
+    t: string;
+    /** Required `[from, to]` t range. */
+    domain: [number, number];
+    /** Function evaluated at each sample t. Must be pure — no setState inside. */
+    fn: (t: number) => {
+        x: number;
+        y: number;
+    };
+} & ChartMarkProps;
+/**
+ * Plots a smooth curve from a JS function. Mirrors SwiftUI Charts' `LinePlot(...)`
+ * function-form initializers (iOS 18+). On iOS 17 the bridge logs an API-deprecated
+ * warning and renders nothing for this mark.
+ *
+ * Two forms, dispatched on whether `t` is present:
+ * - `{ x, y, domain?, fn: (x) => y }` — single-variable `y = fn(x)`
+ * - `{ x, y, t, domain, fn: (t) => ({ x, y }) }` — parametric curve
+ *
+ * @example
+ * ```tsx
+ * <Chart>
+ *   <LinePlot x="X" y="Y" domain={[0, 10]}
+ *             fn={(x) => Math.sin(x)} />
+ *   <LinePlot x="X" y="Y" t="t" domain={[0, 6.283]}
+ *             fn={(t) => ({ x: Math.cos(t), y: Math.sin(t) })} />
+ * </Chart>
+ * ```
+ *
+ * Performance note: SwiftUI Charts re-samples the function on every layout pass
+ * (≈ viewport-width samples). Each sample is a JSCore call (~5µs). Keep `fn`
+ * cheap — direct `Math.*` is fine, heavy work or large captures will stutter on
+ * scroll / zoom.
+ */
+declare const LinePlot: FunctionComponent<LinePlotFunctionProps | LinePlotParametricProps>;
+/** Area between two y values: `(yStart, yEnd) = fn(x)` over `domain`. */
+type AreaPlotProps = {
+    x: string;
+    yStart: string;
+    yEnd: string;
+    domain?: [number, number];
+    /** Function evaluated at each sample x. Must be pure — no setState inside. */
+    fn: (x: number) => {
+        yStart: number;
+        yEnd: number;
+    };
+} & ChartMarkProps;
+/**
+ * Plots a smooth filled area from a JS function returning `(yStart, yEnd)` per x.
+ * Mirrors SwiftUI Charts' `AreaPlot(x:yStart:yEnd:domain:function:)` (iOS 18+).
+ *
+ * @example
+ * ```tsx
+ * <AreaPlot x="X" yStart="lo" yEnd="hi" domain={[0, 10]}
+ *           fn={(x) => ({ yStart: Math.sin(x) - 0.5, yEnd: Math.sin(x) + 0.5 })} />
+ * ```
+ */
+declare const AreaPlot: FunctionComponent<AreaPlotProps>;
 /**
  * A view that displays a chart.
  *
@@ -2606,6 +6239,36 @@ type DatePickerProps = ({
  */
 declare const DatePicker: FunctionComponent<DatePickerProps>;
 
+type DirectoryBrowserViewProps = {
+    /**
+     * The title displayed in the navigation bar.
+     */
+    title: string;
+    /**
+     * The directory path to browse. When null or undefined, the browser shows an empty folder.
+     */
+    directoryPath?: string | null;
+    /**
+     * Called after files are imported, renamed, deleted, or edited.
+     */
+    onFilesChanged?: () => void;
+};
+/**
+ * A file browser for viewing and managing the contents of a directory.
+ *
+ * @example
+ * ```tsx
+ * <NavigationStack>
+ *   <DirectoryBrowserView
+ *     title="Workspace"
+ *     directoryPath={Script.directoryPath}
+ *     onFilesChanged={() => console.log("Files changed")}
+ *   />
+ * </NavigationStack>
+ * ```
+ */
+declare const DirectoryBrowserView: FunctionComponent<DirectoryBrowserViewProps>;
+
 type DisclosureGroupProps = ({
     /**
      * A description of the content of the disclosure group.
@@ -2700,2491 +6363,6 @@ declare const Editor: FunctionComponent<EditorProps>;
 
 declare const EmptyView: FunctionComponent<{}>;
 
-/**
- * Options that control how adding a gesture to a view affects other gestures recognized by the view and its subviews.
- *  - `all`: Enable both the added gesture as well as all other gestures on the view and its subviews.
- *  - `gesture`: Enable the added gesture but disable all gestures in the subview hierarchy.
- *  - `subviews`: Enable all gestures in the subview hierarchy but disable the added gesture.
- *  - `none`: Disable all gestures in the subview hierarchy, including the added gesture.
- */
-type GestureMask = "all" | "gesture" | "subviews" | "none";
-type GestureProps = Gesture | {
-    /**
-     * A gesture to attach to the view.
-     */
-    gesture: Gesture;
-    /**
-     * A value that controls how adding this gesture to the view affects other gestures recognized by the view and its subviews. Defaults to "all".
-     */
-    mask: GestureMask;
-} | {
-    gesture: Gesture;
-    /**
-     * Whether the added gesture is enabled.
-     */
-    isEnabled: boolean;
-};
-type GesturesProps = {
-    /**
-     * The gesture to apply to the view
-     * @example
-     * ```tsx
-     * <Text
-     *   gesture={
-     *     TapGesture()
-     *       .onEnded(() => console.log('Tapped'))
-     *   }
-     * />
-     * ```
-     */
-    gesture?: GestureProps;
-    /**
-     * Attaches a gesture to the view to process simultaneously with gestures defined by the view.
-     * @example
-     * ```tsx
-     * <Text
-     *   simultaneousGesture={
-     *     TapGesture()
-     *       .onEnded(() => console.log('Tapped'))
-     *   }
-     * />
-     * ```
-     */
-    simultaneousGesture?: GestureProps;
-    /**
-     * Attaches a gesture to the view with a higher precedence than gestures defined by the view.
-     * @example
-     * ```tsx
-     * <Text
-     *   highPriorityGesture={
-     *     TapGesture()
-     *       .onEnded(() => console.log('Tapped'))
-     *   }
-     * />
-     * ```
-     */
-    highPriorityGesture?: GestureProps;
-    /**
-     * Sets the screen edge from which you want your gesture to take precedence over the system gesture.
-     */
-    defersSystemGestures?: EdgeSet;
-    /**
-     * Adds an action to perform when this view recognizes a tap gesture.
-     */
-    onTapGesture?: (() => void) | {
-        /**
-         * The number of taps or clicks required to trigger the action closure provided in action. Defaults to 1.
-         */
-        count: number;
-        /**
-         * The coordinate space in which to receive location values. Defaults to "local".
-         *  - `local`: The local coordinate space of the current view.
-         *  - `global`: The global coordinate space at the root of the view hierarchy.
-         *  - `scrollView`: The named coordinate space that is added by the system for the innermost containing scroll view.
-         *  - `immersiveSpace`: The named coordinate space that represents the currently opened ImmersiveSpace scene. If no immersive space is currently opened, this CoordinateSpace provides the same behavior as the "global" coordinate space.
-         */
-        coordinateSpace?: "local" | "global" | "scrollView" | "immersiveSpace";
-        /**
-         * The action to perform.
-         */
-        perform: () => void;
-    };
-    /**
-     * Adds an action to perform when this view recognizes a long press gesture.
-     */
-    onLongPressGesture?: (() => void) | {
-        /**
-         * The minimum duration of the long press that must elapse before the gesture succeeds.
-         * Defaults to `500` ms.
-         */
-        minDuration?: DurationInMilliseconds;
-        /**
-         * The maximum distance that the fingers or cursor performing the long press can move before the gesture fails.
-         * Defaults to `10000` ms.
-         */
-        maxDuration?: DurationInMilliseconds;
-        /**
-         * The action to perform when a long press is recognized.
-         */
-        perform: () => void;
-        /**
-         * A callback to run when the pressing state of the gesture changes, passing the current state as a parameter.
-         */
-        onPressingChanged?: (state: boolean) => void;
-    };
-    /**
-     * A dragging motion that invokes an action as the drag-event sequence changes.
-     * @param onDragGesture.minDistance The minimum dragging distance for the gesture to succeed. Defaults to 10.
-     * @param onDragGesture.coordinateSpace The coordinate space of the dragging gesture’s location. Defaults to `locale`.
-     * @param onDragGesture.onChanged Adds an action to perform when the gesture’s value changes. The action to perform when this gesture’s value changes. The action closure’s parameter contains the gesture’s new value.
-     * @param onDragGesture.onEnded Adds an action to perform when the gesture ends. The action to perform when this gesture ends. The action closure’s parameter contains the final value of the gesture.
-     */
-    onDragGesture?: {
-        minDistance?: number;
-        coordinateSpace?: 'local' | 'global';
-        onChanged?: (action: DragGestureDetails) => void;
-        onEnded?: (action: DragGestureDetails) => void;
-    };
-    /**
-     * Configures whether this view participates in hit test operations.
-     */
-    allowsHitTesting?: boolean;
-};
-
-type FrameSizeProps = {
-    frame?: {
-        width?: number;
-        height?: number;
-        /**
-         * The alignment of this view inside the resulting frame.
-         * Note that most alignment values have no apparent effect when the
-         * size of the frame happens to match that of this view.
-         */
-        alignment?: Alignment;
-    } | {
-        /**
-         * The alignment of this view inside the resulting frame.
-         * Note that most alignment values have no apparent effect when the
-         * size of the frame happens to match that of this view.
-         */
-        alignment?: Alignment;
-        /**
-         * The minimum width of the resulting frame.
-         */
-        minWidth?: number;
-        /**
-         * The minimum height of the resulting frame.
-         */
-        minHeight?: number;
-        /**
-         * The maximum width of the resulting frame.
-         */
-        maxWidth?: number | 'infinity';
-        /**
-         * The maximum height of the resulting frame.
-         */
-        maxHeight?: number | 'infinity';
-        /**
-         * The ideal width of the resulting frame.
-         */
-        idealWidth?: number | 'infinity';
-        /**
-         * The ideal height of the resulting frame.
-         */
-        idealHeight?: number | 'infinity';
-    };
-    /**
-     * Positions this view within an invisible frame with a size relative to the nearest container.
-     * @see https://developer.apple.com/documentation/swiftui/view/containerrelativeframe(_:alignment:)
-     * @see https://www.hackingwithswift.com/quick-start/swiftui/how-to-adjust-the-size-of-a-view-relative-to-its-container
-     */
-    containerRelativeFrame?: {
-        axes: AxisSet;
-        /**
-         * Defaults to `center`.
-         */
-        alignment?: Alignment;
-        count: never;
-        span: never;
-        spacing: never;
-    } | {
-        axes: AxisSet;
-        /**
-         * Defaults to `center`.
-         */
-        alignment?: Alignment;
-        /**
-         * How many parts the container's space should be split into.
-         */
-        count: number;
-        /**
-         * How many parts should be allocated to for each view.
-         * Defaults to 1.
-         */
-        span?: number;
-        spacing: number;
-    };
-    /**
-     * Fixes this view at its ideal size.
-     */
-    fixedSize?: boolean | {
-        /**
-         * A Boolean value that indicates whether to fix the width of the view.
-         */
-        horizontal: boolean;
-        /**
-         * A Boolean value that indicates whether to fix the height of the view.
-         */
-        vertical: boolean;
-    };
-};
-
-type ForeAndBackgroundProps = {
-    /**
-     * Sets a view’s foreground elements to use a given style. You can also sets the primary, secondary, and tertiary levels of the foreground style.
-     */
-    foregroundStyle?: ShapeStyle | DynamicShapeStyle | {
-        primary: ShapeStyle | DynamicShapeStyle;
-        secondary: ShapeStyle | DynamicShapeStyle;
-        tertiary?: ShapeStyle | DynamicShapeStyle;
-    };
-    /**
-     * Sets the view’s background to an insettable shape filled with a style. You can also layers the views that you specify behind this view.
-     */
-    background?: ShapeStyle | DynamicShapeStyle | {
-        style: ShapeStyle | DynamicShapeStyle;
-        shape: Shape | 'concentricRect' | ({
-            type: 'concentricRect';
-        } & ConcentricRectangleShape);
-    } | VirtualNode | {
-        content: VirtualNode;
-        alignment: Alignment;
-    };
-    /**
-     * Adds the background extension effect to the view. The view will be duplicated into mirrored copies which will be placed around the view on any edge with available safe area. Additionally, a blur effect will be applied on top to blur out the copies.
-     * @available iOS 26.0+
-     */
-    backgroundExtensionEffect?: boolean;
-};
-
-type PaddingAndBorderProps = {
-    /**
-     * When specify to true, will apply the default padding.
-     */
-    padding?: true | number | {
-        horizontal?: number | true;
-        vertical?: number | true;
-        leading?: number | true;
-        trailing?: number | true;
-        top?: number | true;
-        bottom?: number | true;
-    };
-    /**
-     * Adds a border to this view with the specified style and width.
-     */
-    border?: {
-        style: ShapeStyle | DynamicShapeStyle;
-        /**
-         * The thickness of the border. The default is 1 pixel.
-         */
-        width?: number;
-    } | ShapeStyle | DynamicShapeStyle;
-};
-
-type ViewVisibilityProps = {
-    /**
-     * Hidden views are invisible and can’t receive or respond to interactions. However, they do remain in the view hierarchy and affect layout.
-     */
-    hidden?: boolean;
-    /**
-     * Hides the labels of any controls contained within this view.
-     */
-    labelsHidden?: boolean;
-};
-
-type ImageViewProps = {
-    /**
-     * Scales this view to fit its parent.
-     */
-    scaleToFit?: boolean;
-    /**
-     * Scales this view to fill its parent.
-     */
-    scaleToFill?: boolean;
-    /**
-     * Constrains this view’s dimensions to the specified aspect ratio.
-     */
-    aspectRatio?: {
-        /**
-         * The ratio of width to height to use for the resulting view. Use null to maintain the current aspect ratio in the resulting view.
-         */
-        value?: number | null;
-        /**
-         * A flag that indicates whether this view fits or fills the parent context.
-         */
-        contentMode: ContentMode;
-    };
-    /**
-     * Scales images within the view according to one of the relative sizes available including small, medium, and large images sizes.
-     */
-    imageScale?: ImageScale;
-};
-
-type ViewStyleProps = {
-    /**
-     * Sets the style for control groups within this view.
-     */
-    controlGroupStyle?: ControlGroupStyle;
-    /**
-     * Sets the style for menus within this view.
-     */
-    menuStyle?: MenuStyle;
-    /**
-     * The style to apply to this tab view.
-     */
-    tabViewStyle?: TabViewStyle;
-    /**
-     * Sets the size for controls within this view.
-     */
-    controlSize?: ControlSize;
-    /**
-     * A type that applies custom interaction behavior and a custom appearance to all buttons within a view hierarchy.
-     */
-    buttonStyle?: ButtonStyle;
-    /**
-     * The border shape affects buttons of the `bordered` and `borderedProminent` styles.
-     *  - `automatic`: A shape that defers to the system to determine an appropriate shape for the given context and platform.
-     *  - `capsule`: A capsule shape.
-     *  - `circle`: A circular shape.
-     *  - `roundedRectangle`: A rounded rectangle shape.
-     *  - `buttonBorder`: A shape that defers to the environment to determine the resolved button border shape.
-     */
-    buttonBorderShape?: ButtonBorderShape;
-    /**
-     * Sets the style for labels within this view.
-     */
-    labelStyle?: LabelStyle;
-    /**
-     * The appearance and behavior of a toggle.
-     */
-    toggleStyle?: ToggleStyle;
-    /**
-     * Sets the style for pickers within this view.
-     */
-    pickerStyle?: PickerStyle;
-    /**
-     * Sets the style for forms in a view hierarchy.
-     */
-    formStyle?: FormStyle;
-    datePickerStyle?: DatePickerStyle;
-    /**
-     * Sets the style for text fields within this view.
-     */
-    textFieldStyle?: TextFieldStyle;
-    /**
-     * The gauge view style to use for this view.
-     */
-    gaugeStyle?: GaugeStyle;
-    /**
-     * The style describes the behavior and appearance of a list.
-     */
-    listStyle?: ListStyle;
-    /**
-     * The progress view style to use for this view.
-     */
-    progressViewStyle?: ProgressViewStyle;
-    /**
-     * Adds a context menu with a custom preview to a view.
-     *
-     * @example
-     * ```tsx
-     * function View() {
-     *   return <Text
-     *     contextMenu={{
-     *       menuItems: <Group>
-     *         <Button
-     *           title="Add"
-     *           action={() => {
-     *             // Add
-     *           }}
-     *         />
-     *         <Button
-     *           title="Delete"
-     *           role="destructive"
-     *           action={() => {
-     *             // Delete
-     *           }}
-     *         />
-     *       </Group>
-     *     }}
-     *   >Long Press to Open Context Menu</Text>
-     * }
-     * ```
-     */
-    contextMenu?: {
-        /**
-         * The menu’s contents
-         */
-        menuItems: VirtualNode;
-        /**
-         * A view that the system displays along with the menu.
-         */
-        preview?: VirtualNode;
-    };
-    /**
-     * Sets the menu indicator visibility for controls within this view.
-     */
-    menuIndicator?: Visibility;
-    /**
-     * Set the width reserved for icons in labels.
-     * Requires iOS 26+.
-     */
-    labelReservedIconWidth?: number;
-    /**
-     * Set the spacing between the icon and title in labels.
-     */
-    labelIconToTitleSpacing?: number;
-    /**
-     * Sets the visibility of the slider thumb.
-     * Requires iOS 26+
-     */
-    sliderThumbVisibility?: Visibility;
-};
-
-type TextFieldViewProps = {
-    /**
-     * A Boolean value that indicates whether autocorrection is disabled for this view. The default value is true.
-     */
-    autocorrectionDisabled?: boolean;
-    /**
-     * Sets how often the shift key in the keyboard is automatically enabled.
-     */
-    textInputAutocapitalization?: TextInputAutocapitalization;
-    /**
-     * Sets the text content type for this view, which the system uses to offer suggestions while the user enters text on an iOS or tvOS device.
-     */
-    textContentType?: TextContentType;
-    /**
-     * Sets the keyboard type for this view.
-     */
-    keyboardType?: KeyboardType;
-    /**
-     * Adds an action to perform when the user submits a value to this view. If you specify a function as the action, the `triggers` defaults to `text`.
-     */
-    onSubmit?: (() => void) | {
-        /**
-         * The triggers that should invoke the provided action.
-         */
-        triggers: SubmitTriggers;
-        /**
-         * The action to perform on submission of a value.
-         */
-        action: () => void;
-    };
-    /**
-     * Prevents submission triggers originating from this view to invoke a submission action configured by a submission modifier higher up in the view hierarchy. A boolean that indicates whether this scope is actively blocking submission triggers from reaching higher submission actions.
-     */
-    submitScope?: boolean;
-    /**
-     * The label to use for the submit button.
-     */
-    submitLabel?: "continue" | "return" | "send" | "go" | "search" | "join" | "done" | "next" | "route";
-};
-
-type TextViewProps = {
-    /**
-     * When specify to number, will apply as system font with size. When specify to `Font`, will apply as specified system font. If you provide both `name` and `size`, will apply as custom font family and font size.
-     */
-    font?: Font | number | {
-        /**
-         * Custom font name.
-         */
-        name: string;
-        /**
-         * Custom font size.
-         */
-        size: number;
-    };
-    /**
-     * Sets the font width of the text in this view.
-     */
-    fontWidth?: FontWidth | number;
-    /**
-     * One of the available font weights. Providing null removes the effect of any font weight modifier applied higher in the view hierarchy.
-     */
-    fontWeight?: FontWeight;
-    /**
-     * One of the available font designs. Providing null removes the effect of any font design modifier applied higher in the view hierarchy.
-     */
-    fontDesign?: FontDesign;
-    /**
-     * A fraction between 0 and 1 (inclusive) you use to specify the minimum amount of text scaling that this view permits.
-     */
-    minScaleFactor?: number;
-    /**
-     * Applies a bold font weight to the text in this view.
-     */
-    bold?: boolean;
-    /**
-     * Sets the vertical offset for the text relative to its baseline in this view.
-     */
-    baselineOffset?: number;
-    /**
-     * Sets the spacing, or kerning, between characters for the text in this view.
-     */
-    kerning?: number;
-    /**
-     * Applies italics to the text in this view.
-     */
-    italic?: boolean;
-    /**
-     * Modifies the fonts of all child views to use the fixed-width variant of the current font, if possible.
-     */
-    monospaced?: boolean;
-    /**
-     * Modifies the fonts of all child views to use fixed-width digits, if possible, while leaving other characters proportionally spaced.
-     */
-    monospacedDigit?: boolean;
-    /**
-     * Applies a strikethrough with a specified color to the text.
-     */
-    strikethrough?: Color | {
-        pattern: LineStylePattern;
-        color: Color;
-    };
-    /**
-     * Applies a underline with a specified color to the text.
-     */
-    underline?: Color | {
-        pattern: LineStylePattern;
-        color: Color;
-    };
-    /**
-     * Sets the maximum number of lines that text can occupy in this view.
-     */
-    lineLimit?: number | {
-        min?: number;
-        max: number;
-        /**
-         * Whether text reserves space so that it always occupies the height required to display the specified number of lines.
-         */
-        reservesSpace?: boolean;
-    };
-    /**
-     * Sets the alignment of a text view that contains multiple lines of text.
-     */
-    multilineTextAlignment?: TextAlignment;
-    /**
-     * Sets the spacing between lines of text in this view.
-     */
-    lineSpacing?: number;
-    /**
-     * Sets the truncation mode for lines of text that are too long to fit in the available space.
-     */
-    truncationMode?: TruncationMode;
-    /**
-     * Sets whether text in this view can compress the space between characters when necessary to fit text in a line.
-     */
-    allowsTightening?: boolean;
-    /**
-     * Sets whether this view mirrors its contents horizontally when the layout direction is right-to-left.
-     */
-    flipsForRightToLeftLayoutDirection?: boolean;
-    /**
-     * Sets a transform for the case of the text contained in this view when displayed. The default is null.
-     */
-    textCase?: 'uppercase' | 'lowercase' | null;
-    /**
-     * Controls whether people can select text within this view.
-     */
-    textSelection?: boolean;
-};
-
-type ShapeViewProps = {
-    /**
-     * Sets the container shape to use for any container relative shape within this view.
-     */
-    containerShape?: Shape;
-    /**
-     * The resolved shape of the content to which this shape can apply.
-     *
-     * For example, if this shape applies an effect to a button, the `contentShape` might represent the bounding shape of that button’s background. You typically size a dynamic shape relative to the bounding rectangle of the `contentShape`.
-     */
-    contentShape?: Shape | {
-        kind: ContentShapeKinds;
-        shape: Shape | 'concentricRect' | ({
-            type: 'concentricRect';
-        } & ConcentricRectangleShape);
-    };
-    /**
-     * The clipping shape to use for this view. The shape fills the view’s frame, while maintaining its aspect ratio.
-     */
-    clipShape?: Shape | 'concentricRect' | ({
-        type: 'concentricRect';
-    } & ConcentricRectangleShape);
-    /**
-     * Clips this view to its bounding rectangular frame. If specify `null` or `undefined`, this modifier will be ignored. Specify a boolean value that indicates whether the rendering system applies smoothing to the edges of the clipping rectangle.
-     */
-    clipped?: boolean;
-};
-
-type ChartViewProps = {
-    /**
-     * Sets the visibility of the x axis.
-     */
-    chartXAxis?: Visibility;
-    /**
-     * Sets the visibility of the y axis.
-     */
-    chartYAxis?: Visibility;
-    /**
-     * Adds x axis label for charts in the view.
-     */
-    chartXAxisLabel?: {
-        position?: AnnotationPosition;
-        alignment?: Alignment;
-        spacing?: number;
-        content: VirtualNode;
-    };
-    /**
-     * Adds y axis label for charts in the view.
-     */
-    chartYAxisLabel?: {
-        position?: AnnotationPosition;
-        alignment?: Alignment;
-        spacing?: number;
-        content: VirtualNode;
-    };
-    /**
-     * Configures the legend for charts.
-     */
-    chartLegend?: Visibility | {
-        position: AnnotationPosition;
-        alignment?: Alignment;
-        spacing?: number;
-        content?: VirtualNode;
-    };
-    /**
-     * Configures the x scale for charts.
-     */
-    chartXScale?: ClosedRange<number> | ClosedRange<Date> | string[] | ChartAxisScaleType | {
-        /**
-         * The possible data values along the x axis in the chart. You can define the domain with a ClosedRange for number or Date values (e.g., {from: 0, to: 500}), and with an array for string values (e.g., ["A", "B", "C"])
-         */
-        domain: ClosedRange<number> | ClosedRange<Date> | string[];
-        /**
-         * The scale type.
-         */
-        type: ChartAxisScaleType;
-    };
-    /**
-     * Configures the y scale for charts.
-     */
-    chartYScale?: ClosedRange<number> | ClosedRange<Date> | string[] | ChartAxisScaleType | {
-        /**
-         * The possible data values along the y axis in the chart. You can define the domain with a ClosedRange for number or Date values (e.g., {from: 0, to: 500}), and with an array for string values (e.g., ["A", "B", "C"])
-         */
-        domain: ClosedRange<number> | ClosedRange<Date> | string[];
-        /**
-         * The scale type.
-         */
-        type: ChartAxisScaleType;
-    };
-    /**
-     * Adds a background to a view that contains a chart.
-     */
-    chartBackground?: VirtualNode | {
-        /**
-         * The alignment of the content.
-         */
-        alignment: Alignment;
-        /**
-         * The content of the background.
-         */
-        content: VirtualNode;
-    };
-    /**
-     * For many charts, the default configuration works well. However, in this case, the colors that the framework assigns to each mark don’t match the shape colors that they represent.
-     * You can customize the chart to override the default color scale by adding this property.
-     */
-    chartForegroundStyleScale?: Record<string, ShapeStyle | DynamicShapeStyle>;
-    /**
-     * Configures the symbol style scale for charts.
-     */
-    chartSymbolScale?: Record<string, ChartSymbolShape>;
-    /**
-     * Configures the symbol size scale for charts.
-     */
-    chartSymbolSizeScale?: Record<string, number>;
-    /**
-     * Configures the line style scale for charts.
-     */
-    chartLineStyleScale?: Record<string, StrokeStyle>;
-    /**
-     * The set of chart axes to enable scrolling.
-     */
-    chartScrollableAxes?: AxisSet;
-    chartXSelection?: ChartSelection;
-    chartYSelection?: ChartSelection;
-    chartAngleSelection?: ChartSelection;
-    /**
-     * The length of the visible domain measured in data units. For categorical data, this should be the number of visible categories.
-     *
-     * When the `label` type of the chart marks is `Date`, this number should be fixed with your `unit`! See [Swift Charts' chartXVisibleDomain hangs or crashes](https://stackoverflow.com/questions/77236097/swift-charts-chartxvisibledomain-hangs-or-crashes)
-     */
-    chartXVisibleDomain?: number;
-    /**
-     * The length of the visible domain measured in data units. For categorical data, this should be the number of visible categories.
-     *
-     * When the `label` type of the chart marks is `Date`, this number should be fixed with your `unit`! See [Swift Charts' chartXVisibleDomain hangs or crashes](https://stackoverflow.com/questions/77236097/swift-charts-chartxvisibledomain-hangs-or-crashes)
-     */
-    chartYVisibleDomain?: number;
-    /**
-     * Sets the initial scroll position along the x-axis if you provide a `string`, `number` or `Date` value. Once the user scrolls the scroll view, the value provided to this modifier will have no effect. Specify an object with `value` and `onChange` will associate a binding to be updated when the chart scrolls along the x-axis.
-     */
-    chartScrollPositionX?: number | string | Date | ChartScrollPosition<string> | ChartScrollPosition<number> | ChartScrollPosition<Date> | Observable<number> | Observable<string> | Observable<Date>;
-    /**
-     * Sets the initial scroll position along the y-axis if you provide a `string`, `number` or `Date` value. Once the user scrolls the scroll view, the value provided to this modifier will have no effect. Specify an object with `value` and `onChange` will associate a binding to be updated when the chart scrolls along the y-axis.
-     */
-    chartScrollPositionY?: number | string | Date | ChartScrollPosition<string> | ChartScrollPosition<number> | ChartScrollPosition<Date> | Observable<number> | Observable<string> | Observable<Date>;
-};
-
-/**
- * A kind of toolbar item a View adds by default.
- *  - `sidebarToggle`: The sidebar toggle toolbar item a NavigationSplitView adds by default.
- *  - `search`: The search item added by a `searchable` modifier.
- *  - `title`: The title and subtitle shown in title bar / navigation bar.
- */
-type ToolbarDefaultItemKind = "sidebarToggle" | "search" | "title";
-type DefaultToolbarItemProps = {
-    kind: ToolbarDefaultItemKind;
-    /**
-     * Defaults to `automatic`.
-     */
-    placement?: ToolbarItemPlacement;
-    /**
-     * Controls the visibility of the glass background effect on items in the toolbar. In certain contexts, such as the navigation bar on iOS and the window toolbar on macOS, toolbar items will be given a glass background effect that is shared with other items in the same logical grouping.
-     */
-    sharedBackgroundVisibility?: Visibility;
-};
-declare const DefaultToolbarItem: FunctionComponent<DefaultToolbarItemProps>;
-
-type ToolbarsProps = {
-    /**
-     * Controls the visibility of bottom bar.
-     */
-    bottomBarVisibility?: Visibility;
-    /**
-     * Controls the visibility of navigation bar.
-     */
-    navigationBarVisibility?: Visibility;
-    /**
-     * Controls the visibility of tab bar.
-     */
-    tabBarVisibility?: Visibility;
-    /**
-     * Populates the toolbar or navigation bar with the specified items.
-     * @example
-     * ```tsx
-     * <List
-     *   toolbar={<Toolbar>
-     *     <ToolbarItem
-     *       placement="topBarLeading"
-     *     >
-     *       <Button
-     *         title="Close"
-     *         action={dismiss}
-     *       />
-     *     </ToolbarItem>
-     *   </Toolbar>}
-     * >
-     *  ...
-     * </List>
-     * ```
-     */
-    toolbar?: ToolBarProps | VirtualNode;
-    /**
-     * This will construct a menu that can be presented by tapping the navigation title in the app’s navigation bar.
-     */
-    toolbarTitleMenu?: VirtualNode;
-    /**
-     * Specifies the preferred shape style of the background of the tabbar
-     */
-    toolbarBackground?: ShapeStyle | DynamicShapeStyle | {
-        style: ShapeStyle | DynamicShapeStyle;
-        bars?: ToolbarPlacement[];
-    };
-    /**
-     * (iOS 18.0+) Specifies the preferred visibility of backgrounds on a bar.
-     */
-    toolbarBackgroundVisibility?: Visibility | {
-        /**
-         * The preferred visibility of the background of the bar.
-         */
-        visibility: Visibility;
-        /**
-         * The bars to update the color scheme of or automatic if empty.
-         */
-        bars?: ToolbarPlacement[];
-    };
-    /**
-     * Specifies the preferred color scheme of a bar.
-     */
-    toolbarColorScheme?: ColorScheme | {
-        /**
-         * The preferred color scheme of the background of the bar.
-         */
-        colorScheme: ColorScheme | null;
-        /**
-         * The bars to update the color scheme of or automatic if empty.
-         */
-        bars?: ToolbarPlacement[];
-    };
-    /**
-     * Configures the toolbar title display mode for this view.
-     */
-    toolbarTitleDisplayMode?: ToolbarTitleDisplayMode;
-    /**
-     * Remove the specified toolbar items present by default.
-     */
-    toolbarRemoving?: {
-        [K in ToolbarDefaultItemKind]?: boolean;
-    };
-    /**
-     * Configures the semantic role for the content populating the toolbar.
-     */
-    toolbarRole?: 'automatic' | 'browser' | 'editor' | 'navigationStack';
-    /**
-     * Sets the behavior for tab bar minimization.
-     * @available iOS 26.0+
-     */
-    tabBarMinimizeBehavior?: 'automatic' | 'never' | 'onScrollDown' | 'onScrollUp';
-    /**
-     * Places a view as the bottom accessory of the tab view.
-     * @available iOS 26.0+
-     */
-    tabViewBottomAccessory?: VirtualNode;
-    /**
-     * Configures the activation and deactivation behavior of search in the search tab.
-     * @available iOS 26.0+
-     */
-    tabViewSearchActivation?: 'automatic' | 'searchTabSelection';
-    /**
-     * Specifies the customizations to apply to the sidebar representation of the tab view.
-     * @available iOS 18.0+
-     */
-    tabViewCustomization?: Observable<TabViewCustomization>;
-    /**
-     * Places a view as the header of the sidebar tab view.
-     * @available iOS 18.0+
-     */
-    tabViewSidebarHeader?: VirtualNode;
-    /**
-     * Places a view as the footer of the sidebar tab view.
-     * @available iOS 18.0+
-     */
-    tabViewSidebarFooter?: VirtualNode;
-    /**
-     * Places a view as the bottom bar of the sidebar tab view.
-     * @available iOS 18.0+
-     */
-    tabViewSidebarBottomBar?: VirtualNode;
-    /**
-     * Sets the style for the index view within the current environment.
-     */
-    indexViewStyle?: IndexViewStyle;
-};
-
-/**
- * - `hard`: A scroll edge effect with a hard cutoff and dividing line.
- * - `soft`: A scroll edge effect with a soft edge.
- */
-type ScrollEdgeEffectStyle = "automatic" | "hard" | "soft";
-type ScrollProps = {
-    /**
-     * Marks this view as refreshable. An asynchronous handler that framework executes when the user requests a refresh. Use this handler to initiate an update of model data displayed in the modified view. Use await in front of any asynchronous calls inside the handler.
-     */
-    refreshable?: () => Promise<void>;
-    /**
-     * Use this modifier to hide or show scroll indicators on scrollable content in views like a `ScrollView` or `List`. This modifier applies the prefered visibility to any scrollable content within a view hierarchy.
-     */
-    scrollIndicator?: ScrollScrollIndicatorVisibility | {
-        /**
-         * The visibility to apply to scrollable views.
-         */
-        visibility: ScrollScrollIndicatorVisibility;
-        /**
-         * The axes of scrollable views that the visibility applies to.
-         */
-        axes: AxisSet;
-    };
-    /**
-     * Disables or enables scrolling in scrollable views.
-     */
-    scrollDisabled?: boolean;
-    /**
-     * Sets whether a scroll view clips its content to its bounds.
-     */
-    scrollClipDisabled?: boolean;
-    /**
-     * Configures the behavior in which scrollable content interacts with the software keyboard.
-     */
-    scrollDismissesKeyboard?: ScrollDismissesKeyboardMode;
-    /**
-     * Use this modifier to specify an anchor to control both which part of the scroll view’s content should be visible initially and how the scroll view handles content size changes.
-     */
-    defaultScrollAnchor?: KeywordPoint | Point;
-    /**
-     * Apply this modifier to layout containers like `LazyHStack` or `VStack` within a `ScrollView` that contain the main repeating content of your `ScrollView`.
-     */
-    scrollTargetlayout?: boolean;
-    /**
-     * Sets the scroll behavior of views scrollable in the provided axes.
-     */
-    scrollTargetBehavior?: ScrollTargetBehavior;
-    /**
-     * Specifies the visibility of the background for scrollable views within this view.
-     */
-    scrollContentBackground?: Visibility;
-    /**
-     * Configures the scroll edge effect style for scroll views within this hierarchy.
-     * @available iOS 26.0+
-     */
-    scrollEdgeEffectStyle?: EdgeSet | ScrollEdgeEffectStyle | {
-        style: ScrollEdgeEffectStyle;
-        edges: EdgeSet;
-    };
-    /**
-     * Hides any scroll edge effects for scroll views within this hierarchy.
-     * @available iOS 26.0+
-     */
-    scrollEdgeEffectHidden?: boolean | EdgeSet | {
-        edges: EdgeSet;
-        hidden: boolean;
-    };
-};
-
-type SafeAreaProps = {
-    /**
-     * Adds the provided insets into the safe area of this view. Use this modifier when you would like to add a fixed amount of space to the safe area a view sees.
-     * When specify to true, will apply the default padding.
-     */
-    safeAreaPadding?: true | number | {
-        horizontal?: number | true;
-        vertical?: number | true;
-        leading?: number | true;
-        trailing?: number | true;
-        top?: number | true;
-        bottom?: number | true;
-    };
-    /**
-     * Shows the specified content beside the modified view.
-     */
-    safeAreaInset?: {
-        top?: {
-            /**
-             * The alignment guide used to position content horizontally.
-             */
-            alignment?: HorizontalAlignment;
-            /**
-             * Extra distance placed between the two views, or nil to use the default amount of spacing.
-             */
-            spacing?: number;
-            /**
-             * The view to display in the inset space of the modified view.
-             */
-            content: VirtualNode;
-        };
-        bottom?: {
-            /**
-             * The alignment guide used to position content horizontally.
-             */
-            alignment?: HorizontalAlignment;
-            /**
-             * Extra distance placed between the two views, or nil to use the default amount of spacing.
-             */
-            spacing?: number;
-            /**
-             * The view to display in the inset space of the modified view.
-             */
-            content: VirtualNode;
-        };
-        leading?: {
-            /**
-             * The alignment guide used to position content vertically.
-             */
-            alignment?: VerticalAlignment;
-            /**
-             * Extra distance placed between the two views, or nil to use the default amount of spacing.
-             */
-            spacing?: number;
-            /**
-             * The view to display in the inset space of the modified view.
-             */
-            content: VirtualNode;
-        };
-        trailing?: {
-            /**
-             * The alignment guide used to position content vertically.
-             */
-            alignment?: VerticalAlignment;
-            /**
-             * Extra distance placed between the two views, or nil to use the default amount of spacing.
-             */
-            spacing?: number;
-            /**
-             * The view to display in the inset space of the modified view.
-             */
-            content: VirtualNode;
-        };
-    };
-    /**
-     * Expands the safe area of a view.
-     */
-    ignoresSafeArea?: boolean | {
-        /**
-         * The regions to expand the view’s safe area into. The modifier expands into all safe area region types by default.
-         */
-        regions?: SafeAreaRegions;
-        /**
-         * The set of edges to expand. Any edges that you don’t include in this set remain unchanged. The set includes all edges by default.
-         */
-        edges?: EdgeSet;
-    };
-    /**
-     * Shows the specified content as a custom bar beside the modified view.
-     * @available iOS 26.0+
-     */
-    safeAreaBar?: {
-        edge: HorizontalEdge;
-        alignment?: VerticalAlignment;
-        spacing?: number | null;
-        content: VirtualNode;
-    } | {
-        edge: VerticalEdge;
-        alignment?: HorizontalAlignment;
-        spacing?: number | null;
-        content: VirtualNode;
-    };
-};
-
-type WidgetProps = {
-    /**
-     * The URL to open in the containing app when the user clicks the widget. Widgets support one `widgetURL` modifier in their view hierarchy. If multiple views have widgetURL modifiers, the behavior is undefined. If you want to add URL for multiple views, use `Link` view to wrap them.
-     */
-    widgetURL?: string;
-    /**
-     * Adds the view and all of its subviews to the accented group.
-     *
-     * When the system renders the widget using the WidgetKit/WidgetRenderingMode/accented mode, it divides the widget’s view hierarchy into two groups: the accented group and the default group. It then applies a different color to each group.
-     *
-     * When applying the colors, the system treats the widget’s views as if they were template images. It ignores the view’s color — rendering the new colors based on the view’s alpha channel.
-     *
-     * To control your view’s appearance, add the `widgetAccentable` modifier to part of your view’s hierarchy. If the accentable parameter is true, the system adds that view and all of its subviews to the accent group. It puts all other views in the default group.
-     *
-     * @example
-     * ```tsx
-     * <VStack>
-     *   <Text
-     *     widgetAccentable
-     *     font="caption"
-     *   >MON</Text>
-     *   <Text
-     *     font="title"
-     *   >6</Text>
-     * </VStack>
-     * ```
-     */
-    widgetAccentable?: boolean;
-    /**
-     * This view modifier is used in widgets to set the background of views. When a widget is rendered in `accented` mode, the system displays all colors as white (or as the tinted color if `widgetAccentable` is applied to the view). By using this modifier, the background will be hidden in `accented` mode but will appear normally in all other modes.
-     */
-    widgetBackground?: ShapeStyle | DynamicShapeStyle | {
-        style: ShapeStyle | DynamicShapeStyle;
-        shape: Shape | 'concentricRect' | ({
-            type: 'concentricRect';
-        } & ConcentricRectangleShape);
-    };
-};
-
-type ExtensionProps = {
-    /**
-     * Defines the animation configuration for swinging the view along the X and/or Y axis. Each axis can have its own animation settings:
-     *
-     *  - x: The animation configuration for the horizontal axis.
-     *  - y: The animation configuration for the vertical axis.
-     *
-     * @example
-     * ```tsx
-     * <Circle
-     *   fill="systemRed"
-     *   frame={{width: 50, height: 50}}
-     *   swingAnimation={{
-     *     x: {
-     *       duration: 4,
-     *       distance: 250
-     *     },
-     *     y: {
-     *       duration: 2,
-     *       distance: 50
-     *     }
-     *   }}
-     * />
-     * ```
-     */
-    swingAnimation?: {
-        /**
-         * The horizontal axis animation.
-         */
-        x?: SwingAnimation;
-        /**
-         * The vertical axis animation.
-         */
-        y?: SwingAnimation;
-    };
-    /**
-     * Defines the rotation effect for simulating a clock hand. You can specify the anchor point (optional) and the period (e.g., "hourHand", "minuteHand", "secondHand"), or provide a custom duration for the rotation.
-     */
-    clockHandRotationEffect?: ClockHandRotationEffectPeriod | {
-        anchor: KeywordPoint | Point;
-        period: ClockHandRotationEffectPeriod;
-    };
-    /**
-     * Provides a host for translation service. This should be applied to the root view of your current page.
-     *
-     * Why use a translation host?
-     *
-     * - If the source or target language aren’t installed, the framework asks the person for permission to download the languages.
-     * - If the source parameter is null and the framework can’t detect the source language from the content, the framework prompts the person to choose the source language.
-     *
-     * @example
-     * ```tsx
-     * function View() {
-     *   const translation = useMemo(() => new Translation(), [])
-     *   const [translated, setTranslated] = useState<{[key: string]: string}>({})
-     *   const texts = ["Hello", "Goodbye"]
-     *
-     *   useEffect(() => {
-     *     translation.translateBatch({
-     *       texts,
-     *       target: "fr",
-     *       source: "en"
-     *     }).then(result => {
-     *       const map: {[key: string]: string} = {}
-     *       result.forEach((item, index) => {
-     *         map[texts[index]] = item
-     *       })
-     *       setTranslated(map)
-     *     })
-     *   }, [])
-     *
-     *
-     *   return <VStack
-     *     translationHost={translation}
-     *   >
-     *    {texts.map(text => (
-     *       <Text key={text}>
-     *         {translated[text] || text}
-     *       </Text>
-     *     ))}
-     *   </VStack>
-     * }
-     * ```
-     */
-    translationHost?: Translation;
-};
-
-type ViewAppearProps = {
-    /**
-     * The exact moment that framework calls this method depends on the specific view type that you apply it to, but the action closure completes before the first rendered frame appears.
-     */
-    onAppear?: () => void;
-    /**
-     * The exact moment that framework calls this method depends on the specific view type that you apply it to, but the action closure doesn’t execute until the view disappears from the interface.
-     */
-    onDisappear?: () => void;
-};
-
-type GridViewProps = {
-    /**
-     * Tells a view that acts as a cell in a grid to span the specified number of columns.
-     */
-    gridCellColumns?: number;
-    /**
-     * Specifies a custom alignment anchor for a view that acts as a grid cell.
-     */
-    gridCellAnchor?: KeywordPoint | Point;
-    /**
-     * Asks grid layouts not to offer the view extra size in the specified axes.
-     */
-    gridCellUnsizedAxes?: AxisSet;
-    /**
-     * Overrides the default horizontal alignment of the grid column that the view appears in.
-     */
-    gridColumnAlignment?: HorizontalAlignment;
-};
-
-type ModalPresentationViewProps = {
-    /**
-     * A Boolean value that indicates whether to prevent nonprogrammatic dismissal of the containing view hierarchy when presented in a sheet or popover.
-     */
-    interactiveDismissDisabled?: boolean;
-    /**
-     * Presents a popover when the `isPresented` condition is true. Register multiple modals by specify an array of `ModalPresentation`.
-     */
-    popover?: PopoverPresentation | PopoverPresentation[];
-    /**
-     * Presents a sheet when the `isPresented` that you provide is true. Register multiple modals by specify an array of `ModalPresentation`.
-     */
-    sheet?: ModalPresentation | ModalPresentation[];
-    /**
-     * Presents a modal view that covers as much of the screen as possible when the `isPresented` that you provide is true. Register multiple modals by specify an array of `ModalPresentation`.
-     */
-    fullScreenCover?: ModalPresentation | ModalPresentation[];
-    /**
-     * The adaptation to use in either a horizontally or vertically compact size class.
-     * Some presentations adapt their appearance depending on the context. For example, a sheet presentation over a vertically-compact view uses a full-screen-cover appearance by default.
-     */
-    presentationCompactAdaptation?: PresentationAdaptation | {
-        /**
-         * The adaptation to use in a horizontally compact size class.
-         */
-        horizontal: PresentationAdaptation;
-        /**
-         * The adaptation to use in a vertically compact size class. In a size class that is both horizontally and vertically compact, system uses the verticalAdaptation value.
-         */
-        vertical: PresentationAdaptation;
-    };
-    /**
-     * Sets the visibility of the drag indicator on top of a sheet.
-     */
-    presentationDragIndicator?: Visibility;
-    /**
-     * A set of supported detents for the sheet. If you provide more that one detent, people can drag the sheet to resize it.
-     */
-    presentationDetents?: PresentationDetent[];
-    /**
-     * A specification of how people can interact with the view behind a presentation.
-     */
-    presentationBackgroundInteraction?: PresentationBackgroundInteraction;
-    /**
-     * By default, when a person swipes up on a scroll view in a resizable presentation, the presentation grows to the next detent. A scroll view embedded in the presentation only scrolls after the presentation reaches its largest size. Use this modifier to control which action takes precedence.
-     */
-    presentationContentInteraction?: PresentationContentInteraction;
-    /**
-     * Requests that the presentation have a specific corner radius.
-     */
-    presentationCornerRadius?: number;
-};
-
-type TransformAndEffectProps = {
-    /**
-     * Override the default accent color for this view with a given styling. Unlike an app’s accent color, which can be overridden by user preference, tint is always respected and should be used as a way to provide additional meaning to the control.
-     */
-    tint?: ShapeStyle | DynamicShapeStyle;
-    /**
-     * Sets the transparency of this view.
-     */
-    opacity?: number;
-    /**
-     * Inverts the colors in this view.
-     */
-    colorConvert?: boolean;
-    /**
-     * Controls the display order of overlapping views.
-     * A relative front-to-back ordering for this view; the default is 0.
-     */
-    zIndex?: number;
-    /**
-     * Layers the views that you specify in front of this view.
-     */
-    overlay?: VirtualNode | {
-        alignment: Alignment;
-        content: VirtualNode;
-    };
-    /**
-     * Masks this view using the alpha channel of the given view.
-     */
-    mask?: VirtualNode | {
-        alignment: Alignment;
-        content: VirtualNode;
-    };
-    /**
-     * Positions the center of this view at the specified coordinates in its parent’s coordinate space.
-     */
-    position?: {
-        /**
-         * The x-coordinate at which to place the center of this view.
-         */
-        x: number;
-        /**
-         * The y-coordinate at which to place the center of this view.
-         */
-        y: number;
-    };
-    /**
-     * Offset this view by the specified horizontal and vertical distances.
-     */
-    offset?: {
-        /**
-         * The horizontal distance to offset this view.
-         */
-        x: number;
-        /**
-         * The vertical distance to offset this view.
-         */
-        y: number;
-    };
-    /**
-     * Rotates a view’s rendered output in two dimensions around the specified point.
-     */
-    rotationEffect?: number | {
-        degrees: number;
-        /**
-         * A unit point within the view about which to perform the rotation. The default value is `center`.
-         */
-        anchor: KeywordPoint | Point;
-    };
-    /**
-     * Scales this view’s rendered output by the given horizontal and vertical amounts, relative to an anchor point.
-     */
-    scaleEffect?: number | {
-        x: number;
-        y: number;
-        anchor?: KeywordPoint | Point;
-    };
-    /**
-     * Adds a shadow to this view.
-     */
-    shadow?: {
-        /**
-         * The shadow’s color.
-         */
-        color: Color;
-        /**
-         * A measure of how much to blur the shadow. Larger values result in more blur.
-         */
-        radius: number;
-        /**
-         * An amount to offset the shadow horizontally from the view.
-         */
-        x?: number;
-        /**
-         * An amount to offset the shadow vertically from the view.
-         */
-        y?: number;
-    };
-    /**
-     * Applies a Gaussian blur to this view.
-     */
-    blur?: number | {
-        /**
-         * The radial size of the blur. A blur is more diffuse when its radius is large.
-         */
-        radius: number;
-        /**
-         * A Boolean value that indicates whether the blur renderer permits transparency in the blur output. Set to true to create an opaque blur, or set to false to permit transparency.
-         */
-        opaque: boolean;
-    };
-};
-
-type NavigationDestinationWithPresentation = {
-    /**
-     * A view to present.
-     */
-    content: VirtualNode;
-} & ({
-    isPresented: boolean;
-    onChanged: (isPresented: boolean) => void;
-} | {
-    isPresented: Observable<boolean>;
-    onChanged?: never;
-});
-type NavigationProps = {
-    /**
-     * A background placement inside a NavigationStack. (iOS 18.0+)
-     */
-    navigationContainerBackground?: ShapeStyle | DynamicShapeStyle | VirtualNode;
-    /**
-     * A background placement inside a NavigationSplitView. (iOS 18.0+)
-     */
-    navigationSplitViewContainerBackground?: ShapeStyle | DynamicShapeStyle | VirtualNode;
-    /**
-     * Sets a fixed, preferred width for the column containing this view.
-     */
-    navigationSplitViewColumnWidth?: number | {
-        min?: number;
-        ideal: number;
-        max?: number;
-    };
-    /**
-     * Sets the style for navigation split views within this view.
-     */
-    navigationSplitViewStyle?: NavigationSplitViewStyle;
-    /**
-     * Associates a destination view with a binding that can be used to push the view onto a NavigationStack.
-     */
-    navigationDestination?: NavigationDestinationWithPresentation | VirtualNode;
-    /**
-     * Configures the view’s title for purposes of navigation.
-     * On iOS, when a view is navigated to inside of a navigation view, that view’s title is displayed in the navigation bar.
-     * On iPadOS, the primary destination’s navigation title is reflected as the window’s title in the App Switcher.
-     */
-    navigationTitle?: string;
-    /**
-     * Configures the view’s subtitle for purposes of navigation.
-     * @available iOS 26.0+
-     */
-    navigationSubtitle?: string;
-    /**
-     * The style to use for displaying the title.
-     */
-    navigationBarTitleDisplayMode?: NavigationBarTitleDisplayMode;
-    /**
-     * Hides the navigation bar back button for the view.
-     */
-    navigationBarBackButtonHidden?: boolean;
-    /**
-     * Sets the navigation transition style for this view.
-     * @available iOS 18.0+
-     */
-    navigationTransition?: 'automatic' | {
-        type: 'zoom';
-        sourceID: string | number;
-        namespace: NamespaceID;
-    };
-    /**
-     * Sets the tab bar item associated with this view.
-     */
-    tabItem?: VirtualNode;
-};
-
-type ListViewProps = {
-    /**
-     * Generates a badge for the view from an integer or a string value.
-     */
-    badge?: number | string;
-    /**
-     * Specifies the prominence of badges created by this view.
-     */
-    badgeProminence?: BadgeProminence;
-    /**
-       * The color to use to tint the content. Use null to avoid overriding the inherited tint.
-       */
-    listItemTint?: Color;
-    /**
-     * Applies an inset to the rows in a list.
-     */
-    listRowInsets?: number | EdgeInsets;
-    /**
-     * Sets the vertical spacing between two adjacent rows in a List.
-     */
-    listRowSpacing?: number;
-    /**
-     * Sets the display mode for the separator associated with this specific row.
-     */
-    listRowSeparator?: Visibility | {
-        /**
-         * The visibility of this row’s separators.
-         */
-        visibility: Visibility;
-        /**
-         * The set of row edges for which this preference applies. The list style might already decide to not display separators for some edges, typically the top edge. The default is all.
-         */
-        edges: VerticalEdgeSet;
-    };
-    /**
-     * Sets the tint color associated with a row.
-     */
-    listRowSeparatorTint?: Color | {
-        /**
-         * The color to use to tint the row separators, or null to use the default color for the current list style.
-         */
-        color: Color;
-        /**
-         * The set of row edges for which the tint applies. The list style might decide to not display certain separators, typically the top edge. The default is all.
-         */
-        edges: VerticalEdgeSet;
-    };
-    /**
-     * Sets the spacing between adjacent sections in a List to a custom value.
-     */
-    listSectionSpacing?: ListSectionSpacing;
-    /**
-     * Sets whether to hide the separator associated with a list section.
-     */
-    listSectionSeparator?: Visibility | {
-        /**
-         * The visibility of this section’s separators.
-         */
-        visibility: Visibility;
-        /**
-         * The set of row edges for which the preference applies. The list style might already decide to not display separators for some edges. The default is all.
-         */
-        edges: VerticalEdgeSet;
-    };
-    /**
-     * Sets the tint color associated with a section.
-     */
-    listSectionSeparatorTint?: Color | {
-        /**
-         * The color to use to tint the section separators, or nil to use the default color for the current list style.
-         */
-        color: Color;
-        /**
-         * The set of row edges for which the tint applies. The list style might decide to not display certain separators, typically the top edge. The default is all.
-         */
-        edges: VerticalEdgeSet;
-    };
-    /**
-     * Places a custom background view behind a list row item.
-     */
-    listRowBackground?: VirtualNode;
-    /**
-     * Configures the content margin for a provided placement.
-     */
-    contentMargins?: EdgeInsets | number | {
-        /**
-         * The edges to add the margins to.
-         */
-        edges?: EdgeSet;
-        /**
-         * The amount of margins to add.
-         */
-        insets: EdgeInsets | number;
-        /**
-         * Where the margins should be added.
-         */
-        placement?: ContentMarginPlacement;
-    };
-    /**
-     * Sets the visibility of the list section index.
-     * @available iOS 26.0+.
-     */
-    listSectionIndexVisibility?: Visibility;
-    /**
-     * Set the section margins for the specific edges.
-     * The default section margins are based on the list style, list section spacing and content margins of the list. Using this modifier overrides these default values completely.
-     *
-     * For sections that have headers or footers, the section margins are applied around these.
-     * @available iOS 26.0+.
-     */
-    listSectionMargins?: number | EdgeSet | {
-        edges: EdgeSet;
-        length: number;
-    };
-    /**
-     * Sets the label that is used in a section index to point to this section, typically only a single character long.
-     * @available iOS 26.0+.
-     */
-    sectionIndexLabel?: string;
-    /**
-     * Adds custom actions to a section.
-     * @available iOS 18.0+
-     */
-    sectionActions?: VirtualNode;
-};
-
-type EditActionsProps = {
-    /**
-     * Adds a condition for whether the view’s view hierarchy is movable.
-     */
-    moveDisabled?: boolean;
-    /**
-     * Adds a condition for whether the view’s view hierarchy is deletable.
-     */
-    deleteDisabled?: boolean;
-    /**
-     * Adds a condition that controls whether users can select this view.
-     */
-    selectionDisabled?: boolean;
-    /**
-     * Use this property to add leading swipe actions to a view that acts as a row in a list.
-     */
-    leadingSwipeActions?: {
-        /**
-         * A Boolean value that indicates whether a full swipe automatically performs the first action. The default is true.
-         */
-        allowsFullSwipe?: boolean;
-        /**
-         * The content of the swipe actions.
-         */
-        actions: VirtualNode[];
-    };
-    /**
-     * Use this property to add trailing swipe actions to a view that acts as a row in a list.
-     */
-    trailingSwipeActions?: {
-        /**
-         * A Boolean value that indicates whether a full swipe automatically performs the first action. The default is true.
-         */
-        allowsFullSwipe?: boolean;
-        /**
-         * The content of the swipe actions.
-         */
-        actions: VirtualNode[];
-    };
-};
-
-type SymbolProps = {
-    /**
-     * Sets the rendering mode for symbol images within this view.
-     */
-    symbolRenderingMode?: SymbolRenderingMode;
-    /**
-     * Makes symbols within the view show a particular variant.
-     */
-    symbolVariant?: SymbolVariants;
-    /**
-     * Add a symbol effect to the view.
-     */
-    symbolEffect?: SymbolEffect;
-};
-
-type TransitionProps = {
-    /**
-     * The transition to apply when animating the content change.
-     */
-    contentTransition?: ContentTransition;
-    /**
-     * The transition to apply when animating the view.
-     */
-    transition?: Transition;
-    /**
-     * Isolates the geometry (e.g. position and size) of the view from its parent view.
-     */
-    geometryGroup?: boolean;
-    /**
-     * Wraps this view in a compositing group.
-     */
-    compositingGroup?: boolean;
-    /**
-     * Composites this view’s contents into an offscreen image before final display.
-     */
-    drawingGroup?: boolean | {
-        opaque: boolean;
-        /**
-         * The color rendering mode of the view. Defaults to `nonLinear`.
-         */
-        colorMode?: ColorRenderingMode;
-    };
-    /**
-     * Identifies this view as the source of a navigation transition, such as a zoom transition.
-     * @available iOS 18.0+
-     */
-    matchedTransitionSource?: {
-        id: string | number;
-        namespace: NamespaceID;
-    };
-    /**
-     * Defines a group of views with synchronized geometry using an identifier and namespace that you provide.
-     *  - `id`: The identifier, often derived from the identifier of the data being displayed by the view.
-     *  - `namespace`: The namespace in which defines the id. New namespaces are created by `NamespaceReader` views.
-     *  - `properties`: The properties to copy from the source view. Defaults to 'frame'.
-     *  - `anchor`: The relative location in the view used to produce its shared position value. Defaults to 'center'.
-     *  - `isSource`: True if the view should be used as the source of geometry for other views in the group. Defaults to true.
-     */
-    matchedGeometryEffect?: {
-        id: string | number;
-        namespace: NamespaceID;
-        properties?: MatchedGeometryProperties;
-        anchor?: Point | KeywordPoint;
-        isSource?: boolean;
-    };
-};
-
-/**
- * The reasons to apply a redaction to data displayed on screen.
- *  - `placeholder`: Displayed data should appear as generic placeholders.
- *  - `invalidated`: Displayed data should appear as invalidated and pending a new update.
- *  - `privacy`: Displayed data should be obscured to protect private information.
- */
-type RedactedReason = "placeholder" | "invalidated" | "privacy";
-
-type DialogProps = {
-    toast?: {
-        /**
-         * The duration of the toast in seconds. Defaults to 2.
-         */
-        duration?: number | null;
-        /**
-         * The position of the toast. Defaults to `bottom`.
-         */
-        position?: "top" | "bottom" | "center";
-        /**
-         * The background color of the toast.
-         */
-        backgroundColor?: Color | null;
-        /**
-         * The text color of the toast.
-         */
-        textColor?: Color | null;
-        /**
-         * The corner radius of the toast. Defaults to 16.
-         */
-        cornerRadius?: number | null;
-        /**
-         * The shadow color of the toast. Defaults to 4.
-         */
-        shadowRadius?: number | null;
-    } & ({
-        message: string;
-        content?: never;
-    } | {
-        message?: never;
-        content: VirtualNode;
-    }) & ({
-        /**
-         * An observable Boolean value that determines whether to present the toast. When the user presses or taps one of the toast’s actions, the system sets this value to false and dismisses.
-         */
-        isPresented: Observable<boolean>;
-    } | {
-        /**
-         * A Boolean value that determines whether to present the toast. When the user presses or taps one of the toast’s actions, the system sets this value to false and dismisses.
-         */
-        isPresented: boolean;
-        onChanged: (isPresented: boolean) => void;
-    });
-    /**
-     * Presents an alert with a message when a given condition is true using a string variable as a title.
-     */
-    alert?: {
-        /**
-         * A text string used as the title of the alert.
-         */
-        title: string;
-        /**
-         * The alert’s actions.
-         */
-        actions: VirtualNode;
-        /**
-         * The message for the alert.
-         */
-        message?: VirtualNode;
-    } & ({
-        /**
-         * A Boolean value that determines whether to present the alert. When the user presses or taps one of the alert’s actions, the system sets this value to false and dismisses.
-         */
-        isPresented: boolean;
-        /**
-         * A callback when the `isPresented` changed. You must update `isPresented` value when the user make the alert dismissed.
-         */
-        onChanged: (isPresented: boolean) => void;
-    } | {
-        isPresented: Observable<boolean>;
-    });
-    /**
-     * Presents a confirmation dialog with a message when a given condition is true, using a string variable for the title.
-     */
-    confirmationDialog?: {
-        /**
-         * A text string used as the title of the dialog.
-         */
-        title: string;
-        /**
-         * The visibility of the dialog’s title. The default value is `automatic`.
-         */
-        titleVisibility?: Visibility;
-        /**
-         * The dialog’s actions.
-         */
-        actions: VirtualNode;
-        /**
-         * The message for the dialog.
-         */
-        message?: VirtualNode;
-    } & ({
-        /**
-         * A Boolean value hat determines whether to present the dialog. When the user presses or taps the dialog’s default action button, the system sets this value to false, dismissing the dialog.
-         */
-        isPresented: boolean;
-        /**
-         * A callback when the `isPresented` changed. You must update `isPresented` value when the user make the alert dismissed.
-         */
-        onChanged: (isPresented: boolean) => void;
-    } | {
-        isPresented: Observable<boolean>;
-    });
-};
-
-type SearchableProps = {
-    /**
-       * Marks this view as searchable, which configures the display of a search field.
-       */
-    searchable?: {
-        /**
-         * The preferred placement of the search field within the containing view hierarchy.
-         */
-        placement?: SearchFieldPlacement;
-        /**
-         * The prompt of the search field which provides users with guidance on what to search for.
-         */
-        prompt?: string;
-        /**
-         * The presented state of the search field. When the user taps the search field, the system sets this value to true and presents the search field.
-         * When the user taps the search field’s cancel button, the system sets this value to false and dismisses the search field.
-         */
-        presented?: {
-            /**
-             * A Boolean value that indicates whether the search field is presented.
-             */
-            value: boolean;
-            /**
-             * A callback when the `presented` value changed.
-             * You must update `presented.value` when the user make the search field dismissed.
-             * @param value A Boolean value that indicates whether the search field is presented.
-             */
-            onChanged: (value: boolean) => void;
-        } | Observable<boolean>;
-    } & ({
-        /**
-         * The text to display and edit in the search field.
-         */
-        value: string;
-        /**
-         * The text changed callback.
-         */
-        onChanged: (value: string) => void;
-    } | {
-        value: Observable<string>;
-        onChanged?: never;
-    });
-    /**
-     * A view that produces content that populates a list of suggestions.
-     */
-    searchSuggestions?: VirtualNode;
-    /**
-     * Configures how to display search suggestions within this view.
-     */
-    searchSuggestionsVisibility?: {
-        /**
-         * The visibility of the search suggestions for the specified locations.
-         */
-        visibility: Visibility;
-        /**
-         * The set of locations in which to set the visibility of search suggestions.
-         */
-        placements: SearchSuggestionsPlacementSet;
-    };
-    /**
-     * Associates a fully formed string with the value of this view when used as a search suggestion.
-     */
-    searchCompletion?: string;
-    /**
-     * Configures the behavior for search in the toolbar.
-     * - `minimize`: A search toolbar behavior that prefers rendering a search field as a button-like control.
-     */
-    searchToolbarBehavior?: 'automatic' | 'minimize';
-};
-
-type ViewAnimationProps = {
-    animation?: {
-        animation: Animation;
-        value: boolean | string | number;
-    };
-};
-
-type LiveActivityProps = {
-    /**
-     * Sets the tint color for the background of a Live Activity that appears on the Lock Screen.
-     */
-    activityBackgroundTint?: Color | {
-        light: Color;
-        dark: Color;
-    };
-    /**
-     * The text color for the auxiliary action button that the system shows next to a Live Activity on the Lock Screen.
-     */
-    activitySystemActionForegroundColor?: Color | {
-        light: Color;
-        dark: Color;
-    };
-};
-
-type EnvironmentsProps = {
-    environments?: {
-        /**
-         * Sets the edit mode of the environment.
-         * @example
-         * ```tsx
-         * const editMode = useObservable(() => EditMode.active())
-         * <List
-         *   environments={{
-         *     editMode: editMode
-         *   }}
-         * >
-         *   <ForEach
-         *     editActions="all"
-         *     data={items}
-         *     builder={item => <Text key={item.id}>{item}</Text>}
-         *   />
-         * </List>
-         * ```
-         */
-        editMode?: Observable<EditMode>;
-        /**
-         * Sets a custom open URL action for the environment.
-         * @example
-         * ```tsx
-         * <Group
-         *   environments={{
-         *     openURL:(url) => {
-         *       return OpenURLActionResult.systemAction({
-         *         url,
-         *         prefersInApp: false
-         *       })
-         *     }
-         *   }}
-         * >
-         * {urls.map(url =>
-         *   <Link
-         *     url={url}
-         *   >{url}</Link>
-         * )}
-         * </Group>
-         * ```
-         */
-        openURL?: (url: string) => OpenURLActionResult;
-    };
-};
-
-/**
- * - `identify`: The identity transition specifying no changes.
- * - `materialize`: The materialize glass effect transition which will fade in content and animate in or out the glass material but will not attempt to match the geometry of any other glass effects.
- * - `matchedGeometry`: The matched geometry transition allows the geometries of glass shapes during an appearance or disappearance phase of a transition to be derived from the geometry of a nearby shape within the glass container.
- */
-type GlassEffectTransition = 'identity' | 'materialize' | 'matchedGeometry';
-/**
- * @available iOS 26.0+
- */
-type GlassProps = {
-    /**
-     * Applies the Liquid Glass effect to a view.
-     * @available iOS 26.0+
-     */
-    glassEffect?: boolean | UIGlass | Shape | {
-        glass: UIGlass;
-        shape: Shape;
-    };
-    /**
-     * Associates a glass effect transition with any glass effects defined within this view.
-     * @available iOS 26.0+
-     */
-    glassEffectTransition?: GlassEffectTransition;
-    /**
-     * Associates an identity value to Liquid Glass effects defined within this view.
-     * @available iOS 26.0+
-     */
-    glassEffectID?: {
-        id: string | number;
-        namespace: NamespaceID;
-    };
-    /**
-     * Associates any Liquid Glass effects defined within this view to a union with the provided identifier.
-     * @available iOS 26.0+
-     */
-    glassEffectUnion?: {
-        id: string | number;
-        namespace: NamespaceID;
-    };
-};
-
-type ScreenshotProps = {
-    screenshotRef?: RefObject<ScreenshotMaker>;
-};
-
-type PiPProps = {
-    /**
-     * Marks the view as a PiP view, it will be presented in a PiP window when the PiP view is presented.
-     */
-    pip?: {
-        /**
-         * Should the PiP view be presented.
-         */
-        isPresented: Observable<boolean>;
-        /**
-         * The maximum number of times the PiP view can be updated per second. Defaults to 30.
-         */
-        maximumUpdatesPerSecond?: number;
-        /**
-         * The content to display in the PiP window.
-         */
-        content: VirtualNode;
-    };
-    /**
-     * Called when the PiP view is presented.
-     */
-    onPipStart?: () => void;
-    /**
-     * Called when the PiP view is dismissed.
-     */
-    onPipStop?: () => void;
-    /**
-     * Called when the PiP play/pause toggle is tapped.
-     */
-    onPipPlayPauseToggle?: (isPlaying: boolean) => void;
-    /**
-     * Called when the PiP skip button is tapped. The `isForward` parameter indicates whether to skip forward or backward.
-     */
-    onPipSkip?: (isForward: boolean) => void;
-    /**
-     * Called when the PiP render size changes.
-     * @param size The new PiP window render size, you can use it to layout the PiP view.
-     */
-    onPipRenderSizeChanged?: (size: Size) => void;
-    /**
-     * When the application is moved to the foreground, and if picture-in-picture is active, stop it.
-     */
-    pipHideOnForeground?: boolean;
-};
-
-/**
- * The operation that was performed by the drag-and-drop operation.
- *   - `cancel`: Cancel the drag operation and transfer no data.
- *   - `copy`: Copy the data to the modified view.
- *   - `move`: Move the data represented by the drag items instead of copying it.
- *   - `forbidden`: The drop activity is not allowed at this time or location.
- */
-type DropOperation = "cancel" | "copy" | "forbidden" | "move";
-type DragDropProps = {
-    /**
-     * Set the current view to receive files or pictures dragged from other apps.
-     * @param onDropContent.types The uniform type identifiers that describe the types of content this view can accept through drag and drop. If the drag-and-drop operation doesn’t contain any of the supported types, then this drop destination doesn’t activate and isTargeted doesn’t update.
-     * @param onDropContent.isTarget A binding object that updates when a drag and drop operation enters or exits the drop target area. The binding’s value is true when the cursor is inside the area, and false when the cursor is outside.
-     * @param onDropContent.perform A callback that takes the dropped content and responds appropriately. The parameter to function contains the dropped items, with types specified by `types`. Return true if the drop operation was successful; otherwise, return false. Make sure to start loading the contents of `ItemProvider` instances within the scope of the function. Do not perform loading asynchronously on a different callback. Loading the contents may finish later, but it must start here. For security reasons, the drop receiver can access the dropped payload only before this function returns.
-     * @example
-     * ```tsx
-     * const isTarget = useObservable(false)
-     *
-     * return <VStack
-     *   onDropContent={{
-     *     types: ["public.image", "public.movie"],
-     *     isTarget: isTarget,
-     *     perform: (attachments) => {
-     *       const images: UIImage[] = []
-     *       const videos: string[] = []
-     *
-     *       let found = false
-     *
-     *       for (const attachment of attachments) {
-     *          if (attachment.hasItemConformingToType("public.png")) {
-     *            found = true
-     *            attachment.loadUIImage().then(image => {
-     *              if (image != null) {
-     *                images.push(image)
-     *              }
-     *            })
-     *          } else if (attachment.hasItemConformingToType("public.movie")) {
-     *            found = true
-     *            attachment.loadFilePath().then(filePath => {
-     *              if (filePath != null) {
-     *                // Get access the the Security-Scoped resource
-     *                // FileManager.addFileBookmark(filePath)
-     *                videos.push(filePath)
-     *              }
-     *            })
-     *          }
-     *       }
-     *       return found
-     *     }
-     *   }}
-     * >
-     * ...
-     * </VStack>
-     * ```
-     */
-    onDropContent?: {
-        types: UTType[];
-        isTarget: {
-            value: boolean;
-            onChanged: (value: boolean) => void;
-        } | Observable<boolean>;
-        perform: (attachments: ItemProvider[]) => boolean;
-    };
-    /**
-     * Activates this view as the source of a drag and drop operation.
-     * @param onDrag.data A callback that returns a single `ItemProvider` that represents the draggable data from this view.
-     * @param onDrag.preview A View to use as the source for the dragging preview, once the drag operation has begun. The preview is centered over the source view.
-     */
-    onDrag?: {
-        data: () => ItemProvider;
-        preview: VirtualNode;
-    };
-    /**
-     * Defines the destination of a drag and drop operation using behavior controlled by the actions that you provide.
-     * @param onDrop.types The uniform type identifiers that describe the types of content this view can accept through drag and drop. If the drag and drop operation doesn’t contain any of the supported types, then this drop destination doesn’t activate and isTargeted doesn’t update.
-     * @param onDrop.validateDrop A callback that returns true if the drag-and-drop operation should begin. Specify the expected types when you apply the drop modifier to the view. The default implementation returns true.
-     * @param onDrop.dropEntered A callback that is called when the drag-and-drop operation enters the drop target area. The default implementation does nothing.
-     * @param onDrop.dropUpdated A callback that is called when a validated drop moved inside the modified view. Use this callback to return a drop proposal containing the operation the action intends to perform at the drop location. The default implementation of this method returns null, which tells the drop to use the last valid returned value or else `DropOperation.copy`.
-     * @param onDrop.dropExited A callback that is called when the drag-and-drop operation exits the drop target area.
-     * @param onDrop.performDrop A callback that is called when you can request the item provider data from the given information. A Boolean that is true if the drop was successful, false otherwise. Make sure to start loading the contents of `ItemProvider` instances from `DropInfo` within the scope of this method. Do not perform loading asynchronously on a different callback. Loading the contents may finish later, but it must start here. For security reasons, the drop receiver can access the dropped payload only before this method returns.
-     */
-    onDrop?: {
-        types: UTType[];
-        validateDrop?: (info: DropInfo) => boolean;
-        dropEntered?: (info: DropInfo) => void;
-        dropUpdated?: (info: DropInfo) => DropOperation | null;
-        dropExited?: (info: DropInfo) => void;
-        performDrop: (info: DropInfo) => boolean;
-    };
-};
-
-type StandardKeyboardShortcut = "defaultAction" | "cancelAction";
-type KeyEquivalent = "return" | "tab" | "escape" | "space" | "delete" | "deleteForward" | "home" | "end" | "pageUp" | "pageDown" | "leftArrow" | "rightArrow" | "upArrow" | "downArrow" | "clear";
-type SingleCharacterKeyEquivalent = "a" | "b" | "c" | "d" | "e" | "f" | "g" | "h" | "i" | "j" | "k" | "l" | "m" | "n" | "o" | "p" | "q" | "r" | "s" | "t" | "u" | "v" | "w" | "x" | "y" | "z" | "A" | "B" | "C" | "D" | "E" | "F" | "G" | "H" | "I" | "J" | "K" | "L" | "M" | "N" | "O" | "P" | "Q" | "R" | "S" | "T" | "U" | "V" | "W" | "X" | "Y" | "Z" | "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9";
-type KeyboardshortcutEventModifier = "all" | "shift" | "command" | "option" | "control" | "capsLock" | "numberPad";
-type KeyboardShortcut = {
-    key: KeyEquivalent | SingleCharacterKeyEquivalent;
-    modifiers: KeyboardshortcutEventModifier[];
-};
-type KeyPressResult = "handled" | "ignored";
-type KeyPressAction = () => KeyPressResult;
-type KeyboardShortcutProps = {
-    /**
-     * The keyboard shortcut to use.
-     * @example
-     * ```tsx
-     * <Button
-     *   title="Sign in"
-     *   action={signIn}
-     *   keyboardShortcut={{
-     *     key: "return",
-     *     modifiers: ["all"]
-     *   }}
-     * />
-     * ```
-     */
-    keyboardShortcut?: StandardKeyboardShortcut | KeyboardShortcut;
-    /**
-     * The key and action to use for the keyboard shortcut.
-     * @example
-     * ```tsx
-     * <Text
-     *   onKeyPress={{
-     *     key: "return",
-     *     action: () => {
-     *       // do something
-     *       return "handled"
-     *     }
-     *   }}
-     * >Content</Text>
-     * ```
-     */
-    onKeyPress?: KeyPressAction | {
-        key: KeyEquivalent | SingleCharacterKeyEquivalent;
-        action: KeyPressAction;
-    };
-};
-
-type CommonViewProps = DialogProps & GesturesProps & FrameSizeProps & ForeAndBackgroundProps & PaddingAndBorderProps & ViewVisibilityProps & ImageViewProps & ViewStyleProps & TextFieldViewProps & TextViewProps & ShapeViewProps & ChartViewProps & ScrollProps & ToolbarsProps & SafeAreaProps & WidgetProps & ExtensionProps & ViewAppearProps & GridViewProps & ModalPresentationViewProps & TransformAndEffectProps & NavigationProps & ListViewProps & EditActionsProps & SymbolProps & TransitionProps & SearchableProps & ViewAnimationProps & LiveActivityProps & EnvironmentsProps & GlassProps & ScreenshotProps & PiPProps & DragDropProps & KeyboardShortcutProps & {
-    disabled?: boolean;
-    /**
-     * A value that indicates the visibility of the non-transient system views overlaying the app.
-     */
-    preferredColorScheme?: ColorScheme;
-    /**
-     * Sets the unique tag value of this view.
-     * Use this modifier to differentiate among certain selectable views, like the possible values of a `Picker`.
-     * @example
-     * ```tsx
-     * function View() {
-     *   const [value, setValue] = useState<number>()
-     *
-     *   return <Picker
-     *      value={value}
-     *      onChanged={newValue => setValue(newValue)}
-     *   >
-     *     <Text tag={0}>Item1</Text>
-     *     <Text tag={1}>Item2</Text>
-     *     <Text tag={2}>Item3</Text>
-     *     <Text tag={3}>Item4</Text>
-     *   </Picker>
-     * }
-     * ```
-     */
-    tag?: number | string;
-    /**
-     * Plays the specified feedback when the provided trigger value changes.
-     */
-    sensoryFeedback?: {
-        /**
-         * A value to monitor for changes to determine when to play.
-         */
-        trigger: number | string | boolean;
-        /**
-         * Which type of feedback to play.
-         */
-        feedback: SensoryFeedback;
-    };
-    /**
-     * Sets the header prominence for this view.
-     */
-    headerProminence?: Prominence;
-    /**
-     * Adds a reason to apply a redaction to this view hierarchy.
-     */
-    redacted?: RedactedReason | null;
-    /**
-     * If true, removes any reason to apply a redaction to this view hierarchy.
-     */
-    unredacted?: boolean;
-    /**
-     * Sets the priority by which a parent layout should apportion space to this child.
-     */
-    layoutPriority?: number;
-    /**
-     * The modifiers to apply to the view. The modifiers are applied in the order they are specified.
-     *
-     * It is useful to apply a same modifier multiple times to a view.
-     *
-     * @example
-     * ```tsx
-     * function View() {
-     *   return <VStack
-     *     modifiers={
-     *      modifiers()
-     *        .padding()
-     *        .background("red")
-     *        .padding()
-     *        .background("blue")
-     *     }
-     *   >
-     *     <Text>Hello</Text>
-     *   </VStack>
-     * }
-     * ```
-     */
-    modifiers?: ViewModifiers;
-};
-
-declare function modifiers(): ViewModifiers;
-declare class ViewModifiers {
-    readonly modifiers: {
-        name: string;
-        value: any;
-    }[];
-    frame(value: CommonViewProps["frame"]): this;
-    containerRelativeFrame(value: CommonViewProps["containerRelativeFrame"]): this;
-    foregroundStyle(value: CommonViewProps["foregroundStyle"]): this;
-    background(value: CommonViewProps["background"]): this;
-    padding(value?: CommonViewProps["padding"]): this;
-    border(value: CommonViewProps["border"]): this;
-    tint(value: CommonViewProps["tint"]): this;
-    opacity(value: CommonViewProps["opacity"]): this;
-    hidden(value?: CommonViewProps["hidden"]): this;
-    labelsHidden(value?: CommonViewProps["labelsHidden"]): this;
-    disabled(value?: CommonViewProps["disabled"]): this;
-    preferredColorScheme(value: CommonViewProps["preferredColorScheme"]): this;
-    scaleToFit(value?: CommonViewProps["scaleToFit"]): this;
-    scaleToFill(value?: CommonViewProps["scaleToFill"]): this;
-    aspectRatio(value: CommonViewProps["aspectRatio"]): this;
-    imageScale(value: CommonViewProps["imageScale"]): this;
-    controlSize(value: CommonViewProps["controlSize"]): this;
-    buttonStyle(value: CommonViewProps["buttonStyle"]): this;
-    buttonBorderShape(value: CommonViewProps["buttonBorderShape"]): this;
-    labelStyle(value: CommonViewProps["labelStyle"]): this;
-    toggleStyle(value: CommonViewProps["toggleStyle"]): this;
-    pickerStyle(value: CommonViewProps["pickerStyle"]): this;
-    formStyle(value: CommonViewProps["formStyle"]): this;
-    datePickerStyle(value: CommonViewProps["datePickerStyle"]): this;
-    gaugeStyle(value: CommonViewProps["gaugeStyle"]): this;
-    listStyle(value: CommonViewProps["listStyle"]): this;
-    progressViewStyle(value: CommonViewProps["progressViewStyle"]): this;
-    autocorrectionDisabled(value?: CommonViewProps["autocorrectionDisabled"]): this;
-    textInputAutocapitalization(value: CommonViewProps["textInputAutocapitalization"]): this;
-    textContentType(value: CommonViewProps["textContentType"]): this;
-    allowsHitTesting(value: CommonViewProps["allowsHitTesting"]): this;
-    textFieldStyle(value: CommonViewProps["textFieldStyle"]): this;
-    keyboardType(value: CommonViewProps["keyboardType"]): this;
-    keyboardShortcut(value: CommonViewProps["keyboardShortcut"]): this;
-    onKeyPress(value: CommonViewProps["onKeyPress"]): this;
-    contentShape(value: CommonViewProps["contentShape"]): this;
-    colorConvert(value?: CommonViewProps["colorConvert"]): this;
-    clipShape(value: CommonViewProps["clipShape"]): this;
-    clipped(value?: CommonViewProps["clipped"]): this;
-    fixedSize(value: CommonViewProps["fixedSize"]): this;
-    font(value: CommonViewProps["font"]): this;
-    fontWidth(value: CommonViewProps["fontWidth"]): this;
-    fontWeight(value: CommonViewProps["fontWeight"]): this;
-    fontDesign(value: CommonViewProps["fontDesign"]): this;
-    minScaleFactor(value: CommonViewProps["minScaleFactor"]): this;
-    bold(value?: CommonViewProps["bold"]): this;
-    baselineOffset(value: CommonViewProps["baselineOffset"]): this;
-    kerning(value: CommonViewProps["kerning"]): this;
-    italic(value?: CommonViewProps["italic"]): this;
-    monospaced(value?: CommonViewProps["monospaced"]): this;
-    monospacedDigit(value?: CommonViewProps["monospacedDigit"]): this;
-    strikethrough(value: CommonViewProps["strikethrough"]): this;
-    underline(value: CommonViewProps["underline"]): this;
-    lineLimit(value: CommonViewProps["lineLimit"]): this;
-    multilineTextAlignment(value: CommonViewProps["multilineTextAlignment"]): this;
-    truncationMode(value: CommonViewProps["truncationMode"]): this;
-    allowsTightening(value?: CommonViewProps["allowsTightening"]): this;
-    flipsForRightToLeftLayoutDirection(value?: CommonViewProps["flipsForRightToLeftLayoutDirection"]): this;
-    chartXAxis(value: CommonViewProps["chartXAxis"]): this;
-    chartYAxis(value: CommonViewProps["chartYAxis"]): this;
-    chartXAxisLabel(value: CommonViewProps["chartXAxisLabel"]): this;
-    chartYAxisLabel(value: CommonViewProps["chartYAxisLabel"]): this;
-    chartLegend(value: CommonViewProps["chartLegend"]): this;
-    chartXScale(value: CommonViewProps["chartXScale"]): this;
-    chartYScale(value: CommonViewProps["chartYScale"]): this;
-    chartBackground(value: CommonViewProps["chartBackground"]): this;
-    chartForegroundStyleScale(value: CommonViewProps["chartForegroundStyleScale"]): this;
-    chartSymbolScale(value: CommonViewProps["chartSymbolScale"]): this;
-    chartSymbolSizeScale(value: CommonViewProps["chartSymbolSizeScale"]): this;
-    chartLineStyleScale(value: CommonViewProps["chartLineStyleScale"]): this;
-    chartScrollableAxes(value: CommonViewProps["chartScrollableAxes"]): this;
-    chartXSelection(value: CommonViewProps["chartXSelection"]): this;
-    chartYSelection(value: CommonViewProps["chartYSelection"]): this;
-    chartAngleSelection(value: CommonViewProps["chartAngleSelection"]): this;
-    chartXVisibleDomain(value: CommonViewProps["chartXVisibleDomain"]): this;
-    chartYVisibleDomain(value: CommonViewProps["chartYVisibleDomain"]): this;
-    chartScrollPositionX(value: CommonViewProps["chartScrollPositionX"]): this;
-    chartScrollPositionY(value: CommonViewProps["chartScrollPositionY"]): this;
-    onSubmit(value: CommonViewProps["onSubmit"]): this;
-    submitScope(value?: CommonViewProps["submitScope"]): this;
-    submitLabel(value: CommonViewProps["submitLabel"]): this;
-    onAppear(value: CommonViewProps["onAppear"]): this;
-    onDisappear(value: CommonViewProps["onDisappear"]): this;
-    onTapGesture(value: CommonViewProps["onTapGesture"]): this;
-    onLongPressGesture(value: CommonViewProps["onLongPressGesture"]): this;
-    onDragGesture(value: CommonViewProps["onDragGesture"]): this;
-    onDropContent(value: CommonViewProps["onDropContent"]): this;
-    tag(value: CommonViewProps["tag"]): this;
-    refreshable(value: CommonViewProps["refreshable"]): this;
-    scrollIndicator(value: CommonViewProps["scrollIndicator"]): this;
-    scrollDisabled(value?: CommonViewProps["scrollDisabled"]): this;
-    scrollClipDisabled(value?: CommonViewProps["scrollClipDisabled"]): this;
-    scrollDismissesKeyboard(value: CommonViewProps["scrollDismissesKeyboard"]): this;
-    defaultScrollAnchor(value: CommonViewProps["defaultScrollAnchor"]): this;
-    scrollTargetlayout(value?: CommonViewProps["scrollTargetlayout"]): this;
-    scrollTargetBehavior(value: CommonViewProps["scrollTargetBehavior"]): this;
-    scrollContentBackground(value: CommonViewProps["scrollContentBackground"]): this;
-    interactiveDismissDisabled(value?: CommonViewProps["interactiveDismissDisabled"]): this;
-    safeAreaPadding(value: CommonViewProps["safeAreaPadding"]): this;
-    safeAreaInset(value: CommonViewProps["safeAreaInset"]): this;
-    ignoresSafeArea(value?: CommonViewProps["ignoresSafeArea"]): this;
-    bottomBarVisibility(value: CommonViewProps["bottomBarVisibility"]): this;
-    navigationBarVisibility(value: CommonViewProps["navigationBarVisibility"]): this;
-    tabBarVisibility(value: CommonViewProps["tabBarVisibility"]): this;
-    toolbar(value: CommonViewProps["toolbar"]): this;
-    toolbarTitleMenu(value: CommonViewProps["toolbarTitleMenu"]): this;
-    toolbarBackground(value: CommonViewProps["toolbarBackground"]): this;
-    toolbarBackgroundVisibility(value: CommonViewProps["toolbarBackgroundVisibility"]): this;
-    toolbarColorScheme(value: CommonViewProps["toolbarColorScheme"]): this;
-    toolbarTitleDisplayMode(value: CommonViewProps["toolbarTitleDisplayMode"]): this;
-    textSelection(value?: CommonViewProps["textSelection"]): this;
-    textCase(value: CommonViewProps["textCase"]): this;
-    widgetURL(value: CommonViewProps["widgetURL"]): this;
-    widgetAccentable(value?: CommonViewProps["widgetAccentable"]): this;
-    widgetBackground(value: CommonViewProps["widgetBackground"]): this;
-    swingAnimation(value: CommonViewProps["swingAnimation"]): this;
-    clockHandRotationEffect(value: CommonViewProps["clockHandRotationEffect"]): this;
-    toast(options: CommonViewProps["toast"]): this;
-    alert(options: CommonViewProps["alert"]): this;
-    confirmationDialog(options: CommonViewProps["confirmationDialog"]): this;
-    contextMenu(options: CommonViewProps["contextMenu"]): this;
-    menuStyle(value: CommonViewProps["menuStyle"]): this;
-    menuIndicator(value: CommonViewProps["menuIndicator"]): this;
-    controlGroupStyle(value: CommonViewProps["controlGroupStyle"]): this;
-    tabItem(value: CommonViewProps["tabItem"]): this;
-    tabViewStyle(value: CommonViewProps["tabViewStyle"]): this;
-    gridCellColumns(value: CommonViewProps["gridCellColumns"]): this;
-    gridCellAnchor(value: CommonViewProps["gridCellAnchor"]): this;
-    gridCellUnsizedAxes(value: CommonViewProps["gridCellUnsizedAxes"]): this;
-    gridColumnAlignment(value: CommonViewProps["gridColumnAlignment"]): this;
-    zIndex(value: CommonViewProps["zIndex"]): this;
-    overlay(value: CommonViewProps["overlay"]): this;
-    mask(value: CommonViewProps["mask"]): this;
-    popover(value: CommonViewProps["popover"]): this;
-    sheet(value: CommonViewProps["sheet"]): this;
-    fullScreenCover(value: CommonViewProps["fullScreenCover"]): this;
-    position(value: CommonViewProps["position"]): this;
-    offset(value: CommonViewProps["offset"]): this;
-    rotationEffect(value: CommonViewProps["rotationEffect"]): this;
-    scaleEffect(value: CommonViewProps["scaleEffect"]): this;
-    shadow(value: CommonViewProps["shadow"]): this;
-    blur(value: CommonViewProps["blur"]): this;
-    sliderThumbVisibility(value: CommonViewProps["sliderThumbVisibility"]): this;
-    searchable(value: CommonViewProps["searchable"]): this;
-    searchSuggestions(value: CommonViewProps["searchSuggestions"]): this;
-    searchSuggestionsVisibility(value: CommonViewProps["searchSuggestionsVisibility"]): this;
-    searchCompletion(value: CommonViewProps["searchCompletion"]): this;
-    sensoryFeedback(value: CommonViewProps["sensoryFeedback"]): this;
-    moveDisabled(value?: CommonViewProps["moveDisabled"]): this;
-    deleteDisabled(value?: CommonViewProps["deleteDisabled"]): this;
-    selectionDisabled(value?: CommonViewProps["selectionDisabled"]): this;
-    leadingSwipeActions(value: CommonViewProps["leadingSwipeActions"]): this;
-    trailingSwipeActions(value: CommonViewProps["trailingSwipeActions"]): this;
-    symbolRenderingMode(value: CommonViewProps["symbolRenderingMode"]): this;
-    symbolVariant(value: CommonViewProps["symbolVariant"]): this;
-    symbolEffect(value: CommonViewProps["symbolEffect"]): this;
-    presentationCompactAdaptation(value: CommonViewProps["presentationCompactAdaptation"]): this;
-    presentationDragIndicator(value: CommonViewProps["presentationDragIndicator"]): this;
-    presentationDetents(value: CommonViewProps["presentationDetents"]): this;
-    presentationBackgroundInteraction(value: CommonViewProps["presentationBackgroundInteraction"]): this;
-    presentationContentInteraction(value: CommonViewProps["presentationContentInteraction"]): this;
-    presentationCornerRadius(value: CommonViewProps["presentationCornerRadius"]): this;
-    navigationContainerBackground(value: CommonViewProps["navigationContainerBackground"]): this;
-    navigationSplitViewContainerBackground(value: CommonViewProps["navigationSplitViewContainerBackground"]): this;
-    listItemTint(value: CommonViewProps["listItemTint"]): this;
-    listRowInsets(value: CommonViewProps["listRowInsets"]): this;
-    listRowSpacing(value: CommonViewProps["listRowSpacing"]): this;
-    listRowSeparator(value: CommonViewProps["listRowSeparator"]): this;
-    listRowSeparatorTint(value: CommonViewProps["listRowSeparatorTint"]): this;
-    listSectionSpacing(value: CommonViewProps["listSectionSpacing"]): this;
-    listSectionSeparator(value: CommonViewProps["listSectionSeparator"]): this;
-    listSectionSeparatorTint(value: CommonViewProps["listSectionSeparatorTint"]): this;
-    listRowBackground(value: CommonViewProps["listRowBackground"]): this;
-    contentMargins(value: CommonViewProps["contentMargins"]): this;
-    contentTransition(value: CommonViewProps["contentTransition"]): this;
-    badge(value: CommonViewProps["badge"]): this;
-    badgeProminence(value: CommonViewProps["badgeProminence"]): this;
-    headerProminence(value: CommonViewProps["headerProminence"]): this;
-    navigationSplitViewColumnWidth(value: CommonViewProps["navigationSplitViewColumnWidth"]): this;
-    navigationSplitViewStyle(value: CommonViewProps["navigationSplitViewStyle"]): this;
-    navigationDestination(value: CommonViewProps["navigationDestination"]): this;
-    navigationTitle(value: CommonViewProps["navigationTitle"]): this;
-    navigationSubtitle(value: CommonViewProps["navigationSubtitle"]): this;
-    navigationBarTitleDisplayMode(value: CommonViewProps["navigationBarTitleDisplayMode"]): this;
-    navigationBarBackButtonHidden(value?: CommonViewProps["navigationBarBackButtonHidden"]): this;
-    navigationTransition(value: CommonViewProps["navigationTransition"]): this;
-    redacted(value: CommonViewProps["redacted"]): this;
-    unredacted(value?: CommonViewProps["unredacted"]): this;
-    translationHost(value: CommonViewProps["translationHost"]): this;
-    layoutPriority(value: CommonViewProps["layoutPriority"]): this;
-    gesture(value: CommonViewProps["gesture"]): this;
-    simultaneousGesture(value: CommonViewProps["simultaneousGesture"]): this;
-    highPriorityGesture(value: CommonViewProps["highPriorityGesture"]): this;
-    defersSystemGestures(value: CommonViewProps["defersSystemGestures"]): this;
-    animation(value: CommonViewProps["animation"]): this;
-    transition(value: CommonViewProps["transition"]): this;
-    matchedTransitionSource(value: CommonViewProps["matchedTransitionSource"]): this;
-    matchedGeometryEffect(value: CommonViewProps["matchedGeometryEffect"]): this;
-    activityBackgroundTint(value: CommonViewProps['activityBackgroundTint']): this;
-    activitySystemActionForegroundColor(value: CommonViewProps['activitySystemActionForegroundColor']): this;
-    environments(value: CommonViewProps["environments"]): this;
-    toolbarRemoving(value: CommonViewProps["toolbarRemoving"]): this;
-    toolbarRole(value: CommonViewProps["toolbarRole"]): this;
-    tabBarMinimizeBehavior(value: CommonViewProps["tabBarMinimizeBehavior"]): this;
-    tabViewBottomAccessory(value: CommonViewProps["tabViewBottomAccessory"]): this;
-    tabViewSearchActivation(value: CommonViewProps["tabViewSearchActivation"]): this;
-    tabViewCustomization(value: CommonViewProps["tabViewCustomization"]): this;
-    tabViewSidebarHeader(value: CommonViewProps["tabViewSidebarHeader"]): this;
-    tabViewSidebarFooter(value: CommonViewProps["tabViewSidebarFooter"]): this;
-    tabViewSidebarBottomBar(value: CommonViewProps["tabViewSidebarBottomBar"]): this;
-    indexViewStyle(value: CommonViewProps["indexViewStyle"]): this;
-    labelReservedIconWidth(value: CommonViewProps["labelReservedIconWidth"]): this;
-    labelIconToTitleSpacing(value: CommonViewProps["labelIconToTitleSpacing"]): this;
-    containerShape(value: CommonViewProps["containerShape"]): this;
-    searchToolbarBehavior(value: CommonViewProps["searchToolbarBehavior"]): this;
-    listSectionIndexVisibility(value: CommonViewProps["listSectionIndexVisibility"]): this;
-    listSectionMargins(value: CommonViewProps["listSectionMargins"]): this;
-    sectionIndexLabel(value: CommonViewProps["sectionIndexLabel"]): this;
-    sectionActions(value: CommonViewProps["sectionActions"]): this;
-    scrollEdgeEffectStyle(value: CommonViewProps["scrollEdgeEffectStyle"]): this;
-    scrollEdgeEffectHidden(value?: CommonViewProps["scrollEdgeEffectHidden"]): this;
-    safeAreaBar(value: CommonViewProps["safeAreaBar"]): this;
-    backgroundExtensionEffect(value?: CommonViewProps["backgroundExtensionEffect"]): this;
-    glassEffect(value?: CommonViewProps["glassEffect"]): this;
-    glassEffectTransition(value: CommonViewProps["glassEffectTransition"]): this;
-    glassEffectID(value: CommonViewProps["glassEffectID"]): this;
-    glassEffectUnion(value: CommonViewProps["glassEffectUnion"]): this;
-    pip(value: CommonViewProps["pip"]): this;
-    onPipStart(value: CommonViewProps["onPipStart"]): this;
-    onPipStop(value: CommonViewProps["onPipStop"]): this;
-    onPipPlayPauseToggle(value: CommonViewProps["onPipPlayPauseToggle"]): this;
-    onPipSkip(value: CommonViewProps["onPipSkip"]): this;
-    onPipRenderSizeChanged(value: CommonViewProps["onPipRenderSizeChanged"]): this;
-    pipHideOnForeground(value?: CommonViewProps["pipHideOnForeground"]): this;
-    onDrag(value: CommonViewProps["onDrag"]): this;
-    onDrop(value: CommonViewProps["onDrop"]): this;
-    geometryGroup(value?: CommonViewProps["geometryGroup"]): this;
-    compositingGroup(value?: CommonViewProps["compositingGroup"]): this;
-    drawingGroup(value?: CommonViewProps["drawingGroup"]): this;
-}
-
 type EnvironmentValues = {
     colorScheme: ColorScheme;
     colorSchemeContrast: ColorSchemeContrast;
@@ -5194,6 +6372,7 @@ type EnvironmentValues = {
     dismiss: () => void;
     dismissSearch: () => void;
     editMode: EditMode | null;
+    layoutDirection: LayoutDirection;
     widgetRenderingMode: WidgetRenderingMode;
     showsWidgetContainerBackground: boolean;
     isSearching: boolean;
@@ -5847,6 +7026,499 @@ type ListProps = {
  */
 declare const List: FunctionComponent<ListProps>;
 
+/**
+ * A geographic coordinate, equivalent to `CLLocationCoordinate2D`.
+ */
+type MapCoordinate = {
+    latitude: number;
+    longitude: number;
+};
+/**
+ * A rectangular region of the map specified by a center coordinate and a span
+ * (the latitude/longitude delta around the center).
+ */
+type MapRegion = {
+    center: MapCoordinate;
+    span: {
+        latitudeDelta: number;
+        longitudeDelta: number;
+    };
+};
+/**
+ * A subset of `MKPointOfInterestCategory` exposed as strings. Phase 1 ships
+ * the most common ~15 entries; additional categories can be added in future
+ * phases.
+ */
+type MapPointOfInterestCategory = "airport" | "atm" | "bank" | "beach" | "cafe" | "campground" | "evCharger" | "fitnessCenter" | "gasStation" | "hospital" | "hotel" | "library" | "museum" | "park" | "parking" | "pharmacy" | "police" | "postOffice" | "publicTransport" | "restaurant" | "restroom" | "school" | "store" | "theater" | "university" | "zoo";
+/**
+ * Controls which points of interest are rendered on the map.
+ */
+type MapPointsOfInterestSpec = "all" | "excludingAll" | {
+    includes: MapPointOfInterestCategory[];
+} | {
+    excludes: MapPointOfInterestCategory[];
+};
+/**
+ * Visual style for the map.
+ */
+type MapStyleSpec = {
+    style: "standard";
+    elevation?: "flat" | "realistic";
+    showsTraffic?: boolean;
+    pointsOfInterest?: MapPointsOfInterestSpec;
+} | {
+    style: "imagery";
+    elevation?: "flat" | "realistic";
+} | {
+    style: "hybrid";
+    elevation?: "flat" | "realistic";
+    showsTraffic?: boolean;
+    pointsOfInterest?: MapPointsOfInterestSpec;
+};
+/**
+ * Stroke style shared by `MapPolyline`, `MapPolygon`, and `MapCircle`.
+ */
+type MapStrokeStyle = {
+    lineWidth?: number;
+    lineCap?: "butt" | "round" | "square";
+    lineJoin?: "miter" | "round" | "bevel";
+    /** Dash pattern in points, alternating dash/gap lengths. */
+    dash?: number[];
+};
+/**
+ * Tagged-union value written to `<Map selection>` when the user taps something
+ * on the map.
+ *
+ * - `{ type: "marker", tag }` — a user-rendered `<Marker tag="...">` was tapped.
+ *   `tag` is exactly the string passed to `<Marker tag>`.
+ * - `{ type: "feature", ... }` — an Apple-rendered built-in point of interest,
+ *   physical feature, or territory label was tapped. `coordinate`, `title`, and
+ *   `pointOfInterestCategory` come from MapKit's own POI metadata.
+ *
+ * Tapping the empty map background writes `null`.
+ */
+type MapSelectionValue = {
+    type: "marker";
+    /** The exact string passed to the tapped `<Marker tag>`. */
+    tag: string;
+} | {
+    type: "feature";
+    /** Map coordinate of the tapped Apple feature. */
+    coordinate: MapCoordinate;
+    /** Feature display title from MapKit, when available. */
+    title: string | null;
+    /**
+     * Coarse classification:
+     * - `"pointOfInterest"` — restaurants, shops, landmarks, etc.
+     * - `"physicalFeature"` — natural features (mountains, lakes).
+     * - `"territory"` — administrative regions (cities, countries).
+     * - `"unknown"` — future MapKit feature kinds not yet bridged.
+     */
+    kind: "pointOfInterest" | "physicalFeature" | "territory" | "unknown";
+    /**
+     * Normalized POI category like `"restaurant"` / `"cafe"`, when the feature
+     * is a point of interest with a known category. `null` otherwise. Uses the
+     * same vocabulary as `MapPointOfInterestCategory`.
+     */
+    pointOfInterestCategory: string | null;
+};
+/**
+ * Style for `<Map featureSelectionAccessory>` / `<Map itemDetailSelectionAccessory>`.
+ *
+ * - `"automatic"` — MapKit decides between callout and sheet based on context
+ * - `"callout"` — anchored callout balloon next to the selected marker
+ * - `"sheet"` — bottom sheet
+ */
+type MapSelectionAccessoryStyle = "automatic" | "callout" | "sheet";
+/**
+ * Visibility of annotation titles / subtitles rendered by MapKit. Matches
+ * SwiftUI's `Visibility` enum:
+ *
+ * - `"automatic"` — MapKit picks based on zoom level (default).
+ * - `"visible"` — always show the label.
+ * - `"hidden"` — never show the label.
+ *
+ * Applied as a `<Map annotationTitles>` / `<Map annotationSubtitles>` prop;
+ * affects all `Marker(item:)`, `<Annotation>`, and Apple POI labels rendered
+ * by this map.
+ */
+type MapAnnotationLabelVisibility = "automatic" | "visible" | "hidden";
+type MapProps = {
+    /**
+     * Bidirectional camera position.
+     *
+     * Pass an `Observable<MapCameraPosition>` (see `useObservable`) to enable
+     * two-way binding: the map renders the current value, and user gestures
+     * (pan, pinch, rotate) write the resulting camera position back into the
+     * observable on gesture end.
+     *
+     * Use `initialCameraPosition` if you only need a one-time initial value.
+     *
+     * Renamed from `position` to avoid clashing with the global `position`
+     * view modifier (`{ x, y }`).
+     */
+    cameraPosition?: Observable<MapCameraPosition>;
+    /**
+     * One-time initial camera position. Mutually exclusive with `cameraPosition`
+     * — if both are supplied, `cameraPosition` wins.
+     */
+    initialCameraPosition?: MapCameraPosition;
+    /**
+     * Bidirectional selection binding for string-tagged markers (Phase 3f).
+     *
+     * Pass an `Observable<MapSelectionValue | null>` (see `useObservable`).
+     * Tapping a tagged `<Marker tag>` writes `{ type: "marker", tag }`; tapping
+     * an Apple-rendered built-in POI / feature writes `{ type: "feature", ... }`;
+     * tapping the background writes `null`.
+     *
+     * Mutually exclusive with `itemSelection` — if both are set, `itemSelection`
+     * wins and `selection` does not fire.
+     *
+     * Branch on `value.type` to handle each case:
+     * ```ts
+     * const sel = selection.value
+     * if (sel == null) {
+     *   // background tap
+     * } else if (sel.type === "marker") {
+     *   // user marker — sel.tag is your <Marker tag> string
+     * } else {
+     *   // Apple POI — sel.coordinate, sel.title, sel.pointOfInterestCategory
+     * }
+     * ```
+     *
+     * **iOS 17 limitation**: only built-in Apple features (`type: "feature"`)
+     * are reported. Tagged `<Marker>` taps do NOT fire selection on iOS 17 —
+     * the unified marker/feature selection requires the iOS 18+
+     * `MapSelection<Value>` wrapper. Markers without a `tag` are not selectable
+     * on any version.
+     */
+    selection?: Observable<MapSelectionValue | null>;
+    /**
+     * Bidirectional selection binding for `<Marker item={mapItem}>` markers.
+     *
+     * Tapping such a marker writes the underlying `MapItem` instance into the
+     * observable; tapping the background writes `null`. Mutually exclusive with
+     * `selection`; both set means `itemSelection` wins.
+     *
+     * Apple-rendered POI (built-in feature) taps do NOT fire this — they are
+     * surfaced only through `featureSelectionAccessory` or, alternatively, by
+     * wiring `selection` instead.
+     *
+     * **iOS 17 limitation**: this entire path is a no-op on iOS 17 (the
+     * underlying `MapSelection<Value>` wrapper requires iOS 18+). On iOS 17
+     * the markers render but tapping them never fires the observable.
+     */
+    itemSelection?: Observable<MapItem | null>;
+    /**
+     * Display Apple's auto-generated detail card when a built-in POI / feature
+     * is selected. The card surface adapts to context — pass `"automatic"` and
+     * MapKit picks callout vs sheet for you, or force one of `"callout"` /
+     * `"sheet"`. `null` (default) disables the card.
+     *
+     * iOS 18+ only — silently ignored on iOS 17.
+     */
+    featureSelectionAccessory?: MapSelectionAccessoryStyle | null;
+    /**
+     * Display Apple's auto-generated detail card when an `<Marker item>` marker
+     * is tapped. Requires `itemSelection` to be wired (otherwise no marker
+     * participates in selection and the card never appears). Same style values
+     * as `featureSelectionAccessory`.
+     *
+     * iOS 18+ only — silently ignored on iOS 17.
+     */
+    itemDetailSelectionAccessory?: MapSelectionAccessoryStyle | null;
+    /**
+     * Global visibility for annotation titles inside this map — applies to
+     * `Marker(item:)`, `<Annotation>`, and Apple-rendered built-in POI labels.
+     * Omitted = MapKit default behavior.
+     */
+    annotationTitles?: MapAnnotationLabelVisibility;
+    /**
+     * Global visibility for annotation subtitles. Mostly meaningful for
+     * `Marker(item:)` (whose `MapItem.placemark` carries a subtitle) and Apple
+     * POI labels; `<Annotation>` itself has no subtitle field, so it is
+     * unaffected.
+     */
+    annotationSubtitles?: MapAnnotationLabelVisibility;
+    /**
+     * Visual style for the map (defaults to `{ style: "standard" }`).
+     */
+    mapStyle?: MapStyleSpec;
+    /**
+     * Constrain how the user can pan and zoom this map. Construct via
+     * `MapCameraBounds.centerCoordinateBounds(...)` (clamp center to a region)
+     * or `MapCameraBounds.distance(...)` (limit zoom only). Omit / `undefined`
+     * = no constraint.
+     */
+    cameraBounds?: MapCameraBounds;
+    /**
+     * Built-in map controls. Accepts a single element or a Fragment wrapping
+     * several elements:
+     * ```tsx
+     * controls={<>
+     *   <MapUserLocationButton />
+     *   <MapCompass />
+     *   <MapScaleView />
+     * </>}
+     * ```
+     *
+     * Valid children: `MapUserLocationButton`, `MapCompass`, `MapPitchToggle`,
+     * `MapScaleView`.
+     */
+    controls?: VirtualNode;
+    /**
+     * `MapContent` children:
+     * `Marker`, `MapPolyline`, `MapPolygon`, `MapCircle`.
+     */
+    children?: (VirtualNode | boolean | undefined | null | (VirtualNode | undefined | null | boolean)[])[] | VirtualNode | null | boolean;
+};
+/**
+ * An iOS 17+ MapKit view. Displays a map with optional camera binding,
+ * styling, annotations, and built-in controls.
+ *
+ * @example
+ * ```tsx
+ * function Demo() {
+ *   const cameraPosition = useObservable<MapCameraPosition>(
+ *     MapCameraPosition.region({
+ *       center: { latitude: 31.23, longitude: 121.47 },
+ *       span: { latitudeDelta: 0.05, longitudeDelta: 0.05 },
+ *     })
+ *   )
+ *
+ *   return <Map
+ *     cameraPosition={cameraPosition}
+ *     mapStyle={{ style: "standard", showsTraffic: true }}
+ *     controls={<>
+ *       <MapUserLocationButton />
+ *       <MapCompass />
+ *     </>}
+ *   >
+ *     <Marker
+ *       title="Bund"
+ *       coordinate={{ latitude: 31.24, longitude: 121.49 }}
+ *       tint="systemRed"
+ *     />
+ *     <MapCircle
+ *       center={{ latitude: 31.23, longitude: 121.47 }}
+ *       radius={500}
+ *       fillColor="systemBlue"
+ *     />
+ *   </Map>
+ * }
+ * ```
+ */
+declare const Map: FunctionComponent<MapProps>;
+type MarkerCommonProps = {
+    /** Marker tint color. Accepts the same color strings as other views. */
+    tint?: string;
+    /**
+     * SF Symbol name shown on the marker. Mutually exclusive with `monogram`.
+     * If neither is set, MapKit uses its default pin glyph (or, when the marker
+     * is constructed from a `MapItem`, an Apple-chosen POI glyph).
+     */
+    systemImage?: string;
+    /**
+     * Short monogram text shown on the marker (e.g. "A"). Mutually exclusive
+     * with `systemImage`.
+     */
+    monogram?: string;
+    /**
+     * Stable identifier used by `<Map selection>` to track which marker is
+     * selected. Tapping a tagged marker writes `{ type: "marker", tag }` into
+     * the bound selection observable. Markers without a `tag` are not selectable.
+     *
+     * Tags must be unique inside a single `<Map>` — duplicate tags result in
+     * unpredictable selection behavior.
+     *
+     * **iOS 17 limitation**: tagged-marker selection requires iOS 18+. On
+     * iOS 17, tapping a tagged marker does not update `<Map selection>`
+     * (only Apple's built-in POI taps do).
+     */
+    tag?: string;
+};
+/**
+ * Marker constructed from an explicit `coordinate`. Use this form for
+ * map pins whose position you compute yourself.
+ */
+type MarkerByCoordinateProps = MarkerCommonProps & {
+    coordinate: MapCoordinate;
+    /** Marker label. Empty string and `undefined` both render no label. */
+    title?: string;
+    /** Mutually exclusive with `coordinate`; use the `item` form instead. */
+    item?: never;
+};
+/**
+ * Marker constructed from a `MapItem` (search result, directions endpoint,
+ * etc.). MapKit auto-fills the title from `item.name`, the coordinate from
+ * `item.coordinate`, and — unless overridden by `systemImage` / `monogram` /
+ * a custom `title` — picks a default glyph based on
+ * `item.pointOfInterestCategory`.
+ */
+type MarkerByItemProps = MarkerCommonProps & {
+    item: MapItem;
+    /**
+     * Optional title override. Defaults to `item.name`. Passing this disables
+     * MapKit's auto-glyph selection (the marker reverts to the default pin
+     * unless `systemImage` / `monogram` is also provided).
+     */
+    title?: string;
+    /** Mutually exclusive with `item`; use the `coordinate` form instead. */
+    coordinate?: never;
+};
+type MarkerProps = MarkerByCoordinateProps | MarkerByItemProps;
+/**
+ * A pin annotation rendered inside a `<Map>`.
+ */
+declare const Marker: FunctionComponent<MarkerProps>;
+/**
+ * `<Annotation>` lets you anchor any SwiftUI view tree at a map coordinate.
+ * Unlike `<Marker>` (whose visual is constrained to a pin glyph + tint),
+ * Annotation renders arbitrary children — buttons, badges, custom shapes —
+ * so it is the right tool when you need a chip, photo callout, or
+ * non-pin-shaped marker.
+ *
+ * SwiftUI's `Annotation` only accepts an explicit coordinate (no
+ * `Marker(item:)`-style auto coordinate from `MapItem`), so the component
+ * exposes a single construction form.
+ */
+type AnnotationProps = {
+    /** Where on the map the content view anchors. */
+    coordinate: MapCoordinate;
+    /**
+     * Annotation label rendered by MapKit next to the content. Defaults to no
+     * label when omitted or empty.
+     */
+    title?: string;
+    /**
+     * Where on the content view the coordinate anchors. Accepts a named
+     * `KeywordPoint` (e.g. `"bottom"` for a pin-style anchor) or an arbitrary
+     * `Point` in `[0..1]` unit space. Defaults to `"center"`.
+     */
+    anchor?: KeywordPoint | Point;
+    /**
+     * Stable identifier used by `<Map selection>`. Tapping a tagged annotation
+     * writes `{ type: "marker", tag }` into the selection observable. Tagless
+     * annotations are not selectable. Tags must be unique within one `<Map>`.
+     *
+     * iOS 17 limitation: identical to `<Marker tag>` — tagged-annotation
+     * selection requires iOS 18+.
+     */
+    tag?: string;
+    /**
+     * Custom SwiftUI content rendered as the annotation body. Pass any view
+     * tree; multiple top-level children are composed as a single group.
+     */
+    children?: (VirtualNode | boolean | undefined | null | (VirtualNode | undefined | null | boolean)[])[] | VirtualNode | null | boolean;
+};
+/**
+ * Custom-content map annotation. Place inside a `<Map>`:
+ *
+ * ```tsx
+ * <Map cameraPosition={cam}>
+ *   <Annotation coordinate={{ latitude: 31.24, longitude: 121.49 }} title="Bund" anchor="bottom">
+ *     <ZStack>
+ *       <Circle fill="systemRed" frame={{ width: 20, height: 20 }} />
+ *       <Text font="caption2" foregroundStyle="white">★</Text>
+ *     </ZStack>
+ *   </Annotation>
+ * </Map>
+ * ```
+ */
+declare const Annotation: FunctionComponent<AnnotationProps>;
+type MapPolylineProps = {
+    coordinates: MapCoordinate[];
+    strokeColor?: string;
+    strokeStyle?: MapStrokeStyle;
+    /**
+     * `"straight"` (default) draws a straight line between consecutive points.
+     * `"geodesic"` follows the shortest great-circle path — visible difference
+     * only on long routes (cross-continent flights and similar).
+     */
+    contourStyle?: "straight" | "geodesic";
+};
+/**
+ * A connected sequence of line segments rendered inside a `<Map>`.
+ */
+declare const MapPolyline: FunctionComponent<MapPolylineProps>;
+type MapPolygonProps = {
+    coordinates: MapCoordinate[];
+    fillColor?: string;
+    strokeColor?: string;
+    strokeStyle?: MapStrokeStyle;
+};
+/**
+ * A filled polygon rendered inside a `<Map>`.
+ */
+declare const MapPolygon: FunctionComponent<MapPolygonProps>;
+type MapCircleProps = {
+    center: MapCoordinate;
+    /** Radius in meters. */
+    radius: number;
+    fillColor?: string;
+    strokeColor?: string;
+    strokeStyle?: MapStrokeStyle;
+};
+/**
+ * A filled circle rendered inside a `<Map>`, sized in meters.
+ */
+declare const MapCircle: FunctionComponent<MapCircleProps>;
+/**
+ * Built-in MapKit control: a button that recenters on the user's location.
+ * Use as a child of `<Map controls={...} />`.
+ */
+declare const MapUserLocationButton: FunctionComponent<unknown>;
+/**
+ * Built-in MapKit control: a compass rose that resets the map's rotation.
+ * Use as a child of `<Map controls={...} />`.
+ */
+declare const MapCompass: FunctionComponent<unknown>;
+/**
+ * Built-in MapKit control: a button that toggles the map's pitch.
+ * Use as a child of `<Map controls={...} />`.
+ */
+declare const MapPitchToggle: FunctionComponent<unknown>;
+/**
+ * Built-in MapKit control: an adaptive scale bar.
+ * Use as a child of `<Map controls={...} />`.
+ */
+declare const MapScaleView: FunctionComponent<unknown>;
+type LookAroundPreviewProps = {
+    /**
+     * Scene returned by `MapLookAround.request(coordinate)`. When `null` or
+     * absent the view renders a "No street view available" placeholder so the
+     * UI does not jump as scenes resolve.
+     */
+    scene: MapLookAroundScene | null;
+    /** Show road / street labels overlay. Default `true`. */
+    showsRoadLabels?: boolean;
+    /** Allow tapping into the full-screen LookAround viewer. Default `true`. */
+    allowsNavigation?: boolean;
+    /** Position of Apple's "Look Around" badge. Default `"topLeading"`. */
+    badgePosition?: "topLeading" | "topTrailing" | "bottomTrailing";
+};
+/**
+ * Street-level LookAround preview powered by MapKit. Pair with
+ * `MapLookAround.request({ latitude, longitude })` from the global API to
+ * fetch a scene first.
+ *
+ * @example
+ * ```tsx
+ * const scene = useObservable<MapLookAroundScene | null>(null)
+ *
+ * useEffect(() => {
+ *   MapLookAround.request({ latitude: 37.3349, longitude: -122.0090 }).then(scene.setValue)
+ * }, [])
+ *
+ * return <LookAroundPreview
+ *   scene={scene.value}
+ *   showsRoadLabels
+ *   frame={{ height: 240 }}
+ * />
+ * ```
+ */
+declare const LookAroundPreview: FunctionComponent<LookAroundPreviewProps>;
+
 type MarkdownProps = {
     /**
      * Markdown text content.
@@ -6056,6 +7728,166 @@ type NavigationStackProps = {
 declare const NavigationStack: FunctionComponent<NavigationStackProps>;
 
 /**
+ * A rectangle described by an origin and a size, used by `Path2D`.
+ */
+type Rect = {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+};
+/**
+ * A 2D affine transform `[a b c d tx ty]`, used by `Path2D.applying`.
+ *
+ * The transform maps a point `(x, y)` to `(a*x + c*y + tx, b*x + d*y + ty)`.
+ */
+type PathAffineTransform = {
+    a: number;
+    b: number;
+    c: number;
+    d: number;
+    tx: number;
+    ty: number;
+};
+/**
+ * A vector path you build with line and curve segments, mirroring SwiftUI's `Path`.
+ *
+ * `Path2D` is a value: build it imperatively, query its geometry, transform it, render it with
+ * the `<PathShape>` view, or use it as a `clipShape` / `contentShape` / `containerShape`.
+ *
+ * All points use `{ x, y }`, rectangles use `{ x, y, width, height }`, and angles are in radians.
+ * Build methods are chainable.
+ *
+ * @example
+ * ```tsx
+ * // Build a triangle and render it.
+ * const triangle = new Path2D(p => {
+ *   p.move({ x: 200, y: 100 })
+ *   p.addLine({ x: 100, y: 300 })
+ *   p.addLine({ x: 300, y: 300 })
+ *   p.closeSubpath()
+ * })
+ *
+ * <PathShape path={triangle} fill="orange" stroke={{ color: "black", lineWidth: 2 }} />
+ *
+ * // Query geometry.
+ * triangle.boundingRect()                 // { x, y, width, height }
+ * triangle.contains({ x: 200, y: 200 })   // boolean
+ *
+ * // Use as a clip shape.
+ * <Image imageUrl={url} clipShape={triangle} />
+ * ```
+ */
+declare class Path2D {
+    private _commands;
+    /**
+     * Creates a path, optionally building it with a closure (mirrors SwiftUI's `Path { ... }`).
+     */
+    constructor(build?: (path: Path2D) => void);
+    /** Begins a new subpath at the given point. */
+    move(to: Point): this;
+    /** Adds a line from the current point to the given point. */
+    addLine(to: Point): this;
+    /** Adds a sequence of connected straight line segments, starting from the first point. */
+    addLines(points: Point[]): this;
+    /** Adds a quadratic Bézier curve from the current point to `to`, using a single control point. */
+    addQuadCurve(to: Point, control: Point): this;
+    /** Adds a cubic Bézier curve from the current point to `to`, using two control points. */
+    addCurve(to: Point, control1: Point, control2: Point): this;
+    /**
+     * Adds an arc of a circle, centered at `center`. Angles are in radians. `clockwise` follows
+     * SwiftUI's convention (note this is the opposite of the Web Canvas `counterclockwise` flag).
+     */
+    addArc(opts: {
+        center: Point;
+        radius: number;
+        startAngle: number;
+        endAngle: number;
+        clockwise?: boolean;
+    }): this;
+    /** Adds an arc described by a starting angle and an angular delta (both in radians). */
+    addRelativeArc(opts: {
+        center: Point;
+        radius: number;
+        startAngle: number;
+        delta: number;
+    }): this;
+    /** Adds a rectangular subpath. */
+    addRect(rect: Rect): this;
+    /**
+     * Adds a rounded rectangle. Provide either `cornerRadius` (uniform) or `cornerSize`
+     * (independent width / height radii).
+     */
+    addRoundedRect(opts: {
+        rect: Rect;
+        cornerSize?: Size;
+        cornerRadius?: number;
+        style?: RoundedCornerStyle;
+    }): this;
+    /** Adds an ellipse inscribed in the given rectangle. */
+    addEllipse(rect: Rect): this;
+    /** Appends another path's contents to this path. */
+    addPath(other: Path2D): this;
+    /** Closes the current subpath by drawing a line back to its start point. */
+    closeSubpath(): this;
+    /** The smallest rectangle that completely encloses the path. */
+    boundingRect(): Rect;
+    /**
+     * Returns whether the path contains `point`. Pass `eoFill` to use the even-odd fill rule
+     * instead of the default non-zero winding rule.
+     */
+    contains(point: Point, eoFill?: boolean): boolean;
+    /** Whether the path has no segments. */
+    isEmpty(): boolean;
+    /** The current point of the path, or `null` if the path is empty. */
+    currentPoint(): Point | null;
+    /** Returns a new path with the affine transform applied to every point. */
+    applying(transform: PathAffineTransform): Path2D;
+    /** Returns a new path translated by `(dx, dy)`. */
+    offsetBy(dx: number, dy: number): Path2D;
+    /**
+     * Returns a new path representing the portion between the fractions `from` and `to`
+     * (each in `0...1`) of this path's length.
+     */
+    trimmedPath(from: number, to: number): Path2D;
+    /** @internal 给 <PathShape> / clipShape / native helper 使用的 wire 指令。 */
+    _toWire(): any[];
+}
+/**
+ * Props for the `<PathShape>` view.
+ *
+ * Provide exactly one of `path` (a prebuilt `Path2D`) or `draw` (a size-responsive builder
+ * invoked on layout, like `<Canvas>`). Shares `fill` / `stroke` / `trim` with the other shapes.
+ */
+type PathShapeProps = ShapeProps & {
+    /** A prebuilt path to render. The path uses absolute coordinates (independent of the view size). */
+    path?: Path2D;
+    /**
+     * Builds the path each time the view is laid out, receiving the draw size — use this for paths
+     * that depend on the container size. The return value is ignored.
+     */
+    draw?: (path: Path2D, size: Size) => void;
+};
+/**
+ * A SwiftUI shape rendered from a `Path2D`. Fill / stroke / trim and all view modifiers apply,
+ * exactly like `Rectangle` or `Circle`.
+ *
+ * @example
+ * ```tsx
+ * <PathShape
+ *   fill="orange"
+ *   draw={(path, size) => {
+ *     path.move({ x: size.width / 2, y: 0 })
+ *     path.addLine({ x: 0, y: size.height })
+ *     path.addLine({ x: size.width, y: size.height })
+ *     path.closeSubpath()
+ *   }}
+ * />
+ * ```
+ */
+declare const PathShape: FunctionComponent<PathShapeProps>;
+
+/**
  * Picker value types.
  */
 type PickerValue = number | string;
@@ -6217,6 +8049,155 @@ type ScrollViewReaderProps = {
     children: (scrollViewProxy: ScrollViewProxy) => VirtualNode;
 };
 declare const ScrollViewReader: FunctionComponent<ScrollViewReaderProps>;
+
+/**
+ * Reader-style child of `<Chart>` that gives custom content access to a `ChartProxy`
+ * for hit-testing, custom tooltips, and value↔coordinate conversion. Mirrors SwiftUI Charts'
+ * `chartOverlay(alignment:content:) { proxy in … }`.
+ *
+ * Place it as a direct child of `<Chart>`. The bridge lifts it out of the children list
+ * and applies it as a `.chartOverlay { proxy in … }` modifier on the underlying SwiftUI Chart.
+ *
+ * The proxy is injected by the native bridge. On the very first synchronous render (before
+ * SwiftUI has built the chart), `proxy` is `null` and the overlay falls back to `EmptyView`.
+ */
+type ChartOverlayProps = {
+    /**
+     * Alignment of the overlay content within the chart's plot area. Defaults to `'center'`.
+     */
+    alignment?: Alignment;
+    /**
+     * Render function. Receives a non-null `ChartProxy` once SwiftUI has built the chart.
+     */
+    children: (proxy: ChartProxy) => VirtualNode;
+};
+declare const ChartOverlay: FunctionComponent<ChartOverlayProps>;
+
+/**
+ * Reader-style child of `<Chart>` that attaches a custom gesture to the chart and exposes
+ * a `ChartProxy` whose `select*` methods can drive the chart's selection state. Mirrors
+ * SwiftUI Charts' `chartGesture(_:) { proxy in … }` modifier.
+ *
+ * Use this to implement single-finger range selection on a categorical (String) axis, or
+ * any other custom interaction the default chart gestures don't cover.
+ *
+ * @example
+ * ```tsx
+ * <Chart chartXSelection={{ valueType: "string", from, to, onChanged }}>
+ *   …marks…
+ *   <ChartGesture>
+ *     {(proxy) =>
+ *       DragGesture({ minDistance: 0 }).onChanged(v => {
+ *         proxy.selectXRange(v.startLocation.x, v.location.x)
+ *       })
+ *     }
+ *   </ChartGesture>
+ * </Chart>
+ * ```
+ */
+type ChartGestureProps = {
+    /**
+     * Builder function. Called every time SwiftUI Charts re-evaluates the chart's gesture closure.
+     * Must return a `GestureInfo` (i.e. the result of `DragGesture()`, `TapGesture()`, etc.).
+     * The returned gesture is wired up via `chartGesture` on the underlying SwiftUI Chart.
+     */
+    children: (proxy: ChartProxy) => GestureInfo<any, any>;
+};
+declare const ChartGesture: FunctionComponent<ChartGestureProps>;
+
+type PlotOp = {
+    kind: string;
+    args?: any;
+};
+/**
+ * Builder-style proxy mirroring SwiftUI Charts' `ChartPlotContent`. Each chained call returns
+ * a new immutable `ChartPlotProxy` whose accumulated `ops` are sent to the bridge and replayed
+ * on the real `ChartPlotContent` view inside `chartPlotStyle { plot in plot…. }`.
+ *
+ * Available modifiers cover the most common 90% of chart-plot styling needs. For anything not
+ * listed here, file a request — we'll add the corresponding op rather than expose a fully
+ * unrestricted view-builder (which would require parsing arbitrary view trees on the Swift side).
+ */
+declare class ChartPlotProxy {
+    private readonly ops;
+    constructor(ops?: PlotOp[]);
+    private push;
+    /** Plot-area background. Pass a color string, a `Material` token, or a dict mixing both with `opacity`. */
+    background(args: Color | Material | {
+        color?: Color;
+        material?: Material;
+        opacity?: number;
+    }): ChartPlotProxy;
+    /** Stroke a border around the plot area. */
+    border(args: {
+        color?: Color;
+        width?: number;
+    }): ChartPlotProxy;
+    /** Constrain the plot area's frame. */
+    frame(args: {
+        width?: number;
+        height?: number;
+    }): ChartPlotProxy;
+    /** Pad the plot area. Pass a number (uniform), an `EdgeInsets`-shaped dict, or no args (default padding). */
+    padding(args?: number | EdgeInsets | {
+        horizontal?: number;
+        vertical?: number;
+    }): ChartPlotProxy;
+    /** Round the corners of the plot area's clip shape. */
+    cornerRadius(radius: number): ChartPlotProxy;
+    /** Multiply the plot area's opacity. */
+    opacity(value: number): ChartPlotProxy;
+    /** Drop-shadow on the plot area. */
+    shadow(args: {
+        color?: Color;
+        radius?: number;
+        x?: number;
+        y?: number;
+    }): ChartPlotProxy;
+    /** Clip the plot area to a shape. `'capsule'` / `'rect'` / `{ rounded: <radius> }`. */
+    clipShape(args: "capsule" | "rect" | {
+        rounded: number;
+    }): ChartPlotProxy;
+    /** Read-only access to the accumulated ops list (used by the bridge serializer). */
+    toJson(): {
+        ops: PlotOp[];
+    };
+}
+/**
+ * Reader-style child of `<Chart>` that styles the chart's plot area. Mirrors SwiftUI Charts'
+ * `chartPlotStyle { plot in plot.background(...).border(...) }` modifier.
+ *
+ * The closure receives a `ChartPlotProxy` and must return a `ChartPlotProxy` (i.e. the result of
+ * any number of chained calls on the input). The bridge then replays those ops on the real
+ * `ChartPlotContent` view on the Swift side.
+ *
+ * @example
+ * ```tsx
+ * <Chart>
+ *   <BarChart marks={...} />
+ *   <ChartPlotStyle>
+ *     {(plot) =>
+ *       plot
+ *         .background({ color: "gray", opacity: 0.1 })
+ *         .border({ color: "gray", width: 1 })
+ *         .frame({ height: 240 })
+ *     }
+ *   </ChartPlotStyle>
+ * </Chart>
+ * ```
+ *
+ * Like `<ChartOverlay>` and `<ChartGesture>`, only the FIRST `<ChartPlotStyle>` child of a chart
+ * is honored. The closure body must remain pure — any `setState` calls inside will trigger an
+ * infinite chart-rebuild loop. Use it as a pure builder.
+ */
+type ChartPlotStyleProps = {
+    /**
+     * Builder function. Receives an empty `ChartPlotProxy` and must return a (possibly transformed)
+     * `ChartPlotProxy` whose accumulated ops describe the desired plot-area style.
+     */
+    children: (plot: ChartPlotProxy) => ChartPlotProxy;
+};
+declare const ChartPlotStyle: FunctionComponent<ChartPlotStyleProps>;
 
 type SectionProps = {
     /**
@@ -6900,6 +8881,46 @@ type VideoRecorderPreviewViewProps = {
  */
 declare const VideoRecorderPreviewView: FunctionComponent<VideoRecorderPreviewViewProps>;
 
+type CaptureVideoPreviewViewProps = {
+    /**
+     * The capture session to render. Must already have a video input attached
+     * to actually display frames.
+     */
+    session: AVCaptureSession;
+    /**
+     * Optional device backing the input. Passing it enables iOS 17+
+     * `AVCaptureDevice.RotationCoordinator`, so the preview rotates with the
+     * device. Without it the preview keeps the connection's default orientation.
+     */
+    videoDevice?: AVCaptureDevice;
+    /**
+     * The video gravity. Defaults to `resizeAspectFill`.
+     */
+    videoGravity?: 'resizeAspect' | 'resizeAspectFill' | 'resize';
+    /**
+     * Whether the video is mirrored.
+     */
+    isVideoMirrored?: boolean;
+    /**
+     * The radius to use when drawing rounded corners for the view’s background.
+     * Setting the radius to a value greater than 0 causes the view to begin
+     * drawing rounded corners on its background. Setting `masksToBounds` to
+     * true causes the content to be clipped to the rounded corners.
+     * The default value of this property is 0.
+     */
+    cornerRadius?: number;
+    /**
+     * Whether the view clips to its bounds.
+     */
+    masksToBounds?: boolean;
+};
+/**
+ * A view that renders the live preview of any `AVCaptureSession` you have
+ * built. Drop-in alternative to `VideoRecorderPreviewView` when you assemble
+ * your own pipeline.
+ */
+declare const CaptureVideoPreviewView: FunctionComponent<CaptureVideoPreviewViewProps>;
+
 type VStackProps = {
     /**
      * The guide for aligning the subviews in this stack.
@@ -7201,6 +9222,77 @@ declare namespace AppEvents {
      * ```
      */
     const colorScheme: AppEventListenerManager<ColorScheme>;
+}
+
+type AlarmLiveActivityMode = AlarmManager.AlarmState;
+type AlarmLiveActivitySchedule = AlarmManager.Schedule;
+type AlarmLiveActivityCountdownState = {
+    fireDate: Date;
+    totalCountdownDuration: number;
+};
+type AlarmLiveActivityPausedState = {
+    totalCountdownDuration: number;
+    previouslyElapsedDuration: number;
+    remainingDuration: number;
+};
+type AlarmLiveActivityAction = {
+    title: string;
+    textColor?: Color | null;
+    systemImageName: string;
+    intent: AppIntent<any, AppIntentProtocol.LiveActivityIntent>;
+};
+type AlarmLiveActivityPresentationButton = {
+    title: string;
+    textColor?: Color | null;
+    systemImageName: string;
+};
+type AlarmLiveActivityPresentation = {
+    alert: {
+        title: string;
+        stopButton?: AlarmLiveActivityPresentationButton | null;
+        secondaryButton?: AlarmLiveActivityPresentationButton | null;
+        secondaryBehavior?: AlarmManager.SecondaryButtonBehavior | null;
+    };
+    countdown?: {
+        title?: string | null;
+        pauseButton?: AlarmLiveActivityPresentationButton | null;
+    } | null;
+    paused?: {
+        title?: string | null;
+        resumeButton?: AlarmLiveActivityPresentationButton | null;
+    } | null;
+};
+type AlarmLiveActivityState<TMetadata = Record<string, string>> = {
+    alarmID: string;
+    mode: AlarmLiveActivityMode;
+    title: string;
+    tintColor?: Color | null;
+    metadata: TMetadata;
+    schedule?: AlarmLiveActivitySchedule | null;
+    countdown?: AlarmLiveActivityCountdownState | null;
+    paused?: AlarmLiveActivityPausedState | null;
+    presentation: AlarmLiveActivityPresentation;
+    actions: {
+        pause?: AlarmLiveActivityAction | null;
+        resume?: AlarmLiveActivityAction | null;
+        stop: AlarmLiveActivityAction;
+        secondary?: AlarmLiveActivityAction | null;
+    };
+};
+interface AlarmLiveActivityUIBuilder<TMetadata = Record<string, string>> {
+    (state: AlarmLiveActivityState<TMetadata>): VirtualNode;
+}
+
+/**
+ * Registers UI builders for AlarmKit-driven Live Activities.
+ *
+ * Use this API from `alarm_live_activity.tsx`. AlarmKit owns the
+ * lifecycle; the builder only renders the current alarm presentation state.
+ */
+declare class AlarmLiveActivity {
+    private static _builderMap;
+    static register<TMetadata = Record<string, string>>(name: string, builder: AlarmLiveActivityUIBuilder<TMetadata>): void;
+    private static build;
 }
 
 type ControlWidgetLabel = {
@@ -7816,6 +9908,12 @@ type LiveActivityEndOptions = LiveActivityOptions & {
     dismissTimeInterval?: DurationInSeconds;
 };
 
+declare function LiveActivityUI(props: LiveActivityUIProps): JSX.Element;
+declare function LiveActivityUIExpandedLeading(props: LiveActivityUIExpandedViewProps): JSX.Element;
+declare function LiveActivityUIExpandedTrailing(props: LiveActivityUIExpandedViewProps): JSX.Element;
+declare function LiveActivityUIExpandedCenter(props: LiveActivityUIExpandedViewProps): JSX.Element;
+declare function LiveActivityUIExpandedBottom(props: LiveActivityUIExpandedViewProps): JSX.Element;
+
 /**
  * Display your Script’s data in the Dynamic Island and on the Lock Screen and offer quick interactions.
  */
@@ -7823,7 +9921,6 @@ declare class LiveActivity<T> {
     private static _builderMap;
     static register<T>(name: string, builder: LiveActivityUIBuilder<T>): () => LiveActivity<T>;
     private static build;
-    private static _renderView;
     name: string;
     private _updateListeners;
     private _updateListenerId?;
@@ -7923,11 +10020,6 @@ declare class LiveActivity<T> {
      */
     static endAllActivities(options?: LiveActivityEndOptions): Promise<boolean>;
 }
-declare function LiveActivityUI(props: LiveActivityUIProps): JSX.Element;
-declare function LiveActivityUIExpandedLeading(props: LiveActivityUIExpandedViewProps): JSX.Element;
-declare function LiveActivityUIExpandedTrailing(props: LiveActivityUIExpandedViewProps): JSX.Element;
-declare function LiveActivityUIExpandedCenter(props: LiveActivityUIExpandedViewProps): JSX.Element;
-declare function LiveActivityUIExpandedBottom(props: LiveActivityUIExpandedViewProps): JSX.Element;
 
 /**
  * Constants that indicate the importance and delivery timing of a notification.
@@ -8329,7 +10421,8 @@ declare class Response {
     private _mimeType?;
     private _expectedContentLength?;
     private _textEncodingName?;
-    readonly body: ReadableStream<Data>;
+    private _bodyUsed;
+    body: ReadableStream<Data>;
     /**
      * @internal
      */
@@ -8342,6 +10435,8 @@ declare class Response {
     bytes(): Promise<Uint8Array>;
     arrayBuffer(): Promise<ArrayBuffer>;
     formData(): Promise<FormData>;
+    clone(): Response;
+    private consumeBody;
     /**
      * Get response status code.
      */
@@ -8515,7 +10610,7 @@ declare function useCancelToken(): CancelTokenHook;
 type RequestInit = {
     method?: string;
     headers?: HeadersInit;
-    body?: Data | FormData | string | ArrayBuffer;
+    body?: Data | FormData | string | ArrayBuffer | ArrayBufferView | null;
     /**
      * Whether to allow insecure request, default is false.
      * If the request URL is HTTP and the app is served over HTTPS, the request will be blocked unless this option is set to true.
@@ -8559,7 +10654,7 @@ declare class Request {
     url: string;
     method: string;
     headers: Headers;
-    body?: Data | FormData | string | ArrayBuffer;
+    body?: Data | FormData | string | ArrayBuffer | ArrayBufferView | null;
     /**
      * Whether to allow insecure request, default is false.
      * If the request URL is HTTP and the app is served over HTTPS, the request will be blocked unless this option is set to true.
@@ -8654,9 +10749,10 @@ declare namespace Script {
      *  - `"keyboard"`: The script is running in the custom keyboard extension, "keyboard.tsx" is the entry point.
      *  - `"control_widget"`: The script is running in the control widget, "control_widget_button.tsx" or "control_widget_toggle.tsx" is the entry point.
      *  - `"live_activity"`: The script is running in the live activity extension, "live_activity.tsx" is the entry point.
+     *  - `"alarm_live_activity"`: The script is rendering an AlarmKit live activity, "alarm_live_activity.tsx" is the entry point.
      *  - `"translation_ui_provider"`: The script is running in the translation UI provider extension, "translation_ui_provider.tsx" is the entry point.
      */
-    const env: "index" | "widget" | "intent" | "app_intents" | "notification" | "assistant_tool" | "keyboard" | "control_widget" | "live_activity" | "translation_ui_provider";
+    const env: "index" | "widget" | "intent" | "app_intents" | "notification" | "assistant_tool" | "keyboard" | "control_widget" | "live_activity" | "alarm_live_activity" | "translation_ui_provider";
     /**
      * Name of the current script.
      */
@@ -8693,10 +10789,15 @@ declare namespace Script {
      */
     const widgetParameter: string;
     /**
-     * If the current script is opened and run by the `run URL scheme`(
-     * like `"scripting://run/{script_name}?a=1&b=2"`).
+     * Parameters passed to the script. When launched with a JSON object (e.g.
+     * `scripting-ts run ... --queryparameters '{"enabled":true,"count":1}'`,
+     * `Script.run({ queryParameters })`, or keyboard `switchToScript`), the
+     * original JSON value types (boolean/number/null/array/object) are preserved.
+     * When launched by a `run URL scheme` (like
+     * `"scripting://run/{script_name}?a=1&b=2"`), values are always strings,
+     * because URL query strings cannot carry typed values.
      */
-    const queryParameters: Record<string, string>;
+    const queryParameters: Record<string, any>;
     /**
      * Creates a URL scheme for opening the Scripting's documentation page.
      * @param title The title of the documentation page, if not specified, it will open the documentation homepage.
@@ -8848,7 +10949,7 @@ declare namespace Script {
      */
     function run<T>(options: {
         name: string;
-        queryParameters?: Record<string, string>;
+        queryParameters?: Record<string, any>;
         singleMode?: boolean;
     }): Promise<T | null>;
     /**
@@ -8901,7 +11002,7 @@ declare namespace Script {
         /**
          * The query parameters passed to the script when it was resumed.
          */
-        queryParameters: Record<string, string> | null;
+        queryParameters: Record<string, any> | null;
         /**
          * The notification info passed to the script when it was resumed by tapping on a notification.
          */
@@ -9065,6 +11166,11 @@ declare namespace Widget {
      * Reloads the timelines for all Test Widgets.
      */
     function reloadTestWidgets(): void;
+    /**
+     * Opens the app with the specified bundle ID.
+     * @param bundleId The bundle ID of the app to open.
+     */
+    function openApp(bundleId: string): void;
 }
 
 declare const Device: typeof globalThis.Device;
@@ -9081,4 +11187,4 @@ declare global {
     }
 }
 
-export { type AVLayerVideoGravity, AVPlayerView, type AVPlayerViewProps, AbortController, AbortError, AbortEvent, type AbortEventListener, AbortSignal, AccessoryWidgetBackground, type AdaptableTabBarPlacement, type Alignment, type Angle, type AngleValue, type AngularGradient, AnimatedFrames, type AnimatedFramesProps, AnimatedGif, type AnimatedGifProps, AnimatedImage, type AnimatedImageProps, type AnnotationOverflowResolution, type AnnotationOverflowResolutionStrategy, type AnnotationPosition, AppEventListenerManager, AppEvents, type AppIntent, type AppIntentFactory, AppIntentManager, type AppIntentPerform, AppIntentProtocol, AreaChart, AreaStackChart, type Axis, type AxisSet, type BadgeProminence, Bar1DChart, BarChart, type BarChartProps, BarGanttChart, type BarGanttChartProps, BarStackChart, Button, type ButtonBorderShape, type ButtonProps, type ButtonRole, type ButtonStyle, type CalendarComponent, CancelError, type CancelEventListener, CancelToken, type CancelTokenHook, Capsule, Chart, type ChartAxisScaleType, type ChartInterpolationMethod, type ChartMarkProps, type ChartMarkStackingMethod, type ChartNumberSelection, type ChartScrollPosition, type ChartSelection, type ChartStringSelection, type ChartSymbolShape, Circle, type ClockHandRotationEffectPeriod, type ClosedRange, type Color, ColorPicker, type ColorPickerProps, type ColorRenderingMode, type ColorScheme, type ColorSchemeContrast, type ColorStringHex, type ColorStringRGBA, type ColorWithGradientOrOpacity, type CommonViewProps, type ComponentCallback, type ComponentEffect, type ComponentEffectEvent, type ComponentMemo, type ComponentProps, ConcentricRectangle, type ConcentricRectangleProps, type ConcentricRectangleShape, type Consumer, type ConsumerProps, type ContentAvailableViewProps, type ContentAvailableViewWithLabelProps, type ContentAvailableViewWithTitleProps, type ContentMarginPlacement, type ContentMode, type ContentShapeKinds, type ContentTransition, ContentUnavailableView, type Context, ControlGroup, type ControlGroupProps, type ControlGroupStyle, type ControlSize, ControlWidget, ControlWidgetButton, type ControlWidgetButtonProps, type ControlWidgetLabel, ControlWidgetToggle, type ControlWidgetToggleProps, type Cookie, DateIntervalLabel, type DateIntervalLabelProps, DateLabel, type DateLabelProps, DatePicker, type DatePickerComponents, type DatePickerProps, type DatePickerStyle, DateRangeLabel, type DateRangeLabelProps, DefaultToolbarItem, type DefaultToolbarItemProps, Device, DisclosureGroup, type DisclosureGroupProps, type DiscreteSymbolEffect, type Dispatch, Divider, DonutChart, DragGesture, type DragGestureDetails, type DragGestureOptions, type DurationInMilliseconds, type DynamicImageSource, type DynamicShapeStyle, type Edge, type EdgeCornerStyle, type EdgeInsets, type EdgeSet, type EdgeSetOption, EditButton, Editor, type EditorProps, type EffectDestructor, type EffectSetup, Ellipse, EmptyView, type EnvironmentValues, EnvironmentValuesReader, type EnvironmentValuesReaderProps, type FileImageProps, FlowLayout, type FlowLayoutProps, type Font, type FontDesign, type FontWeight, type FontWidth, ForEach, type ForEachComponent, type ForEachDeprecatedProps, type ForEachProps, Form, type FormBinaryData, FormData, type FormProps, type FormStyle, type FunctionComponent, Gauge, type GaugeProps, type GaugeStyle, type GeometryProxy, GeometryReader, type GeometryReaderProps, type Gesture, GestureInfo, GlassEffectContainer, type GlassEffectContainerProps, type Gradient, type GradientStop, Grid, type GridItem, type GridProps, GridRow, type GridRowProps, type GridSize, Group, GroupBox, type GroupBoxProps, type GroupProps, HStack, type HStackProps, Headers, type HeadersInit, HeatMapChart, type HorizontalAlignment, type HorizontalEdge, type HorizontalEdgeSet, type IdProps, Image, type ImageInterpolation, type ImageProps, type ImageRenderOptions, ImageRenderer, type ImageRenderingBehaviorProps, type ImageRenderingMode, type ImageResizable, type ImageResizingMode, type ImageScale, type IndexViewStyle, Intent, IntentAttributedTextValue, IntentFileURLValue, IntentFileValue, IntentImageValue, IntentJsonValue, IntentRequestConfirmationValue, IntentSnippetIntentValue, IntentTextValue, IntentURLValue, IntentValue, IntentViewValue, type InternalWidgetRender, type KeyboardType, type KeywordPoint, type KeywordsColor, Label, type LabelProps, type LabelStyle, LazyHGrid, type LazyHGridProps, LazyHStack, type LazyHStackProps, LazyVGrid, type LazyVGridProps, LazyVStack, type LazyVStackProps, LineCategoryChart, LineChart, type LineStylePattern, type LinearGradient, Link, type LinkProps, List, type ListProps, type ListSectionSpacing, type ListStyle, LiveActivity, type LiveActivityActivitiesEnabledListener, type LiveActivityActivityUpdateListener, type LiveActivityDetail, type LiveActivityEndOptions, type LiveActivityOptions, type LiveActivityState, LiveActivityUI, type LiveActivityUIBuilder, LiveActivityUIExpandedBottom, LiveActivityUIExpandedCenter, LiveActivityUIExpandedLeading, LiveActivityUIExpandedTrailing, type LiveActivityUIExpandedViewProps, type LiveActivityUIProps, type LiveActivityUpdateOptions, LivePhotoView, type LivePhotoViewProps, LongPressGesture, type LongPressGestureOptions, MagnifyGesture, type MagnifyGestureValue, type MarkDimension, Markdown, type MarkdownProps, type MatchedGeometryProperties, type Material, Menu, type MenuProps, type MenuStyle, type MeshGradient, type ModalPresentation, type ModalPresentationStyle, MultiColumnsPicker, type MultiColumnsPickerProps, MultiPicker, type MutableRefObject, NamespaceReader, type NamespaceReaderProps, Navigation, type NavigationBarTitleDisplayMode, NavigationDestination, type NavigationDestinationProps, NavigationLink, type NavigationLinkProps, NavigationSplitView, type NavigationSplitViewColumn, type NavigationSplitViewProps, type NavigationSplitViewStyle, type NavigationSplitViewVisibility, NavigationStack, type NavigationStackProps, type NetworkImageProps, type NormalProgressViewProps, Notification, type NotificationAction, type NotificationInfo, type NotificationInterruptionLevel, type NotificationRequest, type PIPStatus, type ParagraphStyle, Path, Picker, type PickerProps, type PickerStyle, type PickerValue, PieChart, type PinnedScrollViews, type Point, Point1DChart, PointCategoryChart, PointChart, type PopoverPresentation, type PresentationAdaptation, type PresentationBackgroundInteraction, type PresentationContentInteraction, type PresentationDetent, ProgressView, type ProgressViewProps, type ProgressViewStyle, type Prominence, type Provider, type ProviderProps, QRImage, type QRImageProps, type RadialGradient, RangeAreaChart, ReadableStream, ReadableStreamDefaultController, ReadableStreamDefaultReader, RectAreaChart, RectChart, type RectCornerRadii, type RectWithCornerRadii, type RectWithCornerRadius, type RectWithCornerSize, Rectangle, type Reducer, type ReducerAction, type ReducerState, type RefObject, type RenderNode, ReorderableForEach, type ReorderableForEachComponent, type ReorderableForEachProps, Request, type RequestInit, Response, type ResponseInit, RotateGesture, type RotateGestureValue, type RoundedCornerStyle, RoundedRectangle, type RoundedRectangleProps, RuleChart, RuleLineForLabelChart, RuleLineForValueChart, SVG, type SVGCodeSourceProps, type SVGFilePathSourceProps, type SVGProps, type SVGURLSourceProps, type SafeAreaRegions, type ScenePhase, ScreenshotMaker, Script, type ScriptDeveloper, type ScriptMetadata, type ScriptingDeviceInfo, type ScrollDismissesKeyboardMode, type ScrollScrollIndicatorVisibility, type ScrollTargetBehavior, ScrollView, type ScrollViewProps, type ScrollViewProxy, ScrollViewReader, type ScrollViewReaderProps, type SearchFieldPlacement, type SearchSuggestionsPlacementSet, Section, type SectionProps, SecureField, type SecureFieldProps, type SensoryFeedback, type SetStateAction, type Shape, type ShapeProps, type ShapeStyle, type ShortcutFileURLParameter, type ShortcutJsonParameter, type ShortcutParameter, type ShortcutTextParameter, type Size, Slider, type SliderProps, type SliderWithLabelProps, type SliderWithRangeValueLabelsProps, type SliderWithTicksProps, Spacer, type StateInitializer, Stepper, type StepperProps, type StrokeStyle, type StyledText, type SubmitTriggers, type SwingAnimation, type SymbolEffect, type SymbolRenderingMode, type SymbolVariants, type SystemImageProps, Tab, type TabCustomizationBehavior, type TabPlacement, type TabProps, type TabRole, TabSection, type TabSectionProps, TabView, type TabViewProps, type TabViewStyle, TapGesture, Text, type TextAlignment, type TextContentType, TextField, type TextFieldProps, type TextFieldStyle, type TextInputAutocapitalization, type TextProps, TimerIntervalLabel, type TimerIntervalLabelProps, type TimerIntervalProgressViewProps, Toggle, type ToggleProps, type ToggleStyle, type ToolBarProps, Toolbar, type ToolbarDefaultItemKind, ToolbarItem, ToolbarItemGroup, type ToolbarItemGroupProps, type ToolbarItemPlacement, type ToolbarItemProps, type ToolbarPlacement, ToolbarSpacer, type ToolbarSpacerProps, type ToolbarSpacerSizing, type ToolbarTitleDisplayMode, type TruncationMode, type UIImageProps, type UnderlineStyle, type UnderlyingSource, UnevenRoundedRectangle, type UnevenRoundedRectangleProps, type UserInterfaceSizeClass, VStack, type VStackProps, type VerticalAlignment, type VerticalEdge, type VerticalEdgeSet, VideoPlayer, type VideoPlayerProps, VideoRecorderPreviewView, type VideoRecorderPreviewViewProps, ViewModifiers, type VirtualNode, type Visibility, WebView, type WebViewProps, Widget, type WidgetAccentedRenderingMode, type WidgetDisplaySize, type WidgetFamily, type WidgetRelevance, type WidgetReloadPolicy, type WidgetRenderingMode, ZStack, type ZStackProps, createContext, fetch, gradient, modifiers, useCallback, useCancelToken, useColorScheme, useContext, useEffect, useEffectEvent, useKeyboardVisible, useMemo, useObservable, useReducer, useRef, useSelector, useState };
+export { type AVLayerVideoGravity, AVPlayerView, type AVPlayerViewProps, AbortController, AbortError, AbortEvent, type AbortEventListener, AbortSignal, AccessoryWidgetBackground, type AdaptableTabBarPlacement, AlarmLiveActivity, type AlarmLiveActivityAction, type AlarmLiveActivityCountdownState, type AlarmLiveActivityMode, type AlarmLiveActivityPausedState, type AlarmLiveActivityPresentation, type AlarmLiveActivityPresentationButton, type AlarmLiveActivitySchedule, type AlarmLiveActivityState, type AlarmLiveActivityUIBuilder, type Alignment, type Angle, type AngleValue, type AngularGradient, AnimatedFrames, type AnimatedFramesProps, AnimatedGif, type AnimatedGifProps, AnimatedImage, type AnimatedImageProps, Annotation, type AnnotationOverflowResolution, type AnnotationOverflowResolutionStrategy, type AnnotationPosition, type AnnotationProps, AppEventListenerManager, AppEvents, type AppIntent, type AppIntentFactory, AppIntentManager, type AppIntentPerform, AppIntentProtocol, AreaChart, AreaPlot, type AreaPlotProps, AreaStackChart, type Axis, type AxisGridLineConfig, type AxisLabelFormat, type AxisMarkOrientation, type AxisMarkPosition, type AxisMarkPreset, type AxisMarkValues, type AxisMarksConfig, type AxisSet, type AxisTickConfig, type AxisValueLabelCollisionResolution, type AxisValueLabelConfig, type BadgeProminence, Bar1DChart, BarChart, type BarChartProps, BarGanttChart, type BarGanttChartProps, BarStackChart, Button, type ButtonBorderShape, type ButtonProps, type ButtonRole, type ButtonStyle, type CalendarComponent, CancelError, type CancelEventListener, CancelToken, type CancelTokenHook, Canvas, CanvasGradient, type CanvasImageSource, CanvasPattern, type CanvasProps, CanvasRenderingContext, type CanvasSize, Capsule, CaptureVideoPreviewView, type CaptureVideoPreviewViewProps, Chart, type ChartAxisScaleType, type ChartDateRangeSelection, ChartGesture, type ChartGestureProps, type ChartInterpolationMethod, type ChartMarkProps, type ChartMarkStackingMethod, type ChartNumberRangeSelection, type ChartNumberSelection, ChartOverlay, type ChartOverlayProps, ChartPlotProxy, ChartPlotStyle, type ChartPlotStyleProps, type ChartProxy, type ChartRangeSelection, type ChartScrollPosition, type ChartScrollTargetBehavior, type ChartSelection, type ChartStringRangeSelection, type ChartStringSelection, type ChartSymbolShape, Circle, type ClockHandRotationEffectPeriod, type ClosedRange, type Color, ColorPicker, type ColorPickerProps, type ColorRenderingMode, type ColorScheme, type ColorSchemeContrast, type ColorStringHSL, type ColorStringHSLA, type ColorStringHex, type ColorStringRGB, type ColorStringRGBA, type ColorWithGradientOrOpacity, type CommonViewProps, type ComponentCallback, type ComponentEffect, type ComponentEffectEvent, type ComponentMemo, type ComponentProps, ConcentricRectangle, type ConcentricRectangleProps, type ConcentricRectangleShape, type Consumer, type ConsumerProps, type ContentAvailableViewProps, type ContentAvailableViewWithLabelProps, type ContentAvailableViewWithTitleProps, type ContentMarginPlacement, type ContentMode, type ContentShapeKinds, type ContentTransition, ContentUnavailableView, type Context, ControlGroup, type ControlGroupProps, type ControlGroupStyle, type ControlSize, ControlWidget, ControlWidgetButton, type ControlWidgetButtonProps, type ControlWidgetLabel, ControlWidgetToggle, type ControlWidgetToggleProps, type Cookie, DateIntervalLabel, type DateIntervalLabelProps, DateLabel, type DateLabelProps, DatePicker, type DatePickerComponents, type DatePickerProps, type DatePickerStyle, DateRangeLabel, type DateRangeLabelProps, DefaultToolbarItem, type DefaultToolbarItemProps, Device, DirectoryBrowserView, type DirectoryBrowserViewProps, DisclosureGroup, type DisclosureGroupProps, type DiscreteSymbolEffect, type Dispatch, Divider, DonutChart, DragGesture, type DragGestureDetails, type DragGestureOptions, type DurationInMilliseconds, type DynamicImageSource, type DynamicShapeStyle, type Edge, type EdgeCornerStyle, type EdgeInsets, type EdgeSet, type EdgeSetOption, EditButton, Editor, type EditorProps, type EffectDestructor, type EffectSetup, Ellipse, EmptyView, type EnvironmentValues, EnvironmentValuesReader, type EnvironmentValuesReaderProps, type FileImageProps, FlowLayout, type FlowLayoutProps, type Font, type FontDesign, type FontWeight, type FontWidth, ForEach, type ForEachComponent, type ForEachDeprecatedProps, type ForEachProps, Form, type FormBinaryData, FormData, type FormProps, type FormStyle, type FunctionComponent, Gauge, type GaugeProps, type GaugeStyle, type GeometryProxy, GeometryReader, type GeometryReaderProps, type Gesture, GestureInfo, GlassEffectContainer, type GlassEffectContainerProps, type GlobalCompositeOperation, type Gradient, type GradientStop$1 as GradientStop, Grid, type GridItem, type GridProps, GridRow, type GridRowProps, type GridSize, Group, GroupBox, type GroupBoxProps, type GroupProps, HStack, type HStackProps, Headers, type HeadersInit, HeatMapChart, type HorizontalAlignment, type HorizontalEdge, type HorizontalEdgeSet, type IdProps, Image, type ImageInterpolation, type ImageProps, type ImageRenderOptions, ImageRenderer, type ImageRenderingBehaviorProps, type ImageRenderingMode, type ImageResizable, type ImageResizingMode, type ImageScale, type IndexViewStyle, Intent, IntentAttributedTextValue, IntentFileURLValue, IntentFileValue, IntentImageValue, IntentJsonValue, IntentRequestConfirmationValue, IntentSnippetIntentValue, IntentTextValue, IntentURLValue, IntentValue, IntentViewValue, type InternalWidgetRender, type KeyboardType, type KeywordPoint, type KeywordsColor, Label, type LabelProps, type LabelStyle, type LayoutDirection, type LayoutDirectionBehavior, LazyHGrid, type LazyHGridProps, LazyHStack, type LazyHStackProps, LazyVGrid, type LazyVGridProps, LazyVStack, type LazyVStackProps, LineCategoryChart, LineChart, LinePlot, type LinePlotFunctionProps, type LinePlotParametricProps, type LineStylePattern, type LinearGradient, Link, type LinkProps, List, type ListProps, type ListSectionSpacing, type ListStyle, LiveActivity, type LiveActivityActivitiesEnabledListener, type LiveActivityActivityUpdateListener, type LiveActivityDetail, type LiveActivityEndOptions, type LiveActivityOptions, type LiveActivityState, LiveActivityUI, type LiveActivityUIBuilder, LiveActivityUIExpandedBottom, LiveActivityUIExpandedCenter, LiveActivityUIExpandedLeading, LiveActivityUIExpandedTrailing, type LiveActivityUIExpandedViewProps, type LiveActivityUIProps, type LiveActivityUpdateOptions, LivePhotoView, type LivePhotoViewProps, LongPressGesture, type LongPressGestureOptions, LookAroundPreview, type LookAroundPreviewProps, MagnifyGesture, type MagnifyGestureValue, Map, type MapAnnotationLabelVisibility, MapCircle, type MapCircleProps, MapCompass, type MapCoordinate, MapPitchToggle, type MapPointOfInterestCategory, type MapPointsOfInterestSpec, MapPolygon, type MapPolygonProps, MapPolyline, type MapPolylineProps, type MapProps, type MapRegion, MapScaleView, type MapSelectionAccessoryStyle, type MapSelectionValue, type MapStrokeStyle, type MapStyleSpec, MapUserLocationButton, type MarkDimension, Markdown, type MarkdownProps, Marker, type MarkerByCoordinateProps, type MarkerByItemProps, type MarkerProps, type MatchedGeometryProperties, type Material, Menu, type MenuProps, type MenuStyle, type MeshGradient, type ModalPresentation, type ModalPresentationStyle, MultiColumnsPicker, type MultiColumnsPickerProps, MultiPicker, type MutableRefObject, NamespaceReader, type NamespaceReaderProps, Navigation, type NavigationBarTitleDisplayMode, NavigationDestination, type NavigationDestinationProps, NavigationLink, type NavigationLinkProps, NavigationSplitView, type NavigationSplitViewColumn, type NavigationSplitViewProps, type NavigationSplitViewStyle, type NavigationSplitViewVisibility, NavigationStack, type NavigationStackProps, type NetworkImageProps, type NormalProgressViewProps, Notification, type NotificationAction, type NotificationInfo, type NotificationInterruptionLevel, type NotificationRequest, type PIPStatus, type ParagraphStyle, Path, Path2D, type PathAffineTransform, PathShape, type PathShapeProps, type PathShapeValue, Picker, type PickerProps, type PickerStyle, type PickerValue, PieChart, type PinnedScrollViews, type Point, Point1DChart, PointCategoryChart, PointChart, type PopoverPresentation, type PresentationAdaptation, type PresentationBackgroundInteraction, type PresentationContentInteraction, type PresentationDetent, ProgressView, type ProgressViewProps, type ProgressViewStyle, type Prominence, type Provider, type ProviderProps, QRImage, type QRImageProps, type RadialGradient, RangeAreaChart, ReadableStream, ReadableStreamDefaultController, ReadableStreamDefaultReader, type Rect, RectAreaChart, RectChart, type RectCornerRadii, type RectWithCornerRadii, type RectWithCornerRadius, type RectWithCornerSize, Rectangle, type Reducer, type ReducerAction, type ReducerState, type RefObject, type RenderNode, ReorderableForEach, type ReorderableForEachComponent, type ReorderableForEachProps, Request, type RequestInit, Response, type ResponseInit, RotateGesture, type RotateGestureValue, type RoundedCornerStyle, RoundedRectangle, type RoundedRectangleProps, RuleChart, RuleLineForLabelChart, RuleLineForValueChart, SVG, type SVGCodeSourceProps, type SVGFilePathSourceProps, type SVGProps, type SVGURLSourceProps, type SafeAreaRegions, type ScenePhase, ScreenshotMaker, Script, type ScriptDeveloper, type ScriptMetadata, type ScriptingDeviceInfo, type ScrollDismissesKeyboardMode, type ScrollScrollIndicatorVisibility, type ScrollTargetBehavior, ScrollView, type ScrollViewProps, type ScrollViewProxy, ScrollViewReader, type ScrollViewReaderProps, type SearchFieldPlacement, type SearchSuggestionsPlacementSet, Section, type SectionProps, SecureField, type SecureFieldProps, type SensoryFeedback, type SetStateAction, type Shape, type ShapeProps, type ShapeStyle, type ShortcutFileURLParameter, type ShortcutJsonParameter, type ShortcutParameter, type ShortcutTextParameter, type Size, Slider, type SliderProps, type SliderWithLabelProps, type SliderWithRangeValueLabelsProps, type SliderWithTicksProps, Spacer, type StateInitializer, Stepper, type StepperProps, type StrokeStyle, type StyledText, type SubmitTriggers, type SwingAnimation, type SymbolEffect, type SymbolEffectOptions, type SymbolRenderingMode, type SymbolVariants, type SystemImageProps, Tab, type TabCustomizationBehavior, type TabPlacement, type TabProps, type TabRole, TabSection, type TabSectionProps, TabView, type TabViewProps, type TabViewStyle, TapGesture, Text, type TextAlignment, type TextContentType, TextField, type TextFieldProps, type TextFieldStyle, type TextInputAutocapitalization, TextMetrics, type TextProps, TimelineCanvas, type TimelineCanvasDrawSize, type TimelineCanvasProps, type TimelineCanvasSchedule, TimerIntervalLabel, type TimerIntervalLabelProps, type TimerIntervalProgressViewProps, Toggle, type ToggleProps, type ToggleStyle, type ToolBarProps, Toolbar, type ToolbarDefaultItemKind, ToolbarItem, ToolbarItemGroup, type ToolbarItemGroupProps, type ToolbarItemPlacement, type ToolbarItemProps, type ToolbarPlacement, ToolbarSpacer, type ToolbarSpacerProps, type ToolbarSpacerSizing, type ToolbarTitleDisplayMode, type TriggerSymbolEffect, type TruncationMode, type UIImageProps, type UnderlineStyle, type UnderlyingSource, UnevenRoundedRectangle, type UnevenRoundedRectangleProps, type UserInterfaceSizeClass, VStack, type VStackProps, type VerticalAlignment, type VerticalEdge, type VerticalEdgeSet, VideoPlayer, type VideoPlayerProps, VideoRecorderPreviewView, type VideoRecorderPreviewViewProps, ViewModifiers, type VirtualNode, type Visibility, WebView, type WebViewProps, Widget, type WidgetAccentedRenderingMode, type WidgetDisplaySize, type WidgetFamily, type WidgetRelevance, type WidgetReloadPolicy, type WidgetRenderingMode, ZStack, type ZStackProps, createContext, fetch, gradient, modifiers, useCallback, useCancelToken, useColorScheme, useContext, useEffect, useEffectEvent, useKeyboardVisible, useMemo, useObservable, useReducer, useRef, useSelector, useState };
