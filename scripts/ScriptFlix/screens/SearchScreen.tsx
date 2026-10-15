@@ -308,7 +308,7 @@ export const SearchScreen = () => {
         searchable={{
           value: query,
           onChanged: handleQueryChange,
-          placement: 'navigationBarDrawer',
+          placement: 'navigationBarDrawerAlwaysDisplay',
           prompt: '输入关键词...'
         }}
         onSubmit={{ triggers: 'search', action: () => performSearch() }}
