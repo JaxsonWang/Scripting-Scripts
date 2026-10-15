@@ -31,3 +31,4 @@ demo
 .ace-tool/
 opencode.jsonc
 /.vscode/settings.json
+.agents

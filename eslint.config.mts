@@ -12,6 +12,7 @@ export default [
   // 忽略文件配置
   {
     ignores: [
+      '.agents/skills/wechat-publisher/**', // 第三方技能保留上游规范，使用自身测试验证
       'demo',
       'docs',
       'dts',
