@@ -25,11 +25,12 @@
     }
   },
   "include": [
-    "./dts/global.d.ts",
+    "./dts/*.d.ts",
     "./dts/scripting.d.ts",
     "scripts"
   ],
   "exclude": [
-    "scripts/挂历小组件/utils/lunar.js"
+    "scripts/挂历小组件/utils/lunar.js",
+    "./dts/scripting.d.ts"
   ]
 }
