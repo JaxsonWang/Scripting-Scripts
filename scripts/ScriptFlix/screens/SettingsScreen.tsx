@@ -7,6 +7,7 @@ import {
   NavigationLink,
   NavigationStack,
   Path,
+  Rectangle,
   Script,
   Section,
   Spacer,
@@ -19,6 +20,8 @@ import { HistoryService } from '../services/history'
 import { SettingsService } from '../services/settings'
 import { ChangelogScreen } from './ChangelogScreen'
 import { SourceManagementScreen } from './SourceManagementScreen'
+import { ScreenBackground } from '../components/ScreenBackground'
+import { palette } from '../theme'
 import type { CloudSnapshot } from '../types'
 
 const AppStorage = Storage
@@ -42,10 +45,10 @@ export const SettingsScreen = () => {
   const [sourceCount, setSourceCount] = useState(() => SettingsService.getSources().length)
 
   const getIcloudSettingsPath = () => {
-    const icloudRoot = FileManager.iCloudDocumentsDirectory
-    if (!icloudRoot) {
+    if (!FileManager.isiCloudEnabled) {
       throw new Error('未检测到 iCloud 云盘目录，请先在系统中启用 iCloud Drive')
     }
+    const icloudRoot = FileManager.iCloudDocumentsDirectory
     const folder = `${icloudRoot}/${getScriptFolderRelativePath()}`
     const filePath = `${folder}/settings.json`
     return { icloudRoot, folder, filePath }
@@ -123,14 +126,19 @@ export const SettingsScreen = () => {
       : `开启后将在 iCloud Drive/${getScriptFolderRelativePath()}/settings.json 生成设置备份`
 
   return (
-    <NavigationStack>
+    <NavigationStack preferredColorScheme="dark" tint={palette.accent}>
       <List
+        foregroundStyle={palette.textPrimary}
+        background={<ScreenBackground />}
+        scrollContentBackground="hidden"
+        toolbarBackground={palette.bg}
+        toolbarColorScheme="dark"
         navigationTitle="设置"
         toolbar={{
           cancellationAction: <Button title="完成" action={dismiss} />
         }}
       >
-        <Section header={<Text>视频源</Text>}>
+        <Section listRowBackground={<Rectangle fill={palette.card} />} header={<Text>视频源</Text>}>
           <NavigationLink
             destination={
               <SourceManagementScreen
@@ -141,27 +149,29 @@ export const SettingsScreen = () => {
             }
           >
             <VStack alignment="leading" spacing={2}>
-              <Text foregroundStyle="#e50914">视频源管理</Text>
-              <Text font="caption2" foregroundStyle="secondaryLabel">
+              <Text foregroundStyle={palette.accent}>视频源管理</Text>
+              <Text font="caption2" foregroundStyle={palette.textSecondary}>
                 共 {sourceCount} 个源
               </Text>
             </VStack>
           </NavigationLink>
         </Section>
         <Section
+          listRowBackground={<Rectangle fill={palette.card} />}
           header={<Text>云端同步</Text>}
           footer={
-            <Text font="footnote" foregroundStyle="secondaryLabel">
+            <Text font="footnote" foregroundStyle={palette.textSecondary}>
               {syncStatusLabel}
             </Text>
           }
         >
-          <Toggle title="iCloud 同步" foregroundStyle="#e50914" value={icloudSyncEnabled} onChanged={handleIcloudToggle} />
+          <Toggle title="iCloud 同步" foregroundStyle={palette.accent} value={icloudSyncEnabled} onChanged={handleIcloudToggle} />
         </Section>
         <Section
+          listRowBackground={<Rectangle fill={palette.card} />}
           footer={
             <VStack spacing={10} alignment="leading">
-              <Text font="footnote" foregroundStyle="secondaryLabel">
+              <Text font="footnote" foregroundStyle={palette.textSecondary}>
                 ScriptFlix {'v' + Script.metadata?.version || '1.0.0'}
                 {'\n'}
                 淮城一只猫© - 更多脚本/小组件请关注微信公众号「栈空间」
@@ -174,7 +184,7 @@ export const SettingsScreen = () => {
             destination={<ChangelogScreen title="最近更新" versionLabel="当前版本" version={Script.metadata?.version || '1.0.0'} emptyLabel="暂无更新记录" />}
           >
             <HStack>
-              <Text foregroundStyle="#e50914">查看更新内容</Text>
+              <Text foregroundStyle={palette.accent}>查看更新内容</Text>
               <Spacer />
             </HStack>
           </NavigationLink>

@@ -1,52 +1,76 @@
-import { Button, RoundedRectangle, Text, VStack, ZStack } from 'scripting'
+import { Button, HStack, Image, Spacer, Text, VStack, ZStack } from 'scripting'
 import { RemoteImage } from './RemoteImage'
+import { brandGradient, palette, posterScrim, radius } from '../theme'
 import type { VideoCardProps, VideoItem } from '../types'
 
 /**
- * 展示单个视频的海报与关键信息，并在点击后触发播放回调
- * @param video 即将展示的视频条目
- * @param onTap 点击后触发的回调，传入视频 ID
- * @param width 可选的固定宽度，用于横向滚动场景
+ * 竖版海报卡：封面 + 底部压暗渐变 + 角标 + 评分，点击进入详情。
  */
 export const VideoCard = <T extends VideoItem>({ video, onTap, width }: VideoCardProps<T>) => {
-  const frameProps = width ? { width } : {}
+  const posterHeight = 168
+  const posterFrame = { width, height: posterHeight }
+  const fluidFrame = { width, maxWidth: width ?? ('infinity' as const), height: posterHeight }
+  const columnFrame = { width, maxWidth: width ?? ('infinity' as const), alignment: 'leading' as const }
+  const scoreValue = Number(video.vod_score)
+  const score = Number.isFinite(scoreValue) && scoreValue > 0 ? scoreValue.toFixed(1) : ''
 
   return (
-    <Button action={() => onTap(video)}>
-      <VStack spacing={6} frame={frameProps}>
-        {/* Poster Image */}
-        <ZStack alignment="topTrailing">
+    <Button action={() => onTap(video)} buttonStyle="plain">
+      <VStack spacing={8} frame={columnFrame} alignment="leading">
+        <ZStack alignment="bottom" frame={fluidFrame}>
+          <RemoteImage url={video.vod_pic} frame={posterFrame} />
+
+          {/* 底部压暗，保证角标文字清晰 */}
           <VStack
-            // 使用 RoundedRectangle 提供圆角背景
-            background={<RoundedRectangle cornerRadius={8} style="continuous" fill="secondarySystemBackground" />}
-            clipShape={{ type: 'rect', cornerRadius: 8, style: 'continuous' }}
-            frame={{ height: 160 }}
-          >
-            <RemoteImage url={video.vod_pic} frame={{ height: 160 }} />
+            frame={{ maxWidth: 'infinity', height: 56 }}
+            background={posterScrim}
+            clipShape={{ type: 'rect', cornerRadius: radius.md, style: 'continuous' }}
+          />
+
+          {/* 顶部角标 + 评分 */}
+          <VStack frame={{ maxWidth: 'infinity', maxHeight: 'infinity', alignment: 'top' }} padding={8}>
+            <HStack>
+              {!!video.vod_remarks && (
+                <Text
+                  font={10}
+                  bold
+                  lineLimit={1}
+                  foregroundStyle="#FFFFFF"
+                  padding={{ horizontal: 7, vertical: 3 }}
+                  background={brandGradient}
+                  clipShape="capsule"
+                >
+                  {video.vod_remarks}
+                </Text>
+              )}
+              <Spacer />
+              {!!score && (
+                <HStack spacing={2} padding={{ horizontal: 6, vertical: 3 }} background="rgba(7,6,12,0.55)" clipShape="capsule">
+                  <Image systemName="star.fill" font={8} foregroundStyle={palette.gold} />
+                  <Text font={10} bold foregroundStyle={palette.gold}>
+                    {score}
+                  </Text>
+                </HStack>
+              )}
+            </HStack>
           </VStack>
 
-          {/* Remarks Badge */}
-          {!!video.vod_remarks && (
-            <VStack padding={4}>
-              <Text
-                font={9}
-                foregroundStyle="white"
-                background={<RoundedRectangle cornerRadius={4} fill={{ color: 'black', opacity: 0.7 }} />}
-                padding={{ horizontal: 6, vertical: 2 }}
-              >
-                {video.vod_remarks}
+          {/* 底部播放时长 */}
+          {!!video.vod_duration && (
+            <VStack frame={{ maxWidth: 'infinity', maxHeight: 'infinity', alignment: 'bottomTrailing' }} padding={8}>
+              <Text font={10} foregroundStyle="#FFFFFF">
+                {video.vod_duration}
               </Text>
             </VStack>
           )}
         </ZStack>
 
-        {/* Info */}
-        <VStack spacing={2} alignment="center">
-          <Text font="caption" lineLimit={1} bold foregroundStyle="#e50914">
+        <VStack alignment="leading" spacing={2} frame={columnFrame}>
+          <Text font="footnote" bold lineLimit={1} foregroundStyle={palette.textPrimary}>
             {video.vod_name}
           </Text>
-          <Text font={10} foregroundStyle="gray" lineLimit={1}>
-            {video.vod_year || '未知'}
+          <Text font={10} lineLimit={1} foregroundStyle={palette.textTertiary}>
+            {[video.vod_year, video.type_name].filter(Boolean).join(' · ')}
           </Text>
         </VStack>
       </VStack>

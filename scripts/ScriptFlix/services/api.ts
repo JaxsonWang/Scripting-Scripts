@@ -1,3 +1,4 @@
+import { createDiagnosticLogger, describeDiagnosticUrl, redactDiagnosticError } from '../utils/diagnostics'
 import type { VideoListResponse } from '../types'
 
 /**
@@ -17,31 +18,41 @@ const buildUrl = (baseUrl: string, params: Record<string, string>): string => {
   return `${baseUrl}${hasQuery ? '&' : '?'}${query}`
 }
 
-/**
- * 请求分类/基础配置
- * @param baseUrl 用户配置的 CMS 接口地址
- */
-export const fetchCategories = async (baseUrl: string): Promise<VideoListResponse> => {
-  // Typically 'ac=list' or similar to get categories, or just fetching the base might return list depending on API.
-  // In original code: fetch(`${API_BASE_URL}/api/proxy/vod?${params}`) where params had baseUrl.
-  // The original used axios proxy.
-  // Usually these CMS APIs return categories in the main list response or have a specific action.
-  // Assuming 'ac=videolist' returns 'class' (categories) as seen in the mock/types.
-  // Let's try fetchVideoList(baseUrl, 1) which usually returns categories too.
-  // But maybe there is a specific 'ac=list'
-  // Original code: fetchVideoList sends `ac: 'videolist'`. fetchCategories sends NO `ac`.
-  // So fetches default action.
-
+/** 三个接口共用诊断，保留原请求地址、参数和 JSON 解析契约。 */
+const requestVideoData = async (url: string, operation: string): Promise<VideoListResponse> => {
+  const log = createDiagnosticLogger('api')
+  log('request', { operation, url: describeDiagnosticUrl(url) })
+  let response: Awaited<ReturnType<typeof fetch>>
   try {
-    const res = await fetch(baseUrl)
-    if (!res.ok) throw new Error('Network response was not ok')
-    // 强制将返回结果断言为后端约定的列表响应结构
-    return (await res.json()) as VideoListResponse
-  } catch (e) {
-    console.error('fetchCategories error:', e)
-    throw e
+    response = await fetch(url)
+  } catch (error) {
+    log('network.error', { operation, error: redactDiagnosticError(error) })
+    throw new Error(`视频源网络请求失败：${redactDiagnosticError(error)}`)
   }
+
+  const contentType = response.headers.get('content-type') || '未提供'
+  log('response', {
+    operation,
+    status: response.status,
+    contentType,
+    finalUrl: describeDiagnosticUrl(response.url),
+    redirected: !!response.url && response.url !== url
+  })
+  if (!response.ok) throw new Error(`视频源请求失败（HTTP ${response.status}），请检查视频源是否可用`)
+
+  let data: VideoListResponse
+  try {
+    data = (await response.json()) as VideoListResponse
+  } catch (error) {
+    log('json.error', { operation, error: redactDiagnosticError(error) })
+    throw new Error(`视频源返回的不是有效 JSON（HTTP ${response.status}，类型 ${contentType}），请检查接口地址或服务端拦截`)
+  }
+  log('json.ok', { operation, code: data?.code, count: Array.isArray(data?.list) ? data.list.length : 0 })
+  return data
 }
+
+/** 请求分类/基础配置，仍直接请求用户配置的 CMS 地址。 */
+export const fetchCategories = (baseUrl: string): Promise<VideoListResponse> => requestVideoData(baseUrl, 'categories')
 
 /**
  * 拉取视频列表，支持分页、分类与关键字筛选
@@ -64,16 +75,7 @@ export const fetchVideoList = async (baseUrl: string, page: number = 1, typeIds?
     params['wd'] = keyword
   }
 
-  const url = buildUrl(baseUrl, params)
-
-  try {
-    const res = await fetch(url)
-    if (!res.ok) throw new Error('Network response was not ok')
-    return (await res.json()) as VideoListResponse
-  } catch (e) {
-    console.error('fetchVideoList error:', e)
-    throw e
-  }
+  return requestVideoData(buildUrl(baseUrl, params), keyword ? 'search' : 'list')
 }
 
 /**
@@ -87,14 +89,5 @@ export const fetchVideoDetail = async (baseUrl: string, id: number): Promise<Vid
     ids: id.toString()
   }
 
-  const url = buildUrl(baseUrl, params)
-
-  try {
-    const res = await fetch(url)
-    if (!res.ok) throw new Error('Network response was not ok')
-    return (await res.json()) as VideoListResponse
-  } catch (e) {
-    console.error('fetchVideoDetail error:', e)
-    throw e
-  }
+  return requestVideoData(buildUrl(baseUrl, params), 'detail')
 }

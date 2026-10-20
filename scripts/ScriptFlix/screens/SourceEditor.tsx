@@ -1,4 +1,6 @@
-import { Button, Form, Navigation, NavigationStack, Section, Text, TextField, useState } from 'scripting'
+import { Button, Form, Navigation, NavigationStack, Rectangle, Section, Text, TextField, useState } from 'scripting'
+import { ScreenBackground } from '../components/ScreenBackground'
+import { palette } from '../theme'
 import type { SourceEditorProps } from '../types'
 
 export const SourceEditor = ({ title, initialName, initialUrl, onSave }: SourceEditorProps) => {
@@ -16,15 +18,20 @@ export const SourceEditor = ({ title, initialName, initialUrl, onSave }: SourceE
   }
 
   return (
-    <NavigationStack>
+    <NavigationStack preferredColorScheme="dark" tint={palette.accent}>
       <Form
+        foregroundStyle={palette.textPrimary}
+        background={<ScreenBackground />}
+        scrollContentBackground="hidden"
+        toolbarBackground={palette.bg}
+        toolbarColorScheme="dark"
         navigationTitle={title}
         toolbar={{
           cancellationAction: <Button title="取消" action={dismiss} />,
           primaryAction: <Button title="保存" action={handleSubmit} disabled={!canSubmit} />
         }}
       >
-        <Section header={<Text>信息</Text>}>
+        <Section listRowBackground={<Rectangle fill={palette.card} />} header={<Text>信息</Text>}>
           <TextField title="名称" value={name} onChanged={setName} />
           <TextField title="API 地址" value={url} onChanged={setUrl} />
         </Section>

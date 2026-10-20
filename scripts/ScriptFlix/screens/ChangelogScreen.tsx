@@ -1,4 +1,6 @@
-import { Form, NavigationStack, Script, Section, Text, VStack, useEffect, useState } from 'scripting'
+import { Form, NavigationStack, Rectangle, Script, Section, Text, VStack, useEffect, useState } from 'scripting'
+import { ScreenBackground } from '../components/ScreenBackground'
+import { palette } from '../theme'
 import type { ChangelogScreenProps } from '../types'
 
 /**
@@ -40,13 +42,20 @@ export const ChangelogScreen = ({ title, versionLabel, version, emptyLabel }: Ch
   }, [])
 
   return (
-    <NavigationStack>
-      <Form navigationTitle={title}>
-        <Section header={<Text>{versionLabel}</Text>}>
+    <NavigationStack preferredColorScheme="dark" tint={palette.accent}>
+      <Form
+        navigationTitle={title}
+        foregroundStyle={palette.textPrimary}
+        background={<ScreenBackground />}
+        scrollContentBackground="hidden"
+        toolbarBackground={palette.bg}
+        toolbarColorScheme="dark"
+      >
+        <Section listRowBackground={<Rectangle fill={palette.card} />} header={<Text>{versionLabel}</Text>}>
           <Text styledText={{ content: `v${version}`, font: 18, fontWeight: 'bold' }} />
         </Section>
-        <Section header={<Text>{title}</Text>}>
-          {markdown && markdown.trim().length > 0 ? <Text attributedString={markdown} /> : <Text foregroundStyle="secondaryLabel">{emptyLabel}</Text>}
+        <Section listRowBackground={<Rectangle fill={palette.card} />} header={<Text>{title}</Text>}>
+          {markdown && markdown.trim().length > 0 ? <Text attributedString={markdown} /> : <Text foregroundStyle={palette.textSecondary}>{emptyLabel}</Text>}
         </Section>
       </Form>
     </NavigationStack>

@@ -1,7 +1,7 @@
 {
   "name": "ScriptFlix",
   "intentInputTypes": [],
-  "version": "1.0.6",
+  "version": "1.0.7",
   "icon": "film",
   "author": {
     "homepage": "https://github.com/JaxsonWang",
@@ -9,10 +9,10 @@
     "name": "淮城一只猫"
   },
   "contributors": [],
-  "color": "#e50914",
+  "color": "#A855F7",
   "localizedNames": {
-    "en": "Script Flix",
-    "zh": "Script Flix"
+    "en": "ScriptFlix",
+    "zh": "ScriptFlix"
   },
   "localizedDescriptions": {
     "en": "Online video platform",

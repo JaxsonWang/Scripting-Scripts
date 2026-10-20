@@ -1,7 +1,11 @@
-import { Button, HStack, LazyVGrid, Navigation, NavigationStack, ScrollView, Section, Spacer, Text, VStack, useMemo, useState } from 'scripting'
+import { Button, HStack, LazyVGrid, Navigation, NavigationStack, ScrollView, Spacer, Text, VStack, useMemo, useState } from 'scripting'
 import { VideoCard } from '../components/VideoCard'
 import { HistoryService } from '../services/history'
 import { PlayerScreen } from './PlayerScreen'
+import { FilterChip } from '../components/FilterChip'
+import { ScreenBackground } from '../components/ScreenBackground'
+import { EmptyView } from '../components/StateView'
+import { FULL_SCREEN_FRAME, palette } from '../theme'
 import type { HistoryEntry } from '../types'
 
 const GRID_COLUMNS = [
@@ -19,7 +23,7 @@ const formatTime = (timestamp: number) => {
   }
 }
 
-export const HistoryScreen = () => {
+export const HistoryScreen = ({ embedded = false }: { embedded?: boolean }) => {
   const dismiss = Navigation.useDismiss()
   const [history, setHistory] = useState<HistoryEntry[]>(() => HistoryService.getHistory())
 
@@ -40,50 +44,45 @@ export const HistoryScreen = () => {
     refreshHistory()
   }
 
-  return (
-    <NavigationStack>
-      <ScrollView
-        navigationTitle="观看历史"
-        toolbar={{
-          cancellationAction: <Button title="关闭" action={dismiss} />,
-          primaryAction: <Button title="清空" role="destructive" foregroundStyle="systemRed" disabled={history.length === 0} action={handleClear} />
-        }}
-        scrollIndicator="hidden"
-      >
-        <VStack spacing={16} padding={16}>
-          <Section
-            header={
-              <HStack>
-                <Text font="headline" bold>
-                  共 {history.length} 条记录
+  const content = (
+    <VStack spacing={14} alignment="leading" frame={FULL_SCREEN_FRAME} background={<ScreenBackground />} onAppear={refreshHistory}>
+      <HStack alignment="center" padding={{ horizontal: 16, top: 8 }}>
+        <Text font="title" bold foregroundStyle={palette.textPrimary}>
+          {embedded ? '片库' : '观看历史'}
+        </Text>
+        <Spacer />
+        {!embedded && <Button title="关闭" action={dismiss} foregroundStyle={palette.textSecondary} />}
+        <Button title="清空" role="destructive" foregroundStyle={palette.accent} disabled={history.length === 0} action={handleClear} />
+      </HStack>
+      <HStack padding={{ horizontal: 16 }}>
+        <FilterChip label="观看历史" active count={history.length} onTap={refreshHistory} />
+      </HStack>
+      {history.length === 0 ? (
+        <EmptyView icon="clock.arrow.circlepath" title="还没有观看记录" message="去发现页挑一部开始观看吧" />
+      ) : (
+        <ScrollView scrollIndicator="hidden">
+          <LazyVGrid columns={GRID_COLUMNS} spacing={18} padding={{ horizontal: 16, top: 4, bottom: 24 }}>
+            {sortedHistory.map(entry => (
+              <VStack key={`${entry.sourceUrl}-${entry.video.vod_id}`} spacing={6} alignment="leading">
+                <VideoCard video={entry.video} onTap={() => handlePlay(entry)} />
+                <Text font="caption2" foregroundStyle={palette.textTertiary} lineLimit={1}>
+                  {entry.sourceName || '未知来源'}
                 </Text>
-              </HStack>
-            }
-          >
-            {history.length === 0 ? (
-              <VStack padding={24} alignment="center">
-                <Text font="subheadline" foregroundStyle="secondaryLabel">
-                  暂无观看记录
+                <Text font="caption2" foregroundStyle={palette.textTertiary} lineLimit={1}>
+                  {formatTime(entry.watchedAt)}
                 </Text>
               </VStack>
-            ) : (
-              <LazyVGrid columns={GRID_COLUMNS} spacing={18}>
-                {sortedHistory.map(entry => (
-                  <VStack key={`${entry.sourceUrl}-${entry.video.vod_id}`} spacing={6}>
-                    <VideoCard video={entry.video} onTap={() => handlePlay(entry)} />
-                    <Text font="caption2" foregroundStyle="secondaryLabel" lineLimit={1}>
-                      {entry.sourceName || '未知来源'}
-                    </Text>
-                    <Text font="caption2" foregroundStyle="secondaryLabel" lineLimit={1}>
-                      {formatTime(entry.watchedAt)}
-                    </Text>
-                  </VStack>
-                ))}
-              </LazyVGrid>
-            )}
-          </Section>
-        </VStack>
-      </ScrollView>
+            ))}
+          </LazyVGrid>
+        </ScrollView>
+      )}
+    </VStack>
+  )
+  return embedded ? (
+    content
+  ) : (
+    <NavigationStack preferredColorScheme="dark" tint={palette.accent}>
+      {content}
     </NavigationStack>
   )
 }

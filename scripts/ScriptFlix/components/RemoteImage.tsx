@@ -1,21 +1,22 @@
-import { Circle, Image, Text, VStack, useEffect, useState } from 'scripting'
+import { Image, Rectangle, Text, VStack } from 'scripting'
+import { palette, radius } from '../theme'
 import type { RemoteImageProps } from '../types'
 
-/**
- * 加载远程图片并在加载完成后展示，常用于视频海报等体积较大的资源
- * @param url 需要请求的图片地址
- * @param frame 容器尺寸，便于在加载前占位
- */
+/** 用容器约束填充图片，避免海报原始尺寸撑大网格。 */
 export const RemoteImage = ({ url, frame }: RemoteImageProps) => {
-  if (!url) {
-    return (
-      <VStack frame={frame} background="systemBackground" alignment="center">
-        <Text font="caption" foregroundStyle="gray">
-          Loading...
-        </Text>
-      </VStack>
-    )
-  }
-
-  return <Image imageUrl={url} resizable scaleToFit frame={frame} />
+  const placeholder = (
+    <VStack frame={{ maxWidth: 'infinity', maxHeight: 'infinity' }} background={palette.cardHi}>
+      <Text font={24} foregroundStyle={palette.textTertiary}>
+        🎬
+      </Text>
+    </VStack>
+  )
+  return (
+    <Rectangle
+      fill={palette.cardHi}
+      frame={{ width: frame?.width, maxWidth: frame?.width ?? 'infinity', height: frame?.height }}
+      overlay={url ? <Image imageUrl={url} resizable scaleToFill placeholder={placeholder} /> : placeholder}
+      clipShape={{ type: 'rect', cornerRadius: radius.md, style: 'continuous' }}
+    />
+  )
 }

@@ -1,8 +1,8 @@
 import { Navigation, Script } from 'scripting'
-import { HomeScreen } from './screens/HomeScreen'
+import { RootScreen } from './screens/RootScreen'
 
 const run = async () => {
-  await Navigation.present({ element: <HomeScreen />, modalPresentationStyle: 'fullScreen' })
+  await Navigation.present({ element: <RootScreen />, modalPresentationStyle: 'fullScreen' })
   Script.exit()
 }
 

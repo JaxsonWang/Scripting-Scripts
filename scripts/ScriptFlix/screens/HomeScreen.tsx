@@ -1,4 +1,4 @@
-import { Button, HStack, LazyVGrid, Navigation, ScrollView, Spacer, Text, VStack, useCallback, useEffect, useMemo, useRef, useState } from 'scripting'
+import { Button, HStack, Image, LazyVGrid, Navigation, ScrollView, Spacer, Text, VStack, useCallback, useEffect, useMemo, useRef, useState } from 'scripting'
 import { SettingsService } from '../services/settings'
 import { fetchCategories, fetchVideoList } from '../services/api'
 import { VideoCard } from '../components/VideoCard'
@@ -6,11 +6,14 @@ import { FilterChip } from '../components/FilterChip'
 import { EmptySourcesState } from '../components/EmptySourcesState'
 import { SettingsScreen } from './SettingsScreen'
 import { PlayerScreen } from './PlayerScreen'
-import { SearchScreen } from './SearchScreen'
-import { HistoryScreen } from './HistoryScreen'
+import { HeroCard } from '../components/HeroCard'
+import { ScreenBackground } from '../components/ScreenBackground'
+import { SectionHeader } from '../components/SectionHeader'
+import { EmptyView, LoadingView } from '../components/StateView'
+import { FULL_SCREEN_FRAME, brandGradient, palette } from '../theme'
 import type { ApiSource, Category, VideoItem } from '../types'
 
-// Move columns definition outside to avoid recreation on every render
+// 固定列定义，避免每次渲染重新创建
 const GRID_COLUMNS = [
   { size: { type: 'flexible' as const }, spacing: 12 },
   { size: { type: 'flexible' as const }, spacing: 12 },
@@ -162,20 +165,6 @@ export const HomeScreen = () => {
   }, [loadData])
 
   /**
-   * 进入搜索页
-   */
-  const openSearch = useCallback(() => {
-    Navigation.present({ element: <SearchScreen /> })
-  }, [])
-
-  /**
-   * 查看历史观看记录
-   */
-  const openHistory = useCallback(() => {
-    Navigation.present({ element: <HistoryScreen /> })
-  }, [])
-
-  /**
    * 切换当前视频源
    */
   const handleSelectSource = useCallback(
@@ -215,100 +204,91 @@ export const HomeScreen = () => {
     [source]
   )
 
-  /**
-   * 渲染头部区域，包含搜索与设置入口
-   */
   const renderHeader = () => (
-    <HStack padding={{ horizontal: 16, top: 8, bottom: 8 }} alignment="center">
-      <Text font="title" bold foregroundStyle="#e50914">
-        ScriptFlix
-      </Text>
+    <HStack padding={{ horizontal: 16, top: 4, bottom: 4 }} alignment="center">
+      <VStack alignment="leading" spacing={0}>
+        <Text font="largeTitle" bold foregroundStyle={brandGradient}>
+          ScriptFlix
+        </Text>
+        <Text font="caption" foregroundStyle={palette.textTertiary}>
+          精选影像 · 随心畅看
+        </Text>
+      </VStack>
       <Spacer />
-      <Button systemImage="clock" foregroundStyle="#e50914" action={openHistory} title="" />
-      <Button systemImage="magnifyingglass" foregroundStyle="#e50914" action={openSearch} title="" />
-      <Button systemImage="gear" foregroundStyle="#e50914" action={openSettings} title="" />
-      <Button systemImage="xmark.circle" foregroundStyle="#e50914" action={handleExit} title="" />
+      <Button action={openSettings} accessibilityLabel="设置" buttonStyle="plain">
+        <Image systemName="gearshape" font={16} foregroundStyle={palette.textSecondary} padding={10} background={palette.card} clipShape="circle" />
+      </Button>
+      <Button action={handleExit} accessibilityLabel="退出 ScriptFlix" buttonStyle="plain">
+        <Image systemName="xmark" font={15} foregroundStyle={palette.textSecondary} padding={10} background={palette.card} clipShape="circle" />
+      </Button>
     </HStack>
   )
 
   if (!source) {
     return (
-      <VStack>
-        <HStack padding={16} alignment="center">
-          <Text font="largeTitle" bold foregroundStyle="#e50914">
-            ScriptFlix
-          </Text>
-          <Spacer />
-          <Button systemImage="gear" title="" action={openSettings} />
-        </HStack>
+      <VStack spacing={16} alignment="leading" frame={FULL_SCREEN_FRAME} background={<ScreenBackground />}>
+        {renderHeader()}
         <EmptySourcesState onOpenSettings={openSettings} onExit={handleExit} />
       </VStack>
     )
   }
 
   return (
-    <VStack spacing={16}>
+    <VStack spacing={16} alignment="leading" frame={FULL_SCREEN_FRAME} background={<ScreenBackground />}>
       {renderHeader()}
-
-      {/* Source Tabs */}
-      {sources.length > 0 && (
-        <ScrollView axes="horizontal" scrollIndicator="hidden">
-          <HStack spacing={8} padding={{ horizontal: 16 }}>
-            {sources.map((item, index) => (
-              <FilterChip key={`${item.url}-${index}`} label={item.name} active={source?.url === item.url} onTap={() => handleSelectSource(index)} />
-            ))}
-          </HStack>
-        </ScrollView>
-      )}
-
-      {/* Main Category Tabs */}
       <ScrollView axes="horizontal" scrollIndicator="hidden">
         <HStack spacing={8} padding={{ horizontal: 16 }}>
-          <FilterChip key="main-all" label="首页" active={selectedMainType === null} onTap={() => setSelectedMainType(null)} />
+          {sources.map((item, index) => (
+            <FilterChip key={`${item.url}-${index}`} label={item.name} active={source.url === item.url} onTap={() => handleSelectSource(index)} />
+          ))}
+        </HStack>
+      </ScrollView>
+      <ScrollView axes="horizontal" scrollIndicator="hidden">
+        <HStack spacing={8} padding={{ horizontal: 16 }}>
+          <FilterChip label="全部" active={selectedMainType === null} onTap={() => setSelectedMainType(null)} />
           {mainCategories.map(cat => (
             <FilterChip key={cat.type_id} label={cat.type_name} active={selectedMainType === cat.type_id} onTap={() => setSelectedMainType(cat.type_id)} />
           ))}
         </HStack>
       </ScrollView>
-
-      {/* Sub Category Filters */}
       {selectedMainType !== null && subCategories.length > 0 && (
         <ScrollView axes="horizontal" scrollIndicator="hidden">
           <HStack spacing={8} padding={{ horizontal: 16 }}>
-            <FilterChip key="sub-all" label="全部" active={selectedSubType === null} onTap={() => setSelectedSubType(null)} />
+            <FilterChip label="全部" active={selectedSubType === null} onTap={() => setSelectedSubType(null)} />
             {subCategories.map(cat => (
               <FilterChip key={cat.type_id} label={cat.type_name} active={selectedSubType === cat.type_id} onTap={() => setSelectedSubType(cat.type_id)} />
             ))}
           </HStack>
         </ScrollView>
       )}
-
       <ScrollView scrollIndicator="hidden">
         {loading ? (
-          <VStack padding={50} alignment="center">
-            <Text foregroundStyle="gray">加载中...</Text>
-          </VStack>
+          <LoadingView />
+        ) : videos.length === 0 ? (
+          <EmptyView title="暂无内容" />
         ) : (
-          <VStack spacing={12}>
-            <VStack padding={{ horizontal: 16 }}>
-              <LazyVGrid columns={GRID_COLUMNS} spacing={16}>
+          <VStack spacing={24} padding={{ bottom: 24 }} alignment="leading">
+            {selectedMainType === null && (
+              <ScrollView axes="horizontal" scrollIndicator="hidden">
+                <HStack spacing={14} padding={{ horizontal: 16 }}>
+                  {videos.slice(0, 3).map(video => (
+                    <HeroCard key={video.vod_id} video={video} width={Math.min(Device.screen.width - 32, 360)} onTap={openPlayer} />
+                  ))}
+                </HStack>
+              </ScrollView>
+            )}
+            <SectionHeader title={mainCategories.find(cat => cat.type_id === selectedMainType)?.type_name || '发现好片'} subtitle={source.name} />
+            <VStack spacing={16} padding={{ horizontal: 16 }}>
+              <LazyVGrid columns={GRID_COLUMNS} spacing={18}>
                 {videos.map((video, index) => (
                   <VStack key={video.vod_id} onAppear={() => handleGridItemAppear(index)}>
                     <VideoCard video={video} onTap={openPlayer} />
                   </VStack>
                 ))}
               </LazyVGrid>
-              <VStack padding={{ top: 16 }} alignment="center">
-                {hasMore ? (
-                  <Text font="caption" foregroundStyle="secondaryLabel">
-                    {loadingMore ? '加载中...' : '上拉加载更多'}
-                  </Text>
-                ) : (
-                  <Text font="caption" foregroundStyle="secondaryLabel" multilineTextAlignment="center">
-                    已经到底了
-                  </Text>
-                )}
-              </VStack>
+              <Text font="caption" foregroundStyle={palette.textTertiary}>
+                {hasMore ? (loadingMore ? '加载中…' : '上拉加载更多') : '已经到底了'}
+              </Text>
             </VStack>
           </VStack>
         )}

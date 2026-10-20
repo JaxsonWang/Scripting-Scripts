@@ -1,10 +1,13 @@
-import { Button, Circle, HStack, Label, List, Navigation, NavigationStack, Spacer, Text, VStack, useEffect, useState } from 'scripting'
+import { Button, Circle, HStack, Label, List, Navigation, NavigationStack, Rectangle, Spacer, Text, VStack, useEffect, useState } from 'scripting'
 import { SettingsService } from '../services/settings'
 import { SourceEditor } from './SourceEditor'
+import { ScreenBackground } from '../components/ScreenBackground'
+import { palette } from '../theme'
 import type { ApiSource, SourceManagementScreenProps, SourceRowProps } from '../types'
 
 const SourceRow = ({ source, active, onSelect, onEdit, onDelete }: SourceRowProps) => (
   <HStack
+    listRowBackground={<Rectangle fill={palette.card} />}
     padding={{ vertical: 6 }}
     onTapGesture={onSelect}
     spacing={12}
@@ -21,7 +24,7 @@ const SourceRow = ({ source, active, onSelect, onEdit, onDelete }: SourceRowProp
     }}
   >
     <Circle
-      fill={active ? '#e50914' : 'clear'}
+      fill={active ? palette.accent : 'clear'}
       stroke={
         active
           ? undefined
@@ -38,12 +41,12 @@ const SourceRow = ({ source, active, onSelect, onEdit, onDelete }: SourceRowProp
           {source.name || '未命名'}
         </Text>
         {active ? (
-          <Text font="caption" foregroundStyle="#e50914" padding={{ horizontal: 6 }}>
+          <Text font="caption" foregroundStyle={palette.accent} padding={{ horizontal: 6 }}>
             当前
           </Text>
         ) : null}
       </HStack>
-      <Text font="caption" foregroundStyle="secondaryLabel" lineLimit={1}>
+      <Text font="caption" foregroundStyle={palette.textSecondary} lineLimit={1}>
         {source.url}
       </Text>
     </VStack>
@@ -108,8 +111,13 @@ export const SourceManagementScreen = ({ icloudSyncEnabled, onRequestSync, onSou
   }
 
   return (
-    <NavigationStack>
+    <NavigationStack preferredColorScheme="dark" tint={palette.accent}>
       <List
+        foregroundStyle={palette.textPrimary}
+        background={<ScreenBackground />}
+        scrollContentBackground="hidden"
+        toolbarBackground={palette.bg}
+        toolbarColorScheme="dark"
         navigationTitle="视频源"
         navigationBarTitleDisplayMode="inline"
         listStyle="inset"
@@ -129,7 +137,7 @@ export const SourceManagementScreen = ({ icloudSyncEnabled, onRequestSync, onSou
             />
           ))
         ) : (
-          <Text foregroundStyle="secondaryLabel">暂无配置</Text>
+          <Text foregroundStyle={palette.textSecondary}>暂无配置</Text>
         )}
       </List>
     </NavigationStack>
