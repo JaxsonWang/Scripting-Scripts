@@ -2,6 +2,37 @@ import { Color, ColorScheme, Size, VirtualNode, KeyboardType, Edge, Point, Keywo
 
 declare global {
 
+  /** Foreground App-only VoiceOver announcements. No import is required. */
+  namespace Accessibility {
+    /**
+     * Submits an announcement without moving accessibility focus.
+     * Resolves true when submitted to the system, not when heard or finished.
+     * Resolves false when VoiceOver is off, the App is inactive, or this script environment is ineligible.
+     * Supported in live, non-minimized App entry, Home UI, and assistant-tool contexts.
+     * Rejects TypeError for non-string or whitespace-only input. Await before exiting the script.
+     * Disposing the script cancels pending work; no completion runs in the disposed context.
+     */
+    function announce(message: string): Promise<boolean>
+  }
+
+  interface BonjourService { readonly name: string; readonly type: string; readonly domain: string }
+  interface BonjourPublication extends BonjourService { readonly port: number; stop(): void }
+  interface BonjourBrowser { stop(): void }
+  interface BonjourResolvedService extends BonjourService {
+    readonly hostname: string
+    readonly port: number
+    readonly addresses: ReadonlyArray<{ address: string; family: "IPv4" | "IPv6" }>
+    readonly txtRecord: Readonly<Record<string, Uint8Array>>
+  }
+  /** App runtime, main JS queue. Only service types declared by Scripting, in local., are supported. */
+  const Bonjour: {
+    readonly supportedServiceTypes: readonly string[]
+    publish(options: {name: string; type: string; port: number; txtRecord?: Record<string, string | Uint8Array>; includePeerToPeer?: boolean}): Promise<BonjourPublication>
+    browse(options: {type: string; includePeerToPeer?: boolean; onFound: (service: BonjourService) => void; onRemoved?: (service: BonjourService) => void; onError?: (error: Error & {code?: string}) => void}): BonjourBrowser
+    /** timeout is in milliseconds, 100...60000 (default 10000). */
+    resolve(service: BonjourService, options?: {timeout?: number; includePeerToPeer?: boolean}): Promise<BonjourResolvedService>
+  }
+
   /** App-only global control of Scripting's VPN. No import is required. */
   interface VPNState {
     status: "invalid" | "disconnected" | "connecting" | "connected" | "reasserting" | "disconnecting" | "unknown"
@@ -28,14 +59,26 @@ declare global {
   interface VPNLocalDevAPI {
     getState(): Promise<VPNLocalDevState>
     setEnabled(enabled: boolean, options?: {expectedState?: string}): Promise<VPNLocalDevState>
-    /** Requires LocalDevVPN permission, an active reflected IPv4 alias, and a previously obtained pairing PSK. */
-    openRSDTunnel(options: {host: string; port: number; preSharedKey: Uint8Array | ArrayBuffer; identity?: string; mtu?: number}): Promise<VPNRSDTunnel>
+    /** Requires LocalDevVPN permission, a reachable reflected IPv4 address, and a pairing PSK. Uses the system route, including external VPNs; no Scripting VPN start is required. */
+    openRSDTunnel(options: {host: string; port: number; preSharedKey: Uint8Array | ArrayBuffer; identity?: string; mtu?: number; timeout?: number}): Promise<VPNRSDTunnel>
+    /** Cancels this context's pending opening and waits for native cleanup. Does not close an established tunnel. */
+    cancelRSDTunnelOpening(): Promise<void>
+  }
+  interface VPNRSDDiagnostic {
+    code: string
+    stage: string
+    nativeDomain: string
+    nativeCode: number
+    networkErrorCategory?: "tls" | "posix" | "dns" | "other"
+    networkErrorCode?: number
   }
   interface VPNRSDState {
     id: string
     state: "open" | "failed" | "closed"
     problem: string | null
     closedReason: string | null
+    /** First terminal failure, retained even after explicit cleanup. null for an ordinary close. */
+    terminalError: VPNRSDDiagnostic | null
     clientAddress: string
     serverAddress: string
     mtu: number
@@ -46,9 +89,11 @@ declare global {
   }
   interface VPNRSDTunnel {
     getState(): Promise<VPNRSDState>
-    /** Opens bounded TCP to the negotiated private server IPv6 address. At most four connections. */
+    /** Opens an independent TCP stream. At most four connections across all handles sharing this native tunnel. */
     connect(options: {port: number}): Promise<VPNRSDConnection>
-    /** Waits for this tunnel's cleanup; a closed old handle cannot close its replacement. */
+    /** Closes this handle's connections to port, including opens already pending when the close is applied. */
+    closeConnections(options: {port: number}): Promise<void>
+    /** Closes this handle and its connections. Other handles remain active; the last release reclaims the native tunnel. */
     close(): Promise<void>
   }
   interface VPNRSDConnection {
@@ -108,17 +153,48 @@ declare global {
   /**
    * Start a timer, the callback function will be executed after the specified time interval. Returns a number timer id.
    */
-  const setTimeout: (callback: () => void, timeout?: number) => number
+  const setTimeout: <Args extends unknown[]>(callback: (...args: Args) => void, timeout?: number, ...args: Args) => number
+  /** Repeats on the script queue; ticks can be delayed or coalesced while busy or suspended. */
+  const setInterval: <Args extends unknown[]>(callback: (...args: Args) => void, interval?: number, ...args: Args) => number
   /**
    * Stop a timer by a given timer id.
    */
-  const clearTimeout: (timerId: number) => void
+  const clearTimeout: (timerId: number | { [Symbol.toPrimitive](): number } | undefined) => void
+  const clearInterval: (timerId: number | { [Symbol.toPrimitive](): number } | undefined) => void
 
   /**
    * Provides the information abouts the device, also some methods to use the capabilities of the device.
    *
    */
+  /** Requests and replies with a running main session of the same script, including supported App Group extensions. Global; no import required. */
+  namespace ScriptSession {
+    type Value = null | boolean | number | string | Value[] | { [key: string]: Value }
+    /** Registers only from the main App index/home_screen. Returns a fresh ID; persist it for other entries. */
+    function register(handler: (message: Value) => Value | void | Promise<Value | void>): string
+    /** No autolaunch, wake or keep-alive. 64 KiB JSON; timeout defaults to 10000 ms, range 100...30000, including sleep. */
+    function request<T extends Value = Value>(sessionID: string, message: Value, options?: { timeout?: number }): Promise<T>
+    /** Only the registering context can unregister. Script exit also closes the session. */
+    function unregister(sessionID: string): void
+  }
+
   namespace Device {
+    /** Scripting host App version (CFBundleShortVersionString), or an empty string if unavailable. No import required. */
+    const appVersion: string
+    /** Scripting host App build number (CFBundleVersion), preserved as a string; empty if unavailable. */
+    const appBuildNumber: string
+    /** System default-path information, not a probe of Internet or server reachability. */
+    type NetworkState = {
+      status: "satisfied" | "unsatisfied" | "requiresConnection" | "unknown"
+      interfaces: ("wifi" | "cellular" | "wiredEthernet" | "loopback" | "other")[]
+      isExpensive: boolean
+      isConstrained: boolean
+    }
+    /** Waits for the first real system path (up to 10 seconds). Main-app scripts only. No import required. */
+    function getNetworkState(): Promise<NetworkState>
+    /** Adds a listener with an asynchronous initial snapshot, then distinct changes. Duplicate functions are ignored. */
+    function addNetworkChangeListener(listener: (state: NetworkState) => void): void
+    /** Removes a listener, or all network listeners when omitted. Also cleaned up on script exit. */
+    function removeNetworkChangeListener(listener?: (state: NetworkState) => void): void
     /**
      * A type that represents the orientation of the device.
      */
@@ -11034,19 +11110,56 @@ If the event’s calendar does not support availability settings, this property�
       custom: string
     }
 
+
+    /** Public model capabilities; request headers and arbitrary provider settings are omitted. */
+    type ProviderModelInfo = {
+      contextWindow: number
+      maxTokens?: number
+      temperature?: number
+      providerInputTokenLimit?: number
+      providerOutputTokenLimit?: number
+      supportsImages?: boolean
+      supportsAudio?: boolean
+      supportsVideo?: boolean
+      supportsPDF?: boolean
+      supportsPromptCache: boolean
+      supportsGenerateImage?: boolean
+      supportsImageEdit?: boolean
+      imageOnly?: boolean
+      thinking?: boolean
+      reasoningEffort?: "none" | "minimal" | "low" | "medium" | "high" | "xhigh" | "max"
+    }
+
+    /** One configured account. IDs remain stable when the account is renamed. */
+    type ProviderInfo = {
+      providerID: string
+      name: string
+      provider: Provider
+      modelId: string
+      models: Record<string, ProviderModelInfo>
+    }
+
+    /**
+     * Lists local provider accounts in persistent configuration order.
+     * Does not fetch remote models, sign in, or return credentials or request headers.
+     * Accounts may require sign-in before requests can use them.
+     */
+    function getProviders(): Promise<ProviderInfo[]>
+
     type ModelSelection = {
       provider: Provider
+      providerID: string
       modelId: string
     }
 
     /**
-     * Presents configured providers and models in the current script's UI context.
-     * Returns the selected provider/model, or null when cancelled. The selection
-     * does not change global defaults. Requires a UI context.
-     * Custom providers are returned as {custom: providerId}.
+     * Presents configured providers/models in the script's UI context.
+     * Returns the selected account/model, or null on cancellation; global defaults are unchanged.
+     * providerID selects an exact account; provider, when also supplied, must match.
      */
     function presentModelPicker(options?: {
       provider?: Provider
+      providerID?: string
       modelId?: string
     }): Promise<ModelSelection | null>
 
@@ -11175,7 +11288,8 @@ If the event’s calendar does not support availability settings, this property�
      * @param options The options for the request.
      * @param options.systemPrompt The system prompt to use for the request.
      * @param options.messages The messages to use for the request.
-     * @param options.provider Specifies the AI provider to use. You can use a custom provider with the given name.
+     * @param options.provider A legacy provider selector. A built-in type uses its first configured account.
+     * @param options.providerID An exact configured account ID, obtainable from getProviders() or the Provider panel. May be supplied without provider; unknown IDs and mismatches reject.
      * @example
      * const stream = await Assistant.requestStreaming({
      *   systemPrompt: "You are a helpful assistant.",
@@ -11195,6 +11309,7 @@ If the event’s calendar does not support availability settings, this property�
       systemPrompt?: string | null
       messages: MessageItem | MessageItem[]
       provider?: Provider
+      providerID?: string
       modelId?: string
     }): Promise<ReadableStream<StreamChunk>>
     /**
@@ -11202,7 +11317,8 @@ If the event’s calendar does not support availability settings, this property�
      * @param prompt The input prompt for the assistant.
      * @param schema The expected output JSON schema.
      * @param options The options for the request.
-     * @param options.provider Specifies the AI provider to use. You can use a custom provider with the given name.
+     * @param options.provider A legacy provider selector. A built-in type uses its first configured account.
+     * @param options.providerID An exact configured account ID, obtainable from getProviders() or the Provider panel. May be supplied without provider; unknown IDs and mismatches reject.
      * @param options.modelId You must ensure the specified ID matches a model supported by that provider (e.g., `"gpt-4-turbo"` for OpenAI, or `"gemini-2.5-pro"` for Gemini). If not specified, the app will use the default model configured for the provider.
      * @returns A promise that resolves to the structured data.
      */
@@ -11210,7 +11326,8 @@ If the event’s calendar does not support availability settings, this property�
       prompt: string,
       schema: JSONSchemaArray | JSONSchemaObject,
       options?: {
-        provider: Provider
+        provider?: Provider
+        providerID?: string
         modelId?: string
       }
     ): Promise<R>
@@ -11220,7 +11337,8 @@ If the event’s calendar does not support availability settings, this property�
      * @param images The input images for the assistant, array of image data URIs, format: `data:image/png;base64,{base64}`. Do not pass too many images, or the request will fail.
      * @param schema The expected output JSON schema.
      * @param options The options for the request.
-     * @param options.provider Specifies the AI provider to use. You can use a custom provider with the given name.
+     * @param options.provider A legacy provider selector. A built-in type uses its first configured account.
+     * @param options.providerID An exact configured account ID, obtainable from getProviders() or the Provider panel. May be supplied without provider; unknown IDs and mismatches reject.
      * @param options.modelId You must ensure the specified ID matches a model supported by that provider (e.g., `"gpt-4-turbo"` for OpenAI, or `"gemini-1.5-pro"` for Gemini). If not specified, the app will use the default model configured for the provider.
      * @returns A promise that resolves to the structured data.
      */
@@ -11229,9 +11347,8 @@ If the event’s calendar does not support availability settings, this property�
       images: string[],
       schema: JSONSchemaArray | JSONSchemaObject,
       options?: {
-        provider: "openai" | "gemini" | "anthropic" | "deepseek" | "openrouter" | "grok" | {
-          custom: string
-        }
+        provider?: Provider
+        providerID?: string
         modelId?: string
       }
     ): Promise<R>
@@ -11245,7 +11362,8 @@ If the event’s calendar does not support availability settings, this property�
      * @param options.autoStart Whether to start the conversation automatically. Defaults to false.
      * @param options.systemPrompt The system prompt to use for the conversation. The default system prompt is the Scripting Assistant system prompt, the Assistant Tools are available in this prompt. If you want to use a different system prompt, you can pass it in here, and the Assistant Tools are not available anymore.
      * @param options.modelId The model ID to use for the conversation.
-     * @param options.provider The provider to use for the conversation. User can change the provider in the assistant chat page.
+     * @param options.provider A legacy provider selector; a built-in type uses its first configured account.
+     * @param options.providerID The exact configured account ID. User can change the account in the assistant chat page.
      * @returns A promise that resolves when the conversation is created, or throws an error if the operation fails.
      */
     function startConversation(options: {
@@ -11255,6 +11373,7 @@ If the event’s calendar does not support availability settings, this property�
       systemPrompt?: string
       modelId?: string
       provider?: Provider
+      providerID?: string
     }): Promise<void>
 
     /**
@@ -15617,6 +15736,103 @@ If the event’s calendar does not support availability settings, this property�
   /**
    * This namespace provides functions for managing Bluetooth central operations, including scanning for peripherals, connecting to peripherals, and retrieving known or connected peripherals.
    */
+type BluetoothBackgroundRegistration = {
+  id: string
+  target: {
+    serviceUUIDs: string[]
+    peripheralId?: string
+    localName?: string
+  }
+  subscriptions?: BluetoothBackgroundCharacteristic[]
+}
+
+type BluetoothBackgroundCharacteristic = {
+  serviceUUID: string
+  characteristicUUID: string
+}
+
+type BluetoothBackgroundTaskInfo = {
+  id: string
+  enabled: boolean
+  revision: number
+  state: "disabled" | "waiting" | "connecting" | "connected" | "blocked" | "error"
+  ready: boolean
+  peripheralId: string | null
+  lastEventAt: number | null
+  lastError: { code: string; message: string } | null
+  packageFingerprint: string
+}
+
+type BluetoothBackgroundCapabilities = {
+  supported: boolean
+  authorization: "notDetermined" | "allowed" | "denied" | "restricted"
+  restoration: "available" | "unsupported"
+  accessorySetup: "notIntegrated" | "available"
+  limitations: string[]
+}
+
+namespace BluetoothBackground {
+  function getCapabilities(): Promise<BluetoothBackgroundCapabilities>
+  function register(options: BluetoothBackgroundRegistration): Promise<BluetoothBackgroundTaskInfo>
+  function list(): Promise<BluetoothBackgroundTaskInfo[]>
+  function get(id: string): Promise<BluetoothBackgroundTaskInfo | null>
+  function setEnabled(id: string, enabled: boolean): Promise<void>
+  function unregister(id: string): Promise<void>
+  function handleEvents(handler: BluetoothBackgroundHandler): void
+}
+
+type BluetoothBackgroundEvent = {
+  id: string
+  taskId: string
+  revision: number
+  generation: number
+  sessionEpoch: string           // 原生 UUID，跨进程与重连区分会话
+  sequence: number
+  timestamp: number              // Unix 毫秒；只用于观测，期限使用原生单调时钟
+  type: "restored" | "connected" | "ready" | "disconnected" |
+        "valueUpdated" | "stateChanged" | "gap" | "error"
+  peripheralId: string | null
+  characteristic?: BluetoothBackgroundCharacteristic
+  value?: Data
+  error?: { code: string; message: string }
+}
+
+type BluetoothBackgroundHandler = (
+  event: BluetoothBackgroundEvent,
+  context: BluetoothBackgroundContext
+) => void | Promise<void>
+
+type BluetoothBackgroundSessionState = {
+  connected: boolean
+  ready: boolean
+  generation: number
+  sessionEpoch: string
+  lastSequence: number
+  peripheralId: string | null
+}
+
+type BluetoothBackgroundContext = {
+  session: {
+    getState(): Promise<BluetoothBackgroundSessionState>
+    readValue(characteristic: BluetoothBackgroundCharacteristic,
+              options?: { timeoutMs?: number }): Promise<Data>
+    writeValue(characteristic: BluetoothBackgroundCharacteristic, data: Data,
+               writeType: "withResponse" | "withoutResponse",
+               options?: { timeoutMs?: number }): Promise<void>
+    maxWriteValueLength(writeType: "withResponse" | "withoutResponse"): Promise<number>
+    receiveValue(options: {
+      characteristic: BluetoothBackgroundCharacteristic
+      afterSequence: number
+      timeoutMs?: number
+    }): Promise<BluetoothBackgroundEvent>
+  }
+  checkpoint: {
+    read(): Promise<unknown>
+    write(value: unknown): Promise<void>
+  }
+}
+
+
   namespace BluetoothCentralManager {
 
     /**
@@ -15967,15 +16183,12 @@ If the length of the value parameter exceeds the length of the `maximumUpdateVal
    * 
    * Only available in `Script.env === "index"`.
    *
-   * You can call the `keepAlive()` method after the app switches to the background
-   * (triggered by a background event) to attempt to keep the Scripting App alive.
-   * When the app switches back to the foreground (triggered by a foreground event),
-   * call the `stopKeepAlive()` method to stop the keep-alive process.
+   * Request `keepAlive()` while foregrounded, before starting background work.
+   * Release it with `stopKeepAlive()` when the work finishes.
    *
-   * Multiple scripts can request keep-alive simultaneously. Each call to `keepAlive()`
-   * adds the calling script to an internal keep-alive queue, and calling `stopKeepAlive()`
-   * removes it from the queue. The keep-alive process will only be fully stopped
-   * when the queue becomes empty.
+   * Multiple scripts can request keep-alive simultaneously. Repeated successful calls to `keepAlive()`
+   * from one script are idempotent. `stopKeepAlive()` releases that script's request.
+   * The shared engine stops when all owners release their requests.
    *
    * Note: Even if keep-alive is enabled, the system may still terminate the Scripting App
    * under certain conditions, such as when its memory usage is too high.
@@ -15985,13 +16198,23 @@ If the length of the value parameter exceeds the length of the `maximumUpdateVal
    * may increase device power consumption, so please use it with care.
    */
   namespace BackgroundKeeper {
+    interface State {
+      /** App-wide audio state; this is not a network-session health check. */
+      status: "idle" | "active" | "interrupted" | "inactive"
+      isActive: boolean
+      /** Whether this script owns a successful keep-alive request. Repeated calls are idempotent. */
+      requested: boolean
+      /** Fixed diagnostic reason for the last audio failure; null after success or final release. */
+      lastFailure: string | null
+    }
+    function getState(): Promise<State>
     /**
-     * A promise that resolves to a boolean value that indicates whether the keep-alive process is active.
+     * Reports whether the shared audio engine and player are actually running without an interruption.
      */
     const isActive: Promise<boolean>
     /**
      * Starts the keep-alive process.
-     * @returns A promise that resolves to a boolean value that indicates whether the keep-alive process was successfully started. If the keep-alive process is already active, the promise resolves to true.
+     * @returns A promise that resolves to a boolean value that indicates whether the keep-alive process was successfully started. Repeated successful calls from one script are idempotent. Audio failure resolves to false; access errors reject.
      */
     function keepAlive(): Promise<boolean>
     /**
@@ -19209,6 +19432,242 @@ If the length of the value parameter exceeds the length of the `maximumUpdateVal
      */
     getItems(): Promise<SpotlightIndexedItem[]>
   }
+  /** Persistent HTTP(S) download queues. Available in main-app scripts. */
+  namespace DownloadManager {
+    type Mode = 'background' | 'foreground'
+    type State = 'waiting' | 'running' | 'retrying' | 'suspended' | 'verifying' | 'publishing' | 'canceled' | 'completed' | 'failed' | 'removed'
+    type Algorithm = 'md5' | 'sha1' | 'sha256' | 'sha512'
+    interface Checksum { algorithm: Algorithm; checksum: string }
+    interface RetryPolicy {
+      /** Total attempts, including the initial transfer. Default 3; range 1–20. */
+      maxAttempts: number
+      baseDelay: number
+      maxDelay: number
+      statusCodes: number[]
+    }
+    interface Configuration {
+      mode: Mode
+      /** Concurrent files, 1–6. Default 3. */
+      maxConcurrentTasks: number
+      /** Concurrent Range requests per file, 1–8. Foreground only; default 1. */
+      maxConnectionsPerTask: number
+      /** Bytes per range, 64 KiB–16 MiB. Default 1 MiB. */
+      chunkSize: number
+      /** Queue-wide average payload target; 0 disables limiting. Foreground only, requires a Range-capable server and stable validator. */
+      bytesPerSecond: number
+      timeoutIntervalForRequest: number
+      /** Resource request timeout in seconds; foreground checks the remaining budget before each request. Background enforcement occurs when the app executes. */
+      timeoutIntervalForResource: number
+      allowsCellularAccess: boolean
+      allowsExpensiveNetworkAccess: boolean
+      allowsConstrainedNetworkAccess: boolean
+      /** Progress callback interval in seconds, 0.1–10. Default 0.3. */
+      progressInterval: number
+      retry: RetryPolicy
+    }
+    type ConfigurationOptions = Partial<Omit<Configuration, 'retry'>> & { retry?: Partial<RetryPolicy> }
+    interface Options {
+      url: string
+      /** Absolute local file path. Omit to use an app-managed persistent file. Existing files are never overwritten. */
+      destination?: string
+      /** Range, If-Range, Accept-Encoding, Host and Content-Length are managed internally. */
+      headers?: Record<string, string>
+      priority?: number
+      checksum?: Checksum
+      notifyOnFinished?: { success: string; failure: string }
+    }
+    interface Failure {
+      code: string
+      message: string
+      statusCode?: number
+      retryable: boolean
+      retryAfter?: number
+    }
+    interface Progress {
+      completedBytes: number
+      totalBytes: number | null
+      fractionCompleted: number | null
+      bytesPerSecond: number
+      estimatedTimeRemaining: number | null
+    }
+    interface Part {
+      index: number
+      lower: number
+      upper: number
+      completed: boolean
+      digest?: string
+    }
+    interface TaskSnapshot {
+      id: string
+      url: string
+      responseURL?: string
+      responseStatus?: number
+      responseHeaders: Record<string, string>
+      destination: string
+      filePath: string
+      fileName: string
+      mode: Mode
+      state: State
+      priority: number
+      progress: Progress
+      attempt: number
+      canResume: boolean
+      createdAt: number
+      startedAt?: number
+      endedAt?: number
+      nextRetryAt?: number
+      parts: Part[]
+      validation: 'unknown' | 'correct' | 'incorrect'
+      error: Failure | null
+    }
+    interface QueueSnapshot {
+      identifier: string
+      configuration: Configuration
+      capabilities: {
+        backgroundDownloads: boolean
+        parallelRanges: boolean
+        rateLimiting: boolean
+        resourceTimeout: 'activeAttempt' | 'whenAppExecutes'
+      }
+      taskCount: number
+      runningCount: number
+      completedCount: number
+      failedCount: number
+      canRunImmediately: boolean
+      completedBytes: number
+      totalBytes: number | null
+      bytesPerSecond: number
+      estimatedTimeRemaining: number | null
+    }
+    interface BatchError { id: string; error: Failure }
+    interface BatchDownloadResult { task: Task | null; error: Failure | null }
+    interface Queue {
+      readonly identifier: string
+      onProgress: ((snapshot: QueueSnapshot) => void) | null
+      onStateChange: ((snapshot: TaskSnapshot) => void) | null
+      /** Delivered after the current work finishes; inspect failedCount/task states to distinguish success and failure. */
+      onComplete: ((snapshot: QueueSnapshot) => void) | null
+      download(options: Options): Promise<Task>
+      /** Validates inputs first, then returns one ordered result per input; successful tasks survive operational failures of other inputs. */
+      downloadMany(options: Options[]): Promise<BatchDownloadResult[]>
+      getTasks(): Promise<Task[]>
+      getTask(id: string): Promise<Task | null>
+      getTaskByURL(url: string): Promise<Task | null>
+      getSnapshot(): Promise<QueueSnapshot>
+      /** Suspend active tasks before changing transport/network settings. */
+      updateConfiguration(options: ConfigurationOptions): Promise<QueueSnapshot>
+      resumeAll(): Promise<BatchError[]>
+      suspendAll(): Promise<BatchError[]>
+      cancelAll(): Promise<BatchError[]>
+      removeAll(options: { deleteFile?: boolean }): Promise<BatchError[]>
+      /** Each current task id exactly once. Priority precedes this order. Running tasks are not interrupted. */
+      reorder(ids: string[]): Promise<void>
+      getCacheInfo(): Promise<{ bytes: number; taskCount: number }>
+      /** Removes terminal tasks' internal transfer files; preserves metadata and published outputs. Unfinished tasks must first be canceled/removed. */
+      clearCache(): Promise<void>
+      /** Detaches this handle and its callbacks. Accepted native downloads remain managed. */
+      dispose(): void
+    }
+    interface Task {
+      readonly id: string
+      onProgress: ((progress: Progress) => void) | null
+      onStateChange: ((snapshot: TaskSnapshot) => void) | null
+      onComplete: ((error: Failure | null, snapshot: TaskSnapshot) => void) | null
+      getSnapshot(): Promise<TaskSnapshot>
+      resume(): Promise<void>
+      suspend(): Promise<void>
+      cancel(): Promise<void>
+      /** Discards partial data and starts over; completed output must first be explicitly removed. */
+      restart(): Promise<void>
+      remove(options: { deleteFile?: boolean }): Promise<void>
+      setPriority(priority: number): Promise<void>
+      /** Only for suspended/failed/canceled tasks; changing headers discards partial data. */
+      updateHeaders(headers: Record<string, string>): Promise<void>
+      validateFile(checksum: Checksum): Promise<boolean>
+      /** Reads terminal state immediately or waits through retries and pause/resume. Returns the published absolute file path. */
+      waitUntilFinished(): Promise<string>
+    }
+    /** Reopens the script-local persistent queue. Existing options must agree; use updateConfiguration to change them. At most 64 distinct queues can be open per app process across scripts. */
+    function open(options: ConfigurationOptions & { identifier: string }): Promise<Queue>
+  }
+
 }
 
 export { }
+
+/** Native device-service transports and protocols. Available in App scripts; no import is needed. */
+declare global {
+namespace DeviceServices {
+  type PlistValue = string | number | boolean | Date | Uint8Array | PlistValue[] | { [key: string]: PlistValue }
+  interface ConnectionOptions {
+    host: string
+    port: number
+    /** Connection deadline in milliseconds, 1–300000; default 30000. Plain TCP only. */
+    timeout?: number
+    /** Maximum plist frame size, 1024–8388608; default 1048576 bytes. */
+    maximumFrameBytes?: number
+  }
+  interface MessageOptions { timeout?: number }
+  interface Connection {
+    writePlist(value: PlistValue, options?: MessageOptions & { format?: "binary" | "xml" }): Promise<void>
+    /** Returns null only for EOF before the next message header. */
+    readPlist(options?: MessageOptions): Promise<PlistValue | null>
+    /** RSDCheckin followed by StartService acknowledgment; TLS-required services are rejected. */
+    checkin(options?: MessageOptions & { label?: string }): Promise<void>
+    /** Permanently transfers this connection to AFC mode. */
+    openAFC(options?: MessageOptions): Promise<AFCClient>
+    close(): Promise<void>
+  }
+  interface RSDServiceOptions {
+    port: number
+    /** Optional descriptive name; does not discover or select a port. */
+    serviceName?: string
+    label?: string
+    /** Total connect/check-in deadline in milliseconds, 1–300000; default 30000. */
+    timeout?: number
+    maximumFrameBytes?: number
+  }
+  interface RSDServiceSession {
+    readonly port: number
+    readonly serviceName: string | null
+    readonly connection: Connection
+    close(): Promise<void>
+  }
+  interface RSDSession {
+    /** Creates a fresh independent stream, adopts it and completes plist RSDCheckin. */
+    openService(options: RSDServiceOptions): Promise<RSDServiceSession>
+    /** Closes only this session's children and pending opens; does not close the borrowed tunnel handle. */
+    close(): Promise<void>
+  }
+  /** Borrows a genuine script-owned native tunnel. Pairing and discovery remain script responsibilities. */
+  function openRSDSession(tunnel: VPNRSDTunnel): Promise<RSDSession>
+  interface FileProgress { bytesTransferred: number; totalBytes: number }
+  interface FileResult { bytesTransferred: number; seconds: number; sha256: string }
+  interface TransferOptions {
+    /** Absolute native filesystem path. */
+    localPath: string
+    remotePath: string
+    onProgress?: (progress: FileProgress) => void
+  }
+  interface FileTask {
+    result: Promise<FileResult>
+    /** Cancels this transfer and closes its connection. */
+    cancel(): void
+  }
+  interface AFCClient {
+    readDirectory(path: string): Promise<string[]>
+    stat(path: string): Promise<Record<string, string>>
+    makeDirectory(path: string): Promise<void>
+    rename(source: string, destination: string): Promise<void>
+    remove(path: string): Promise<void>
+    /** Streams a local file to a new remote path; use paths owned exclusively by your script. */
+    upload(options: TransferOptions): FileTask
+    /** Streams a remote file to a new local path, without replacing an existing local file. */
+    download(options: TransferOptions): FileTask
+    close(): Promise<void>
+  }
+  function connect(options: ConnectionOptions): Promise<Connection>
+  /** Exclusively adopts a genuine native connection owned by this script, with no outstanding IO. */
+  function adopt(source: object, options?: { maximumFrameBytes?: number }): Connection
+}
+}

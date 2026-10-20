@@ -2,9 +2,10 @@
  * Node compatibility type declarations for the Scripting app.
  *
  * Describes the Node-compatible runtime layered on JavaScriptCore: a curated
- * subset of Node that is ACTUALLY bridged/implemented. Modules NOT declared here
- * (dgram/child_process/cluster/...) are intentionally absent — importing
- * them is a type error, matching the runtime which throws "not supported".
+ * subset of Node that is ACTUALLY bridged/implemented. Some runtime modules are
+ * compatibility placeholders and are intentionally not declared here; importing
+ * a module successfully does not prove that its operations have real effects.
+ * See the bundled node_compat guide for functional, placeholder and rejected APIs.
  *
  * Maintained DIRECTLY in this repo (ScriptingKit/Resources/scripting-js/dts/
  * node.d.ts). Unlike global.d.ts it has NO dependency on the "scripting" SDK
@@ -17,13 +18,13 @@
  *     Buffer, process, require, __dirname, __filename, global,
  *     setImmediate, clearImmediate, queueMicrotask,
  *     TextEncoder, TextDecoder, URL, URLSearchParams,
- *     crypto (Web Crypto subset: getRandomValues + randomUUID ONLY),
+ *     crypto (WebCrypto: getRandomValues, randomUUID, subtle, chacha20Poly1305),
  *     plus the global TYPES Buffer / BufferConstructor / BufferEncoding / NodeJS.
  *   MODULE (require import — `declare module` blocks further down):
  *     fs, fs/promises, crypto (Node crypto: createHash/...), path, os, stream,
  *     buffer, events, util, url, querystring, assert, string_decoder, http,
- *     https, net (TCP client), tls (certificate TLS client), timers (+ their "node:" aliases).
- * Note `crypto`: the GLOBAL `crypto` is Web Crypto (getRandomValues/randomUUID);
+ *     https, net (TCP clients/servers), tls (certificate TLS client), timers (+ their "node:" aliases).
+ * Note `crypto`: the GLOBAL `crypto` is WebCrypto (including subtle and chacha20Poly1305);
  * the Node `crypto` module (createHash/createHmac/...) needs `require("crypto")`.
  *
  * NOTE: this is intentionally a SCRIPT file (no top-level import/export), so its
@@ -127,8 +128,15 @@ declare namespace NodeJS {
     main: any
   }
 
-  type Timeout = ReturnType<typeof setTimeout>
-  type Immediate = { ref(): void; unref(): void }
+  interface Timeout {
+    ref(): this
+    unref(): this
+    hasRef(): boolean
+    refresh(): this
+    close(): this
+    [Symbol.toPrimitive](): number
+  }
+  interface Immediate { ref(): this; unref(): this; hasRef(): boolean; [Symbol.toPrimitive](): number }
 }
 
 declare const Buffer: BufferConstructor
@@ -139,7 +147,7 @@ declare const __filename: string
 declare const global: typeof globalThis
 
 declare function setImmediate(callback: (...args: any[]) => void, ...args: any[]): NodeJS.Immediate
-declare function clearImmediate(immediate: NodeJS.Immediate): void
+declare function clearImmediate(immediate: NodeJS.Immediate | number | undefined): void
 
 // Web globals (standard Web/WHATWG APIs available at runtime).
 declare class TextEncoder {
@@ -617,6 +625,8 @@ declare module "os" {
 // ---------------------------------------------------------------------------
 
 declare module "crypto" {
+  /** Compares the raw bytes of equally sized buffers or views using the native timing-safe primitive. */
+  function timingSafeEqual(a: ArrayBufferLike | ArrayBufferView, b: ArrayBufferLike | ArrayBufferView): boolean
   /** Shares global crypto, including HKDF and the Scripting ChaCha20-Poly1305 extension. */
   const webcrypto: typeof crypto
   type BinaryLike = string | Uint8Array
@@ -859,12 +869,22 @@ declare module "https" {
 
 declare module "timers" {
   function setTimeout(callback: (...args: any[]) => void, ms?: number, ...args: any[]): NodeJS.Timeout
-  function clearTimeout(timeout: NodeJS.Timeout): void
+  function clearTimeout(timeout: NodeJS.Timeout | number | undefined): void
   function setInterval(callback: (...args: any[]) => void, ms?: number, ...args: any[]): NodeJS.Timeout
-  function clearInterval(interval: NodeJS.Timeout): void
+  function clearInterval(interval: NodeJS.Timeout | number | undefined): void
   function setImmediate(callback: (...args: any[]) => void, ...args: any[]): NodeJS.Immediate
-  function clearImmediate(immediate: NodeJS.Immediate): void
+  function clearImmediate(immediate: NodeJS.Immediate | number | undefined): void
+  const promises: typeof import("timers/promises")
 }
+
+declare module "timers/promises" {
+  interface TimerOptions {signal?: AbortSignal; /** Records intent; does not control iOS process lifetime. */ ref?: boolean}
+  function setTimeout<T = void>(delay?: number, value?: T, options?: TimerOptions): Promise<T>
+  function setImmediate<T = void>(value?: T, options?: TimerOptions): Promise<T>
+  function setInterval<T = void>(delay?: number, value?: T, options?: TimerOptions): AsyncIterableIterator<T>
+  const scheduler: {wait(delay: number, options?: TimerOptions): Promise<void>; yield(): Promise<void>}
+}
+declare module "node:timers/promises" {export * from "timers/promises"}
 
 // ---------------------------------------------------------------------------
 // zlib  (gzip / deflate / inflate — sync, async-callback, and stream forms.
@@ -1021,10 +1041,11 @@ declare namespace NodeJS {
 }
 
 // ---------------------------------------------------------------------------
-// net: bounded TCP client (full Scripting runtime, main JS execution queue)
+// net: bounded TCP streams and servers (full Scripting runtime, main JS execution queue)
 // ---------------------------------------------------------------------------
 declare module "net" {
   import { Duplex } from "stream"
+  import { EventEmitter } from "events"
   interface SocketOptions {
     allowHalfOpen?: boolean
     highWaterMark?: number
@@ -1094,6 +1115,35 @@ declare module "net" {
   function isIP(input: unknown): 0 | 4 | 6
   function isIPv4(input: unknown): boolean
   function isIPv6(input: unknown): boolean
+  interface ServerOpts extends SocketOptions { pauseOnConnect?: boolean }
+  interface ListenOptions {
+    port: number
+    /** Numeric IPv4/IPv6; omitted binds the dual-stack wildcard. */
+    host?: string
+    /** 1...128, default 128. */
+    backlog?: number
+  }
+  class Server extends EventEmitter {
+    constructor(options?: ServerOpts, connectionListener?: (socket: Socket) => void)
+    constructor(connectionListener?: (socket: Socket) => void)
+    listen(options: ListenOptions, callback?: () => void): this
+    listen(port: number, callback?: () => void): this
+    listen(port: number, host: string, callback?: () => void): this
+    listen(port: number, host: string, backlog: number, callback?: () => void): this
+    /** Stops accepting, then waits for accepted sockets to close. */
+    close(callback?: (error?: Error) => void): this
+    address(): AddressInfo | null
+    getConnections(callback: (error: Error | null, count: number) => void): this
+    readonly listening: boolean
+    /** 0...32 or Infinity; the native context also has a shared 32-socket limit. */
+    maxConnections: number
+    on(event: "connection", listener: (socket: Socket) => void): this
+    on(event: "listening" | "close", listener: () => void): this
+    on(event: "error", listener: (error: Error & {code?: string; errno?: number; syscall?: string}) => void): this
+    on(event: string | symbol, listener: (...args: any[]) => void): this
+  }
+  function createServer(options?: ServerOpts, connectionListener?: (socket: Socket) => void): Server
+  function createServer(connectionListener?: (socket: Socket) => void): Server
 }
 declare module "node:net" { export * from "net" }
 
