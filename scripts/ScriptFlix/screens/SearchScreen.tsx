@@ -25,6 +25,7 @@ import { ScreenBackground } from '../components/ScreenBackground'
 import { SectionHeader } from '../components/SectionHeader'
 import { EmptyView, LoadingView } from '../components/StateView'
 import { FULL_SCREEN_FRAME, brandGradient, palette } from '../theme'
+import { usePreferredColorScheme } from '../hooks/useThemeMode'
 import type { ApiSource, SearchResultItem, SourceSearchState, SourceStateMap } from '../types'
 
 const SEARCH_TIMEOUT_MS = 30_000
@@ -58,6 +59,7 @@ const withTimeout = <T,>(promise: Promise<T>, timeoutMs: number) =>
  */
 export const SearchScreen = ({ embedded = false }: { embedded?: boolean }) => {
   const dismiss = Navigation.useDismiss()
+  const colorScheme = usePreferredColorScheme()
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<SearchResultItem[]>([])
   const [loading, setLoading] = useState(false)
@@ -344,7 +346,7 @@ export const SearchScreen = ({ embedded = false }: { embedded?: boolean }) => {
       </ScrollView>
       <SectionHeader title={selectedSource === 'all' ? '全部结果' : selectedSource} accessory={`${results.length} 条 · 异常源 ${errorSourceCount}`} />
       {filteredResults.length > 0 && (loading || !!error) && (
-        <Text font="footnote" foregroundStyle={error ? palette.gold : palette.textSecondary} padding={{ horizontal: 16 }}>
+        <Text font="footnote" foregroundStyle={error ? palette.warning : palette.textSecondary} padding={{ horizontal: 16 }}>
           {statusLabel}
         </Text>
       )}
@@ -373,7 +375,7 @@ export const SearchScreen = ({ embedded = false }: { embedded?: boolean }) => {
   return embedded ? (
     content
   ) : (
-    <NavigationStack preferredColorScheme="dark" tint={palette.accent}>
+    <NavigationStack preferredColorScheme={colorScheme} tint={palette.accent}>
       {content}
     </NavigationStack>
   )

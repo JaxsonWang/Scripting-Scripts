@@ -14,19 +14,36 @@ import {
   Text,
   Toggle,
   VStack,
+  Widget,
   useState
 } from 'scripting'
+import type { WidgetFamily } from 'scripting'
 import { HistoryService } from '../services/history'
 import { SettingsService } from '../services/settings'
 import { ChangelogScreen } from './ChangelogScreen'
 import { SourceManagementScreen } from './SourceManagementScreen'
 import { ScreenBackground } from '../components/ScreenBackground'
 import { palette } from '../theme'
+import { AppearancePicker } from '../components/AppearancePicker'
+import { useThemeMode } from '../hooks/useThemeMode'
+import { AppearanceService } from '../services/appearance'
 import type { CloudSnapshot } from '../types'
 
 const AppStorage = Storage
 const ICLOUD_SYNC_KEY = 'script_flix_icloud_sync_enabled'
 const BANNER_IMAGE_FILE_PATH = Path.join(Script.directory, 'assets', 'banner.webp')
+
+const THEME_HINTS = {
+  auto: '跟随系统外观，白天日间、夜晚夜间自动切换',
+  light: '始终使用日间外观',
+  dark: '始终使用夜间外观'
+} as const
+
+const WIDGET_PREVIEWS: { family: WidgetFamily; title: string }[] = [
+  { family: 'systemSmall', title: '小号' },
+  { family: 'systemMedium', title: '中号' },
+  { family: 'systemLarge', title: '大号' }
+]
 
 const getScriptFolderRelativePath = () => {
   const scriptDir = Script.directory || ''
@@ -39,6 +56,8 @@ const getScriptFolderRelativePath = () => {
 
 export const SettingsScreen = () => {
   const dismiss = Navigation.useDismiss()
+  const themeMode = useThemeMode()
+  const colorScheme = AppearanceService.colorSchemeOf(themeMode)
   const [icloudSyncEnabled, setIcloudSyncEnabled] = useState<boolean>(() => AppStorage.get(ICLOUD_SYNC_KEY) ?? false)
   const [syncing, setSyncing] = useState(false)
   const [lastSyncedAt, setLastSyncedAt] = useState<number | null>(null)
@@ -120,6 +139,16 @@ export const SettingsScreen = () => {
     }
   }
 
+  const previewWidget = async (family: WidgetFamily) => {
+    try {
+      await Widget.preview({ family })
+    } catch (error) {
+      console.error('[SettingsScreen] widget preview failed', error)
+      const message = error instanceof Error ? error.message : '未知错误'
+      await Dialog.alert({ title: '小组件预览失败', message })
+    }
+  }
+
   const syncStatusLabel = syncing
     ? '正在写入 iCloud...'
     : icloudSyncEnabled && lastSyncedAt
@@ -127,13 +156,13 @@ export const SettingsScreen = () => {
       : `开启后将在 iCloud Drive/${getScriptFolderRelativePath()}/settings.json 生成设置备份`
 
   return (
-    <NavigationStack preferredColorScheme="dark" tint={palette.accent}>
+    <NavigationStack preferredColorScheme={colorScheme} tint={palette.accent}>
       <List
         foregroundStyle={palette.textPrimary}
         background={<ScreenBackground />}
         scrollContentBackground="hidden"
         toolbarBackground={palette.bg}
-        toolbarColorScheme="dark"
+        toolbarColorScheme={colorScheme}
         navigationTitle="设置"
         toolbar={{
           cancellationAction: <Button title="完成" action={dismiss} />
@@ -150,6 +179,49 @@ export const SettingsScreen = () => {
               </Text>
             </VStack>
           </NavigationLink>
+        </Section>
+        <Section
+          listRowBackground={<Rectangle fill={palette.card} />}
+          header={<Text>外观</Text>}
+          footer={
+            <Text font="footnote" foregroundStyle={palette.textSecondary}>
+              {THEME_HINTS[themeMode]}
+            </Text>
+          }
+        >
+          <AppearancePicker mode={themeMode} onChange={AppearanceService.setThemeMode} />
+        </Section>
+        <Section
+          listRowBackground={<Rectangle fill={palette.card} />}
+          header={<Text>桌面小组件</Text>}
+          footer={
+            <Text font="footnote" foregroundStyle={palette.textSecondary}>
+              每天按当前视频源推荐电影和剧集，配色跟随上方外观。在主屏幕添加 Scripting 小组件，长按选择「编辑小组件」，脚本选 ScriptFlix。
+            </Text>
+          }
+        >
+          <HStack spacing={8}>
+            <VStack alignment="leading" spacing={2}>
+              <Text foregroundStyle={palette.textPrimary}>每日推荐</Text>
+              <Text font="caption2" foregroundStyle={palette.textSecondary}>
+                预览各尺寸效果
+              </Text>
+            </VStack>
+            <Spacer />
+            {WIDGET_PREVIEWS.map(item => (
+              <Button key={item.family} buttonStyle="plain" action={() => void previewWidget(item.family)}>
+                <Text
+                  font="subheadline"
+                  foregroundStyle={palette.accent}
+                  padding={{ horizontal: 12, vertical: 6 }}
+                  background={palette.cardHi}
+                  clipShape="capsule"
+                >
+                  {item.title}
+                </Text>
+              </Button>
+            ))}
+          </HStack>
         </Section>
         <Section
           listRowBackground={<Rectangle fill={palette.card} />}

@@ -22,6 +22,7 @@ import { createDiagnosticLogger, describeDiagnosticUrl, redactDiagnosticError } 
 import { ScreenBackground } from '../components/ScreenBackground'
 import { EmptyView, LoadingView } from '../components/StateView'
 import { FULL_SCREEN_FRAME, brandGradient, palette, radius } from '../theme'
+import { usePreferredColorScheme } from '../hooks/useThemeMode'
 import type { PlayEpisode, PlayGroup, PlayerScreenProps, VideoItem } from '../types'
 
 type Playback = { kind: 'native'; player: AVPlayer } | { kind: 'web'; controller: WebViewController }
@@ -73,6 +74,7 @@ const EpisodeButton = ({ label, active, onPress }: { label: string; active: bool
  */
 export const PlayerScreen = ({ id, sourceUrl, sourceName }: PlayerScreenProps) => {
   const dismiss = Navigation.useDismiss()
+  const colorScheme = usePreferredColorScheme()
   const [video, setVideo] = useState<VideoItem | null>(null)
   const [playGroups, setPlayGroups] = useState<PlayGroup[]>([])
   const [currentGroupIndex, setCurrentGroupIndex] = useState(0)
@@ -212,7 +214,7 @@ export const PlayerScreen = ({ id, sourceUrl, sourceName }: PlayerScreenProps) =
 
   if (loading || !video) {
     return (
-      <NavigationStack preferredColorScheme="dark" tint={palette.accent}>
+      <NavigationStack preferredColorScheme={colorScheme} tint={palette.accent}>
         <VStack frame={FULL_SCREEN_FRAME} background={<ScreenBackground />} toolbar={{ cancellationAction: <Button title="返回" action={dismiss} /> }}>
           {loading ? <LoadingView /> : <EmptyView title="未找到视频" />}
         </VStack>
@@ -223,7 +225,7 @@ export const PlayerScreen = ({ id, sourceUrl, sourceName }: PlayerScreenProps) =
   const currentEpisode = playGroups[currentGroupIndex]?.episodes[currentEpisodeIndex]
 
   return (
-    <NavigationStack preferredColorScheme="dark" tint={palette.accent}>
+    <NavigationStack preferredColorScheme={colorScheme} tint={palette.accent}>
       <VStack
         spacing={0}
         frame={FULL_SCREEN_FRAME}
@@ -231,7 +233,7 @@ export const PlayerScreen = ({ id, sourceUrl, sourceName }: PlayerScreenProps) =
         navigationBarTitleDisplayMode="inline"
         background={<ScreenBackground />}
         toolbarBackground={palette.bg}
-        toolbarColorScheme="dark"
+        toolbarColorScheme={colorScheme}
         toolbar={{ cancellationAction: <Button title="返回" action={dismiss} /> }}
       >
         {/* 播放器区域 */}
@@ -263,7 +265,7 @@ export const PlayerScreen = ({ id, sourceUrl, sourceName }: PlayerScreenProps) =
         </VStack>
 
         {!!playError && (
-          <Text font="footnote" foregroundStyle={palette.gold} padding={16}>
+          <Text font="footnote" foregroundStyle={palette.warning} padding={16}>
             {playError}
           </Text>
         )}

@@ -25,6 +25,7 @@ import { SourceEditor } from './SourceEditor'
 import { ScreenBackground } from '../components/ScreenBackground'
 import { EmptyView } from '../components/StateView'
 import { accentGlow, brandGradient, palette } from '../theme'
+import { usePreferredColorScheme } from '../hooks/useThemeMode'
 import type { ApiSource, SourceManagementScreenProps, SourceRowProps } from '../types'
 
 type SourceTab = 'enabled' | 'disabled'
@@ -39,14 +40,14 @@ const CURRENT_BACKGROUND = (
   </ZStack>
 )
 
-/** 首字图标配色：按域名固定取色，同一个源每次颜色一致，方便在长列表里扫读 */
+/** 首字图标配色：按域名固定取色，同一个源每次颜色一致，方便在长列表里扫读；日间用加深的同色相保证对比度 */
 const MONOGRAM_TINTS = [
-  { fg: '#C084FC', bg: 'rgba(192,132,252,0.16)' },
-  { fg: '#F472B6', bg: 'rgba(244,114,182,0.16)' },
-  { fg: '#818CF8', bg: 'rgba(129,140,248,0.16)' },
-  { fg: '#60A5FA', bg: 'rgba(96,165,250,0.16)' },
-  { fg: '#2DD4BF', bg: 'rgba(45,212,191,0.16)' },
-  { fg: '#FBBF24', bg: 'rgba(251,191,36,0.16)' }
+  { fg: { light: '#9333EA', dark: '#C084FC' }, bg: 'rgba(192,132,252,0.16)' },
+  { fg: { light: '#DB2777', dark: '#F472B6' }, bg: 'rgba(244,114,182,0.16)' },
+  { fg: { light: '#4F46E5', dark: '#818CF8' }, bg: 'rgba(129,140,248,0.16)' },
+  { fg: { light: '#2563EB', dark: '#60A5FA' }, bg: 'rgba(96,165,250,0.16)' },
+  { fg: { light: '#0D9488', dark: '#2DD4BF' }, bg: 'rgba(45,212,191,0.16)' },
+  { fg: { light: '#D97706', dark: '#FBBF24' }, bg: 'rgba(251,191,36,0.16)' }
 ] as const
 
 const TAB_LABELS: Record<SourceTab, string> = { enabled: '已启用', disabled: '已停用' }
@@ -67,7 +68,7 @@ const tintFor = (key: string) => {
 const SourceMonogram = ({ source, size, variant }: { source: ApiSource; size: number; variant: MonogramVariant }) => {
   const tint = tintFor(getHost(source.url))
   const foreground = variant === 'current' ? '#FFFFFF' : variant === 'disabled' ? palette.textTertiary : tint.fg
-  const background = variant === 'current' ? brandGradient : variant === 'disabled' ? 'rgba(255,255,255,0.06)' : tint.bg
+  const background = variant === 'current' ? brandGradient : variant === 'disabled' ? palette.fillMuted : tint.bg
 
   return (
     <Text
@@ -138,7 +139,7 @@ const SourceRow = ({ source, onSelect, onToggle, onEdit, onDelete }: SourceRowPr
       contentShape="rect"
       onTapGesture={onSelect}
       listRowBackground={ROW_BACKGROUND}
-      listRowSeparatorTint="rgba(255,255,255,0.06)"
+      listRowSeparatorTint="rgba(128,128,140,0.16)"
       leadingSwipeActions={{
         allowsFullSwipe: true,
         actions: [
@@ -176,7 +177,7 @@ const SourceRow = ({ source, onSelect, onToggle, onEdit, onDelete }: SourceRowPr
           <Text
             font="subheadline"
             bold
-            foregroundStyle="#D8B4FE"
+            foregroundStyle={palette.accentInk}
             padding={{ horizontal: 14, vertical: 7 }}
             background="rgba(168,85,247,0.18)"
             clipShape="capsule"
@@ -236,6 +237,7 @@ const SectionCaption = ({ title, hint }: { title: string; hint?: string }) => (
 
 export const SourceManagementScreen = ({ icloudSyncEnabled, onRequestSync, onSourcesChange }: SourceManagementScreenProps) => {
   const [sources, setSources] = useState<ApiSource[]>(() => SettingsService.getSources())
+  const colorScheme = usePreferredColorScheme()
   const [storedIndex, setStoredIndex] = useState(() => SettingsService.getCurrentSourceIndex())
   const [tab, setTab] = useState<SourceTab>('enabled')
   const currentIndex = SettingsService.resolveCurrentIndex(sources, storedIndex)
@@ -352,13 +354,13 @@ export const SourceManagementScreen = ({ icloudSyncEnabled, onRequestSync, onSou
     )
 
   return (
-    <NavigationStack preferredColorScheme="dark" tint={palette.accent}>
+    <NavigationStack preferredColorScheme={colorScheme} tint={palette.accent}>
       <List
         foregroundStyle={palette.textPrimary}
         background={<ScreenBackground />}
         scrollContentBackground="hidden"
         toolbarBackground={palette.bg}
-        toolbarColorScheme="dark"
+        toolbarColorScheme={colorScheme}
         navigationTitle="视频源"
         navigationBarTitleDisplayMode="inline"
         listSectionSpacing="compact"

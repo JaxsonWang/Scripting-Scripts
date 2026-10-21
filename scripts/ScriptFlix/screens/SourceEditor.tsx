@@ -1,10 +1,12 @@
 import { Button, Form, Navigation, NavigationStack, Rectangle, Section, Text, TextField, useState } from 'scripting'
 import { ScreenBackground } from '../components/ScreenBackground'
 import { palette } from '../theme'
+import { usePreferredColorScheme } from '../hooks/useThemeMode'
 import type { SourceEditorProps } from '../types'
 
 export const SourceEditor = ({ title, initialName, initialUrl, onSave }: SourceEditorProps) => {
   const dismiss = Navigation.useDismiss()
+  const colorScheme = usePreferredColorScheme()
   const [name, setName] = useState(initialName)
   const [url, setUrl] = useState(initialUrl)
   const canSubmit = name.trim().length > 0 && url.trim().length > 0
@@ -18,13 +20,13 @@ export const SourceEditor = ({ title, initialName, initialUrl, onSave }: SourceE
   }
 
   return (
-    <NavigationStack preferredColorScheme="dark" tint={palette.accent}>
+    <NavigationStack preferredColorScheme={colorScheme} tint={palette.accent}>
       <Form
         foregroundStyle={palette.textPrimary}
         background={<ScreenBackground />}
         scrollContentBackground="hidden"
         toolbarBackground={palette.bg}
-        toolbarColorScheme="dark"
+        toolbarColorScheme={colorScheme}
         navigationTitle={title}
         toolbar={{
           cancellationAction: <Button title="取消" action={dismiss} />,

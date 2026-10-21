@@ -6,6 +6,7 @@ import { FilterChip } from '../components/FilterChip'
 import { ScreenBackground } from '../components/ScreenBackground'
 import { EmptyView } from '../components/StateView'
 import { FULL_SCREEN_FRAME, palette } from '../theme'
+import { usePreferredColorScheme } from '../hooks/useThemeMode'
 import type { HistoryEntry } from '../types'
 
 const GRID_COLUMNS = [
@@ -25,6 +26,7 @@ const formatTime = (timestamp: number) => {
 
 export const HistoryScreen = ({ embedded = false }: { embedded?: boolean }) => {
   const dismiss = Navigation.useDismiss()
+  const colorScheme = usePreferredColorScheme()
   const [history, setHistory] = useState<HistoryEntry[]>(() => HistoryService.getHistory())
 
   const refreshHistory = () => {
@@ -81,7 +83,7 @@ export const HistoryScreen = ({ embedded = false }: { embedded?: boolean }) => {
   return embedded ? (
     content
   ) : (
-    <NavigationStack preferredColorScheme="dark" tint={palette.accent}>
+    <NavigationStack preferredColorScheme={colorScheme} tint={palette.accent}>
       {content}
     </NavigationStack>
   )

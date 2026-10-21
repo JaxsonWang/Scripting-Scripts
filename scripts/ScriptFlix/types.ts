@@ -200,3 +200,30 @@ export interface FilterChipProps {
   onTap: () => void
   count?: number
 }
+
+/** 小组件每日推荐的一条精简记录，只保留展示和打开播放页需要的字段 */
+export type DailyPick = {
+  id: number
+  name: string
+  pic: string
+  /** 推荐栏目：电影 / 剧集，分类无法识别时为「最新」 */
+  lane: string
+  typeName: string
+  remarks: string
+  year: string
+  area: string
+  /** 已格式化的评分，无评分时为空串 */
+  score: string
+  blurb: string
+}
+
+/** 当天、当前源的推荐快照；同一天内各尺寸小组件共用 */
+export type DailyPicksSnapshot = {
+  day: string
+  sourceUrl: string
+  sourceName: string
+  picks: DailyPick[]
+}
+
+/** 从小组件打开 App 时直接进入的播放页 */
+export type LaunchTarget = PlayerScreenProps

@@ -49,8 +49,8 @@ export const HeroCard = ({ video, width, onTap }: HeroCardProps) => {
             </Text>
             <Spacer />
             <HStack spacing={5} alignment="center" padding={{ horizontal: 14, vertical: 7 }} background="#FFFFFF" clipShape="capsule">
-              <Image systemName="play.fill" font={11} foregroundStyle={palette.bg} />
-              <Text font="caption" bold foregroundStyle={palette.bg}>
+              <Image systemName="play.fill" font={11} foregroundStyle={palette.ink} />
+              <Text font="caption" bold foregroundStyle={palette.ink}>
                 播放
               </Text>
             </HStack>

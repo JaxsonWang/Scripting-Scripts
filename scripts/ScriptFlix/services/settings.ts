@@ -1,3 +1,4 @@
+import { Widget } from 'scripting'
 import type { ApiSource } from '../types'
 
 // Cast to any to avoid conflict with DOM Storage interface
@@ -16,11 +17,12 @@ const getSources = (): ApiSource[] => {
 }
 
 /**
- * 持久化视频源数组
+ * 持久化视频源数组；小组件按当前源推荐，源变化后一并刷新
  * @param sources 新的视频源数组
  */
 const saveSources = (sources: ApiSource[]) => {
   AppStorage.set(STORAGE_KEY_SOURCES, sources)
+  Widget.reloadAll()
 }
 
 /**
@@ -32,11 +34,12 @@ const getCurrentSourceIndex = (): number => {
 }
 
 /**
- * 保存当前视频源下标
+ * 保存当前视频源下标，并刷新按当前源推荐的小组件
  * @param index 需要保存的下标
  */
 const saveCurrentSourceIndex = (index: number) => {
   AppStorage.set(STORAGE_KEY_INDEX, index)
+  Widget.reloadAll()
 }
 
 const isSourceEnabled = (source: ApiSource): boolean => !source.disabled
