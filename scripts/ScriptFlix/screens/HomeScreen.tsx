@@ -25,7 +25,7 @@ const GRID_COLUMNS = [
  */
 export const HomeScreen = () => {
   const [source, setSource] = useState(SettingsService.getCurrentSource())
-  const [sources, setSources] = useState<ApiSource[]>(() => SettingsService.getSources())
+  const [sources, setSources] = useState<ApiSource[]>(() => SettingsService.getEnabledSources())
   const [videos, setVideos] = useState<VideoItem[]>([])
   const [categories, setCategories] = useState<Category[]>([])
   const [loading, setLoading] = useState(false)
@@ -65,7 +65,7 @@ export const HomeScreen = () => {
     async (targetPage: number = 1, append = false) => {
       const currentSource = SettingsService.getCurrentSource()
       setSource(currentSource)
-      setSources(SettingsService.getSources())
+      setSources(SettingsService.getEnabledSources())
 
       if (!currentSource) {
         setVideos([])
@@ -168,12 +168,11 @@ export const HomeScreen = () => {
    * 切换当前视频源
    */
   const handleSelectSource = useCallback(
-    (index: number) => {
-      const next = sources[index]
-      if (!next || next.url === source?.url) {
+    (next: ApiSource) => {
+      if (next.url === source?.url) {
         return
       }
-      SettingsService.saveCurrentSourceIndex(index)
+      SettingsService.selectSourceByUrl(next.url)
       setSource(next)
       setCategories([])
       setSelectedMainType(null)
@@ -182,7 +181,7 @@ export const HomeScreen = () => {
       setPage(1)
       setHasMore(true)
     },
-    [sources, source?.url]
+    [source?.url]
   )
 
   /**
@@ -239,7 +238,7 @@ export const HomeScreen = () => {
       <ScrollView axes="horizontal" scrollIndicator="hidden">
         <HStack spacing={8} padding={{ horizontal: 16 }}>
           {sources.map((item, index) => (
-            <FilterChip key={`${item.url}-${index}`} label={item.name} active={source.url === item.url} onTap={() => handleSelectSource(index)} />
+            <FilterChip key={`${item.url}-${index}`} label={item.name} active={source.url === item.url} onTap={() => handleSelectSource(item)} />
           ))}
         </HStack>
       </ScrollView>

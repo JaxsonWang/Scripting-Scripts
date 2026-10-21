@@ -39,13 +39,70 @@ const saveCurrentSourceIndex = (index: number) => {
   AppStorage.set(STORAGE_KEY_INDEX, index)
 }
 
+const isSourceEnabled = (source: ApiSource): boolean => !source.disabled
+
 /**
- * 读取当前启用的视频源，在缺省时退回到首个可用项
+ * 解析实际生效的当前源下标：存储下标指向已停用或不存在的源时取首个启用源，没有启用源时返回 -1
+ * @param sources 视频源数组
+ * @param index 存储的当前下标
+ */
+const resolveCurrentIndex = (sources: ApiSource[], index: number): number => {
+  const current = sources[index]
+  return current && isSourceEnabled(current) ? index : sources.findIndex(isSourceEnabled)
+}
+
+/**
+ * 读取当前生效的视频源；全部停用或为空时返回 null
  */
 const getCurrentSource = (): ApiSource | null => {
   const sources = getSources()
-  const index = getCurrentSourceIndex()
-  return sources.length > 0 ? sources[index] || sources[0] : null
+  const index = resolveCurrentIndex(sources, getCurrentSourceIndex())
+  return index >= 0 ? sources[index] : null
+}
+
+/**
+ * 读取已启用的视频源，供首页切换与全源搜索使用
+ */
+const getEnabledSources = (): ApiSource[] => getSources().filter(isSourceEnabled)
+
+/**
+ * 按 URL 切换当前视频源
+ * @param url 目标源地址
+ */
+const selectSourceByUrl = (url: string) => {
+  const index = getSources().findIndex(source => source.url === url)
+  if (index >= 0) {
+    saveCurrentSourceIndex(index)
+  }
+}
+
+/**
+ * 启用或停用指定视频源；停用当前源时，当前源移交给首个仍启用的源
+ * @param index 目标下标
+ * @param enabled 是否启用
+ */
+const setSourceEnabled = (index: number, enabled: boolean) => {
+  const sources = getSources().map((source, i) => {
+    if (i !== index) {
+      return source
+    }
+    const { disabled: _disabled, ...rest } = source
+    return enabled ? rest : { ...rest, disabled: true }
+  })
+  saveSources(sources)
+
+  if (!enabled && getCurrentSourceIndex() === index) {
+    saveCurrentSourceIndex(Math.max(resolveCurrentIndex(sources, index), 0))
+  }
+}
+
+/**
+ * 更新指定视频源的名称与地址，保留启用状态
+ * @param index 目标下标
+ * @param patch 新的名称与地址
+ */
+const updateSource = (index: number, patch: Pick<ApiSource, 'name' | 'url'>) => {
+  saveSources(getSources().map((source, i) => (i === index ? { ...source, ...patch } : source)))
 }
 
 /**
@@ -83,6 +140,12 @@ export const SettingsService = {
   getCurrentSourceIndex,
   saveCurrentSourceIndex,
   getCurrentSource,
+  getEnabledSources,
+  isSourceEnabled,
+  resolveCurrentIndex,
+  selectSourceByUrl,
+  setSourceEnabled,
+  updateSource,
   addSource,
   removeSource
 }

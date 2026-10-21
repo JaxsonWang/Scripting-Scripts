@@ -62,14 +62,14 @@ export const SearchScreen = ({ embedded = false }: { embedded?: boolean }) => {
   const [results, setResults] = useState<SearchResultItem[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [sources, setSources] = useState<ApiSource[]>(() => SettingsService.getSources())
+  const [sources, setSources] = useState<ApiSource[]>(() => SettingsService.getEnabledSources())
   const [sourceStates, setSourceStates] = useState<SourceStateMap>({})
   const [selectedSource, setSelectedSource] = useState<string>('all')
   const [lastKeyword, setLastKeyword] = useState('')
   const activeRequestRef = useRef(0)
 
   useEffect(() => {
-    setSources(SettingsService.getSources())
+    setSources(SettingsService.getEnabledSources())
   }, [])
 
   useEffect(() => {
@@ -124,11 +124,11 @@ export const SearchScreen = ({ embedded = false }: { embedded?: boolean }) => {
       return
     }
 
-    const activeSources = SettingsService.getSources()
+    const activeSources = SettingsService.getEnabledSources()
     setSources(activeSources)
 
     if (activeSources.length === 0) {
-      setError('请先在设置里添加数据源')
+      setError('请先在设置里添加或启用视频源')
       return
     }
 

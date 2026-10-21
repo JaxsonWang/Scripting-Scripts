@@ -42,7 +42,8 @@ export const SettingsScreen = () => {
   const [icloudSyncEnabled, setIcloudSyncEnabled] = useState<boolean>(() => AppStorage.get(ICLOUD_SYNC_KEY) ?? false)
   const [syncing, setSyncing] = useState(false)
   const [lastSyncedAt, setLastSyncedAt] = useState<number | null>(null)
-  const [sourceCount, setSourceCount] = useState(() => SettingsService.getSources().length)
+  const [sources, setSources] = useState(() => SettingsService.getSources())
+  const enabledSourceCount = sources.filter(SettingsService.isSourceEnabled).length
 
   const getIcloudSettingsPath = () => {
     if (!FileManager.isiCloudEnabled) {
@@ -57,7 +58,7 @@ export const SettingsScreen = () => {
   const applySnapshot = (snapshot: CloudSnapshot) => {
     if (Array.isArray(snapshot.sources)) {
       SettingsService.saveSources(snapshot.sources)
-      setSourceCount(snapshot.sources.length)
+      setSources(snapshot.sources)
     }
     if (typeof snapshot.currentSourceIndex === 'number') {
       SettingsService.saveCurrentSourceIndex(snapshot.currentSourceIndex)
@@ -113,7 +114,7 @@ export const SettingsScreen = () => {
     if (value) {
       const restored = await restoreSettingsFromICloud()
       if (restored) {
-        setSourceCount(SettingsService.getSources().length)
+        setSources(SettingsService.getSources())
       }
       await syncSettingsToICloud()
     }
@@ -140,18 +141,12 @@ export const SettingsScreen = () => {
       >
         <Section listRowBackground={<Rectangle fill={palette.card} />} header={<Text>视频源</Text>}>
           <NavigationLink
-            destination={
-              <SourceManagementScreen
-                icloudSyncEnabled={icloudSyncEnabled}
-                onRequestSync={syncSettingsToICloud}
-                onSourcesChange={count => setSourceCount(count)}
-              />
-            }
+            destination={<SourceManagementScreen icloudSyncEnabled={icloudSyncEnabled} onRequestSync={syncSettingsToICloud} onSourcesChange={setSources} />}
           >
             <VStack alignment="leading" spacing={2}>
               <Text foregroundStyle={palette.accent}>视频源管理</Text>
               <Text font="caption2" foregroundStyle={palette.textSecondary}>
-                共 {sourceCount} 个源
+                {`已启用 ${enabledSourceCount} 个 · 共 ${sources.length} 个`}
               </Text>
             </VStack>
           </NavigationLink>

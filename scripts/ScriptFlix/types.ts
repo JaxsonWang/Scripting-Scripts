@@ -104,6 +104,8 @@ export interface Category {
 export interface ApiSource {
   name: string
   url: string
+  /** 为 true 时不参与首页浏览与全源搜索；缺省视为启用，兼容旧存储与 iCloud 备份 */
+  disabled?: boolean
 }
 
 export type HistoryEntry = {
@@ -180,8 +182,8 @@ export type CloudSnapshot = {
 
 export type SourceRowProps = {
   source: ApiSource
-  active: boolean
   onSelect: () => void
+  onToggle: (enabled: boolean) => void
   onEdit: () => void
   onDelete: () => void
 }
@@ -189,7 +191,7 @@ export type SourceRowProps = {
 export type SourceManagementScreenProps = {
   icloudSyncEnabled: boolean
   onRequestSync: () => Promise<void> | void
-  onSourcesChange?: (count: number) => void
+  onSourcesChange?: (sources: ApiSource[]) => void
 }
 
 export interface FilterChipProps {

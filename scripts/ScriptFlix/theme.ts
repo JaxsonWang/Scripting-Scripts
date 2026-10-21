@@ -22,6 +22,13 @@ export const brandGradient: LinearGradient = {
   endPoint: 'bottomTrailing'
 }
 
+/** 品牌色低透明度光晕，叠在卡片上标记「当前」等高亮状态 */
+export const accentGlow: LinearGradient = {
+  colors: ['rgba(168,85,247,0.30)', 'rgba(236,72,153,0.10)'],
+  startPoint: 'topLeading',
+  endPoint: 'bottomTrailing'
+}
+
 /** 海报/头图底部压暗渐变，保证文字可读 */
 export const posterScrim: LinearGradient = {
   colors: ['rgba(7,6,12,0)', 'rgba(7,6,12,0.85)'],

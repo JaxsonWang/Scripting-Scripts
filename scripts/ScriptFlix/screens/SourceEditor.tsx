@@ -33,7 +33,15 @@ export const SourceEditor = ({ title, initialName, initialUrl, onSave }: SourceE
       >
         <Section listRowBackground={<Rectangle fill={palette.card} />} header={<Text>信息</Text>}>
           <TextField title="名称" value={name} onChanged={setName} />
-          <TextField title="API 地址" value={url} onChanged={setUrl} />
+          <TextField
+            title="API 地址"
+            prompt="https://example.com/api.php/provide/vod"
+            value={url}
+            onChanged={setUrl}
+            keyboardType="URL"
+            textInputAutocapitalization="never"
+            autocorrectionDisabled
+          />
         </Section>
       </Form>
     </NavigationStack>
