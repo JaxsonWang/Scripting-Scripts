@@ -5,6 +5,7 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
+    "pack": "node pack.mjs",
     "serve": "pnpx scripting-cli start --no-auto-open --bonjour",
     "watch": "tsx watch.ts",
     "lint": "eslint . --ext .js,.jsx,.ts,.tsx --fix",

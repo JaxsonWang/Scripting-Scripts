@@ -24,6 +24,25 @@ pnpm run serve # 使用 Scripting 开发模式
 pnpm run watch # 监听文件变化同步到 iCloud 网盘，开发模式效率比上面高一些
 ```
 
+### 打包脚本
+
+运行以下命令，查看 `scripts/` 下的脚本列表，输入编号多选（例如 `1 3` 或 `1,3`）；直接回车取消：
+
+```bash
+pnpm run pack
+```
+
+也可以直接指定一个或多个文件夹名，名称包含空格时加引号：
+
+```bash
+pnpm run pack ScriptFlix
+pnpm run pack ScriptFlix 一言小组件
+```
+
+每个选中的脚本分别生成 `releases/<文件夹名>.scripting`，成功后覆盖同名旧包。仅列出 `scripts/` 下包含 `script.json` 的直属文件夹，打包内容为该文件夹内的全部文件（排除 `.DS_Store`、`__MACOSX`），不额外嵌套脚本文件夹，也不会残留旧包中的已删除文件。发布前请确认文件夹内没有私人配置或凭据。
+
+打包使用系统 `zip` 命令；macOS 通常已预装，其他环境需自行安装。
+
 ## 📁 项目结构
 
 ```
@@ -41,6 +60,7 @@ scripts/
 |------|------|
 | `pnpm run serve` | 启动开发服务器 |
 | `pnpm run watch` | 监听文件变化 |
+| `pnpm run pack` | 多选脚本并打包到 releases |
 | `pnpm run lint` | 代码检查并自动修复 |
 | `pnpm run format` | 代码格式化 |
 | `pnpm run type-check` | TypeScript 类型检查 |
