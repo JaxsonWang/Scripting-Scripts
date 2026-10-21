@@ -41,6 +41,8 @@ export const SettingsPage = () => {
 
   // 获取字体颜色设置
   const oilSettings = getCurrentSettings()
+  const [preferredOilType, setPreferredOilType] = useState<OilTypeValue>(() => oilSettings.preferredOilType)
+  const [tankCapacity, setTankCapacity] = useState<number>(() => oilSettings.tankCapacity)
   const [lightModeColor, setLightModeColor] = useState<Color>(() => oilSettings.lightModeColor || '#000000')
   const [darkModeColor, setDarkModeColor] = useState<Color>(() => oilSettings.darkModeColor || '#FFFFFF')
 
@@ -115,6 +117,38 @@ export const SettingsPage = () => {
     const nextOilType = oilType as OilTypeValue
     setSmallWidgetOilTypeState(nextOilType)
     setSmallWidgetOilType(nextOilType)
+  }
+
+  const handlePreferredOilTypeChange = (oilType: string) => {
+    const nextOilType = oilType as OilTypeValue
+    setPreferredOilType(nextOilType)
+    saveSettings({ ...getCurrentSettings(), preferredOilType: nextOilType })
+  }
+
+  const handleTankCapacityChange = async () => {
+    try {
+      const value = await Dialog.prompt({
+        title: '油箱大小（L）',
+        message: '单位为 L（升），支持小数。',
+        defaultValue: String(tankCapacity),
+        keyboardType: 'decimalPad',
+        confirmLabel: '保存',
+        cancelLabel: '取消'
+      })
+      if (value === null) return
+
+      const capacity = Number(value)
+      if (!Number.isFinite(capacity) || capacity <= 0) {
+        await Dialog.alert({ title: '油箱大小无效', message: '请输入大于 0 的容量，单位为 L（升），例如 73 或 50.5。' })
+        return
+      }
+
+      saveSettings({ ...getCurrentSettings(), tankCapacity: capacity })
+      setTankCapacity(capacity)
+    } catch (error) {
+      console.error('设置油箱容量失败:', error)
+      await Dialog.alert({ title: '设置失败', message: '无法保存油箱容量，请重试。' })
+    }
   }
 
   // 更新字体颜色设置的函数
@@ -291,6 +325,30 @@ export const SettingsPage = () => {
             </Picker>
           </Section>
         ) : null}
+
+        <Section
+          header={<Text font="headline">加满油箱费用</Text>}
+          footer={
+            <Text font="footnote" foregroundStyle="secondaryLabel">
+              中号、大号组件按优先油号的当前单价 × 油箱容量估算整箱费用。
+            </Text>
+          }
+        >
+          <Picker title="优先展示油号" value={preferredOilType} onChanged={handlePreferredOilTypeChange}>
+            {oilTypeOptions.map(oil => (
+              <Text key={oil.value} tag={oil.value}>
+                {oil.label}
+              </Text>
+            ))}
+          </Picker>
+          <Button action={handleTankCapacityChange}>
+            <HStack>
+              <Text>油箱大小</Text>
+              <Spacer />
+              <Text foregroundStyle="secondaryLabel">{tankCapacity} L</Text>
+            </HStack>
+          </Button>
+        </Section>
 
         {/* 小号组件油标选择 */}
         <Section header={<Text font="headline">小号组件展示油标号</Text>}>

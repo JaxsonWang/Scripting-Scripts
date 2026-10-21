@@ -171,7 +171,9 @@ const DEFAULT_SETTINGS = {
   lightModeColor: '#000000', // 浅色模式字体颜色
   darkModeColor: '#FFFFFF', // 深色模式字体颜色
   enableColorBackground: false, // 开启颜色背景
-  backgroundColors: [] // 背景颜色列表
+  backgroundColors: [], // 背景颜色列表
+  preferredOilType: '95' as OilTypeValue, // 加满费用使用的油号
+  tankCapacity: 73 // 油箱容量（升）
 }
 
 // 创建存储管理器实例
@@ -670,6 +672,19 @@ export const getSmallWidgetOilPriceItem = (data: CompleteOilData): OilPriceItem 
 export const getMediumWidgetOilPriceItems = (data: CompleteOilData): OilPriceItem[] => {
   const selectedOilTypes = getSelectedOilTypes(data.availableOilTypes)
   return selectedOilTypes.map(oilType => data.prices.find(item => item.type === oilType)).filter((item): item is OilPriceItem => Boolean(item))
+}
+
+/** 按优先油号的当前单价估算整箱费用，不使用预测涨跌幅。 */
+export const getRefuelEstimateText = (data: OilPriceData, settings: { preferredOilType: OilTypeValue; tankCapacity: number }): string => {
+  const { preferredOilType, tankCapacity } = settings
+  const oilLabel = oilTypeOptions.find(option => option.value === preferredOilType)!.label.replace('#', '号')
+  const item = data.prices.find(item => item.type === preferredOilType)
+  const price = Number(item?.price.replace(/[¥￥,\s]/g, ''))
+
+  if (!Number.isFinite(tankCapacity) || tankCapacity <= 0) return '请在设置中填写有效的油箱容量'
+  if (!Number.isFinite(price) || price <= 0) return `暂无${oilLabel}价格，无法估算加满费用`
+
+  return `预计加满${oilLabel}${tankCapacity}升需要${(price * tankCapacity).toFixed(2)}元`
 }
 
 /**

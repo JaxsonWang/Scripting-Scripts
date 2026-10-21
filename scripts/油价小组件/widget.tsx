@@ -6,6 +6,7 @@ import {
   getCurrentSettings,
   getDynamicTextColor,
   getMediumWidgetOilPriceItems,
+  getRefuelEstimateText,
   getSmallWidgetOilPriceItem,
   getTrendColor,
   getTrendSymbol
@@ -105,11 +106,11 @@ const getLargeWidgetLayout = (itemCount: number) => {
     return {
       footerFontSize: 11,
       forecastFontSize: 12,
-      labelFontSize: 26,
-      priceFontSize: 21,
-      rowSpacing: 5,
-      sectionSpacing: 8,
-      verticalPadding: 14
+      labelFontSize: 22,
+      priceFontSize: 19,
+      rowSpacing: 4,
+      sectionSpacing: 6,
+      verticalPadding: 12
     }
   }
 
@@ -215,7 +216,7 @@ const WidgetView = ({ data }: { data: CompleteOilData }) => {
 
       return (
         <VStack widgetBackground={widgetBackground}>
-          <VStack padding={{ vertical: 14 }}>
+          <VStack spacing={4} padding={{ vertical: 10 }}>
             <HStack spacing={4} alignment="bottom" padding={{ horizontal: 16 }}>
               <Image systemName="fuelpump.fill" font="body" foregroundStyle="systemOrange" />
               <Text font="body" fontWeight="bold" foregroundStyle={textColor}>
@@ -224,7 +225,7 @@ const WidgetView = ({ data }: { data: CompleteOilData }) => {
               <Spacer />
             </HStack>
 
-            <Spacer />
+            <Spacer minLength={0} />
 
             <HStack spacing={16} padding={{ horizontal: 24 }}>
               {mediumOilPriceItems.map(item => (
@@ -242,19 +243,24 @@ const WidgetView = ({ data }: { data: CompleteOilData }) => {
               ))}
             </HStack>
 
-            <Spacer />
+            <Spacer minLength={0} />
 
-            <HStack spacing={2} alignment="center">
-              <Text font={10} foregroundStyle={textColor}>
-                {data.lastUpdated}刷新
+            <VStack spacing={3}>
+              <Text font={11} foregroundStyle={textColor} lineLimit={1} minScaleFactor={0.8} padding={{ horizontal: 16 }}>
+                {getRefuelEstimateText(data, oilSettings)}
               </Text>
-              <Text font={10} foregroundStyle={textColor}>
-                •
-              </Text>
-              <Text font={10} foregroundStyle={textColor}>
-                {data.forecastDate + getTrendText(data.priceDirection)}调整
-              </Text>
-            </HStack>
+              <HStack spacing={2} alignment="center">
+                <Text font={10} foregroundStyle={textColor}>
+                  {data.lastUpdated}刷新
+                </Text>
+                <Text font={10} foregroundStyle={textColor}>
+                  •
+                </Text>
+                <Text font={10} foregroundStyle={textColor}>
+                  {data.forecastDate + getTrendText(data.priceDirection)}调整
+                </Text>
+              </HStack>
+            </VStack>
           </VStack>
         </VStack>
       )
@@ -289,17 +295,22 @@ const WidgetView = ({ data }: { data: CompleteOilData }) => {
             ))}
           </VStack>
           <Spacer />
-          <HStack spacing={2} alignment="center">
+          <VStack spacing={4}>
             <Text font={layout.footerFontSize} foregroundStyle={textColor} lineLimit={1} minScaleFactor={0.8}>
-              {data.lastUpdated}刷新
+              {getRefuelEstimateText(data, oilSettings)}
             </Text>
-            <Text font={layout.footerFontSize} foregroundStyle={textColor}>
-              •
-            </Text>
-            <Text font={layout.footerFontSize} foregroundStyle={textColor} lineLimit={1} minScaleFactor={0.8}>
-              {data.forecastDate + getTrendText(data.priceDirection)}调整
-            </Text>
-          </HStack>
+            <HStack spacing={2} alignment="center">
+              <Text font={layout.footerFontSize} foregroundStyle={textColor} lineLimit={1} minScaleFactor={0.8}>
+                {data.lastUpdated}刷新
+              </Text>
+              <Text font={layout.footerFontSize} foregroundStyle={textColor}>
+                •
+              </Text>
+              <Text font={layout.footerFontSize} foregroundStyle={textColor} lineLimit={1} minScaleFactor={0.8}>
+                {data.forecastDate + getTrendText(data.priceDirection)}调整
+              </Text>
+            </HStack>
+          </VStack>
         </VStack>
       )
     }
