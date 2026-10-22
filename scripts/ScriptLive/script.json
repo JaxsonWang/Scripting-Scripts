@@ -1,8 +1,8 @@
 {
   "name": "ScriptLive",
   "intentInputTypes": [],
-  "version": "1.0.0",
-  "icon": "dot.radiowaves.left.and.right",
+  "version": "1.0.1",
+  "icon": "play.rectangle.on.rectangle.fill",
   "author": {
     "homepage": "https://github.com/JaxsonWang",
     "email": "jaxson.j.wang@gmail.com",

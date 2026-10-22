@@ -22,7 +22,7 @@ export type WebInlineSupport = { playsInline: boolean; inlineAllowed: boolean }
  */
 const PAGE_ORIGIN: Record<SiteId, string> = {
   bilibili: 'https://live.bilibili.com/',
-  douyu: 'https://www.douyu.com/',
+  douyu: 'https://m.douyu.com/',
   huya: 'https://www.huya.com/',
   douyin: 'https://live.douyin.com/'
 }

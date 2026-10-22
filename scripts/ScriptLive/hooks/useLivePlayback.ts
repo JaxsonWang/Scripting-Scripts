@@ -36,16 +36,32 @@ const INITIAL: PlaybackState = {
   inline: null
 }
 
+/** 原生播放器的画中画状态；设备不支持或非 Pro 时整体为 null */
+export type PictureInPictureState = {
+  /** 源视图在屏幕上且系统允许启动 */
+  possible: boolean
+  /** 系统画中画窗口正在运行 */
+  active: boolean
+}
+
 const withHttps = (line: LivePlayLine, forceHttps: boolean): LivePlayLine => (forceHttps ? { ...line, url: line.url.replace(/^http:\/\//, 'https://') } : line)
 
 /**
  * 直播播放：Pro 用户（Script.hasFullAccess）使用原生 AVPlayer，免费用户使用网页播放器。
  * AVPlayer 只能播放 HLS；Pro 用户遇到只提供 FLV 的清晰度时改用网页播放器，并通过 note 在界面上说明原因。
  * 当前线路出错时自动切到下一条，全部失败后停在错误状态，由用户切换清晰度或重试。
+ * 原生播放器支持系统画中画（VideoPictureInPictureController），AVPlayerView 需以 layer 模式绑定 pictureInPicture 句柄。
  */
 export const useLivePlayback = (siteId: SiteId) => {
   const [isPro] = useState(() => Script.hasFullAccess())
   const [state, setState] = useState<PlaybackState>(INITIAL)
+  /** 整个直播间共用一个句柄：重渲染、换线路都不替换，离开页面时释放 */
+  const [pip] = useState(() => (isPro && VideoPictureInPictureController.isSupported() ? new VideoPictureInPictureController() : null))
+  const [pipState, setPipState] = useState<PictureInPictureState>({ possible: false, active: false })
+  /** 等待画中画 didStop 的换源请求 */
+  const pipStopWaiters = useRef<(() => void)[]>([])
+  /** 用户暂停了原生播放器：起播就绪时不再自动开始 */
+  const userPausedRef = useRef(false)
   const nativeRef = useRef<AVPlayer | null>(null)
   const webRef = useRef<WebLivePlayer | null>(null)
   const sourceRef = useRef<{ lines: LivePlayLine[]; headers?: Record<string, string>; engine: PlaybackEngine } | null>(null)
@@ -83,19 +99,30 @@ export const useLivePlayback = (siteId: SiteId) => {
     }
   }
 
+  /** 系统要求替换视频前先停止画中画并等到 didStop */
+  const exitPictureInPicture = async () => {
+    if (!pip?.isActive) return
+    await new Promise<void>(resolve => {
+      pipStopWaiters.current.push(resolve)
+      pip.stop()
+    })
+  }
+
   const playLine = async (index: number) => {
     const source = sourceRef.current
     const line = source?.lines[index]
     if (!source || !line) return
     const token = ++tokenRef.current
     lineRef.current = index
+    userPausedRef.current = false
     patch({ lineIndex: index, status: 'loading' })
     try {
       if (source.engine === 'native') {
         const player = await ensureNative()
+        await exitPictureInPicture()
         if (token !== tokenRef.current) return
         player.onReadyToPlay = () => {
-          if (token !== tokenRef.current) return
+          if (token !== tokenRef.current || userPausedRef.current) return
           if (!player.play()) fail(token, '原生播放器无法开始播放')
         }
         player.onError = message => fail(token, message)
@@ -104,7 +131,7 @@ export const useLivePlayback = (siteId: SiteId) => {
           if (token !== tokenRef.current) return
           if (status === TimeControlStatus.playing) patch({ status: 'playing', error: null })
           else if (status === TimeControlStatus.waitingToPlayAtSpecifiedRate) patch({ status: 'buffering' })
-          // 起播前也会报告 paused，只有播放开始后的暂停（如锁屏控制中心）才更新界面
+          // 起播前也会报告 paused，只有播放开始后的暂停（画中画窗口、锁屏控制中心）才更新界面
           else setState(current => (current.status === 'playing' || current.status === 'buffering' ? { ...current, status: 'paused' } : current))
         }
         const accepted = player.setSource(line.url, source.headers ? { headers: source.headers } : undefined)
@@ -152,19 +179,43 @@ export const useLivePlayback = (siteId: SiteId) => {
   const stopCurrent = async () => {
     tokenRef.current++
     nativeRef.current?.pause()
+    await exitPictureInPicture()
     await webRef.current?.stop()
   }
 
   /**
-   * 暂停或继续。直播继续播放时重新加载当前线路，回到直播进度而不是从暂停处接着播。
+   * 暂停或继续。直播继续播放时重新加载当前线路，回到直播进度而不是从暂停处接着播；
+   * 画中画期间换源会退出画中画，所以直接在原处继续。
+   * 原生播放器暂停时保留状态回调，画中画窗口和锁屏上的播放 / 暂停也能同步到界面。
    * @param paused 是否暂停
    */
   const setPaused = async (paused: boolean) => {
+    const native = sourceRef.current?.engine === 'native' ? nativeRef.current : null
+    if (native && paused) {
+      userPausedRef.current = true
+      native.pause()
+      patch({ status: 'paused' })
+      return
+    }
+    if (native && pip?.isActive) {
+      userPausedRef.current = false
+      if (!native.play()) fail(tokenRef.current, '原生播放器无法继续播放')
+      return
+    }
     if (!paused) return playLine(lineRef.current)
     tokenRef.current++
-    if (sourceRef.current?.engine === 'native') nativeRef.current?.pause()
-    else await webRef.current?.setPaused(true)
+    await webRef.current?.setPaused(true)
     patch({ status: 'paused' })
+  }
+
+  /** 开启或退出画中画。start() 只能在用户操作中调用，请求被拒绝或启动失败时提示原因 */
+  const togglePictureInPicture = async () => {
+    if (!pip) return
+    if (pip.isActive) {
+      pip.stop()
+      return
+    }
+    if (!pip.start()) await Dialog.alert({ title: '无法开启画中画', message: pip.lastError ?? '画面还没有准备好，请等视频开始播放后再试' })
   }
 
   /** 网页播放器因自动播放策略静音后，由用户点按恢复声音 */
@@ -179,24 +230,45 @@ export const useLivePlayback = (siteId: SiteId) => {
     setState(INITIAL)
   }
 
-  useEffect(
-    () => () => {
+  useEffect(() => {
+    if (pip) {
+      pip.onPossibleChanged = possible => setPipState(current => ({ ...current, possible }))
+      pip.onStateChanged = event => {
+        if (event === 'didStart') setPipState(current => ({ ...current, active: true }))
+        else if (event === 'didStop') {
+          setPipState(current => ({ ...current, active: false }))
+          for (const resolve of pipStopWaiters.current.splice(0)) resolve()
+        } else if (event === 'failedToStart') {
+          console.warn('[ScriptLive] 画中画启动失败', pip.lastError)
+          Dialog.alert({ title: '无法开启画中画', message: pip.lastError ?? '系统拒绝了画中画请求' }).catch(error =>
+            console.warn('[ScriptLive] 提示框显示失败', error)
+          )
+        }
+      }
+    }
+    return () => {
       tokenRef.current++
+      // 先释放画中画句柄，再释放它所依赖的播放器
+      pip?.dispose()
       nativeRef.current?.dispose()
       webRef.current?.dispose()
       if (audioReadyRef.current) SharedAudioSession.setActive(false).catch(error => console.warn('[ScriptLive] 释放音频会话失败', error))
-    },
-    []
-  )
+    }
+  }, [])
 
   return {
     isPro,
     state,
     nativePlayer: nativeRef.current,
     webController: webRef.current?.controller ?? null,
+    /** 绑定到 layer 模式 AVPlayerView 的画中画句柄 */
+    pipController: pip,
+    /** 仅原生播放器时有值 */
+    pictureInPicture: pip && state.engine === 'native' ? pipState : null,
     start,
     playLine,
     setPaused,
+    togglePictureInPicture,
     unmute,
     reset
   }

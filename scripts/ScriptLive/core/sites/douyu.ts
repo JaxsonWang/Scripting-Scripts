@@ -1,5 +1,5 @@
-import { md5Hex, randomString } from '../bytes'
-import { getJson, postForm } from '../http'
+import { randomString } from '../bytes'
+import { getJson, parseQuery, postForm } from '../http'
 import { decodeEntities } from '../text'
 import type {
   LiveAnchorItem,
@@ -15,12 +15,20 @@ import type {
   PagedResult
 } from '../types'
 import { DouyuDanmaku } from './douyu-danmaku'
+import { signDouyu } from './douyu-sign'
 
 // 斗鱼多个接口使用不同字段结构，在各方法内映射到统一模型。
 type ApiItem = Record<string, any>
-type DouyuPlayData = { rate: number; cdns: string[] }
+type DouyuPlayData = { rate: number }
+type DouyuStream = {
+  settings: { name: string; rate: number; high_bit: number }[]
+  url: string
+  pass: number
+}
 const BASE = 'https://www.douyu.com'
+const MOBILE = 'https://m.douyu.com'
 const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36'
+const MOBILE_UA = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1'
 const hot = (value: unknown): number => {
   const text = String(value)
   return Math.round(parseFloat(text) * (text.includes('万') ? 10000 : 1)) || 0
@@ -119,40 +127,38 @@ export class DouyuSite implements LiveSite {
       danmakuData: String(info.room_id)
     }
   }
-  /** 直接实现斗鱼官方 web-encrypt 的 MD5 计算，不执行页面下发的 JavaScript。 */
-  private async play(roomId: string, rate: number, cdn = ''): Promise<ApiItem> {
-    const encryption = await getJson(`${BASE}/wgapi/livenc/liveweb/websec/getEncryption`, { query: { did: this.did }, headers: this.headers(roomId) })
+  /** 移动端返回可直连的 HLS，清单及分片均由斗鱼携带签名。 */
+  private async play(roomId: string, rate: number): Promise<DouyuStream> {
+    const encryption = await getJson<{ error: number; msg: string; data: Record<string, string> }>(`${BASE}/swf_api/homeH5Enc`, {
+      query: { rids: roomId },
+      headers: this.headers(roomId)
+    })
     if (Number(encryption.error) !== 0) throw new Error(`斗鱼签名密钥获取失败：${encryption.msg}`)
-    const key = encryption.data
-    const tt = Math.floor(Date.now() / 1000)
-    let auth = String(key.rand_str)
-    for (let index = 0; index < Number(key.enc_time); index++) auth = md5Hex(auth + key.key)
-    auth = md5Hex(auth + key.key + (Number(key.is_special) === 1 ? '' : `${roomId}${tt}`))
-    const result = await postForm(
-      `${BASE}/lapi/live/getH5PlayV1/${roomId}`,
-      { enc_data: key.enc_data, tt, did: this.did, auth, cdn, rate, ver: 'Douyu_new', iar: 0, ive: 0, hevc: 0, fa: 0 },
-      { headers: this.headers(roomId) }
+    const signature = await signDouyu(encryption.data[`room${roomId}`], roomId, this.did)
+    const result = await postForm<{ error: number; msg: string; data: DouyuStream }>(
+      `${MOBILE}/hgapi/livenc/room/getStreamUrl`,
+      { ...parseQuery(signature), ver: '22011191', rid: roomId, rate },
+      { headers: { 'user-agent': MOBILE_UA, referer: `${MOBILE}/${roomId}` } }
     )
     if (Number(result.error) !== 0) throw new Error(`斗鱼播放接口失败：${result.msg} (${result.error})`)
+    if (result.data.pass) throw new Error('该斗鱼直播间需要密码，请在斗鱼官方客户端观看')
+    if (!result.data.url) throw new Error('斗鱼未返回移动端播放地址')
     return result.data
   }
   async getPlayQualities(detail: LiveRoomDetail): Promise<LivePlayQuality[]> {
     const data = await this.play(detail.roomId, -1)
-    const cdns = data.cdnsWithName
-      .map((item: ApiItem) => String(item.cdn))
-      .sort((a: string, b: string) => Number(a.startsWith('scdn')) - Number(b.startsWith('scdn')))
-    return data.multirates.map((item: ApiItem) => ({ quality: String(item.name), data: { rate: Number(item.rate), cdns }, sort: Number(item.bit) || 0 }))
+    return data.settings
+      .filter(item => item.high_bit === 0)
+      .map(item => ({
+        // 移动端 rate=0 也可能沿用桌面端的「原画2K」名称，实际流不一定达到该分辨率。
+        quality: item.rate === 0 ? '移动端默认' : `${item.name}（移动端）`,
+        data: { rate: item.rate }
+      }))
   }
   async getPlayUrls(detail: LiveRoomDetail, quality: LivePlayQuality): Promise<LivePlayUrl> {
     const data = quality.data as DouyuPlayData
-    const lines: LivePlayUrl['lines'] = []
-    for (const cdn of data.cdns) {
-      const play = await this.play(detail.roomId, data.rate, cdn)
-      const url = `${play.rtmp_url}/${play.rtmp_live}`.replace(/&amp;/g, '&')
-      lines.push({ url, format: url.includes('.m3u8') ? 'hls' : 'flv', name: cdn })
-    }
-    lines.sort((a, b) => Number(a.format === 'flv') - Number(b.format === 'flv'))
-    return { lines }
+    const play = await this.play(detail.roomId, data.rate)
+    return { lines: [{ url: play.url, format: 'hls', name: '移动端 HLS' }] }
   }
   async getLiveStatus(roomId: string): Promise<boolean> {
     const info = await this.roomInfo(roomId)

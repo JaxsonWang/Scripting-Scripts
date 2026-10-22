@@ -1,5 +1,6 @@
 import { Button, HStack, Image, Rectangle, Spacer, Text, VStack, ZStack, useEffect, useRef, useState } from 'scripting'
 import type { LinearGradient, VirtualNode } from 'scripting'
+import type { PictureInPictureState } from '../hooks/useLivePlayback'
 import { palette } from '../theme'
 
 /** 播放中无操作多久后收起控件 */
@@ -23,11 +24,14 @@ type Props = {
   /** 横屏底栏的直播角标文字，如「直播中 · 12.3万」 */
   badge?: string
   canRotate: boolean
+  /** 原生播放器的画中画状态；网页播放器或设备不支持时为 null，不显示按钮 */
+  pictureInPicture: PictureInPictureState | null
   onTogglePlay: () => void
   onUnmute: () => void
   onRefresh: () => void
   onEnterLandscape: () => void
   onExitLandscape: () => void
+  onTogglePictureInPicture: () => void
   /** 叠在点按层之上的状态内容：加载圈、错误与重试 */
   status?: VirtualNode | null
   /** 横屏顶栏右侧：清晰度、线路 */
@@ -36,9 +40,11 @@ type Props = {
   bottomTrailing?: VirtualNode | null
 }
 
-const ChromeButton = ({ icon, label, size = 17, action }: { icon: string; label: string; size?: number; action: () => void }) => (
-  <Button action={action} buttonStyle="plain" accessibilityLabel={label}>
-    <Image systemName={icon} font={size} foregroundStyle="#FFFFFF" frame={{ width: 36, height: 36 }} contentShape="rect" />
+type ChromeButtonProps = { icon: string; label: string; size?: number; disabled?: boolean; action: () => void }
+
+const ChromeButton = ({ icon, label, size = 17, disabled = false, action }: ChromeButtonProps) => (
+  <Button action={action} buttonStyle="plain" accessibilityLabel={label} disabled={disabled}>
+    <Image systemName={icon} font={size} foregroundStyle="#FFFFFF" opacity={disabled ? 0.38 : 1} frame={{ width: 36, height: 36 }} contentShape="rect" />
   </Button>
 )
 
@@ -47,7 +53,7 @@ const ChromeButton = ({ icon, label, size = 17, action }: { icon: string; label:
  * 视频与弹幕在它下面铺满整屏；控件本身留在安全区内，避开刘海和底部横条。
  */
 export const PlayerChrome = (props: Props) => {
-  const { landscape, pinned, canPlay, paused, muted, canRotate } = props
+  const { landscape, pinned, canPlay, paused, muted, canRotate, pictureInPicture } = props
   const [visible, setVisible] = useState(true)
   const timer = useRef<number | null>(null)
 
@@ -88,6 +94,15 @@ export const PlayerChrome = (props: Props) => {
   const playButton = canPlay && (
     <ChromeButton icon={paused ? 'play.fill' : 'pause.fill'} label={paused ? '继续播放' : '暂停'} size={18} action={act(props.onTogglePlay)} />
   )
+  // 画面还没就绪时按钮置灰，避免点了没反应
+  const pipButton = canPlay && pictureInPicture && (
+    <ChromeButton
+      icon={pictureInPicture.active ? 'pip.exit' : 'pip.enter'}
+      label={pictureInPicture.active ? '退出画中画' : '画中画'}
+      disabled={!pictureInPicture.active && !pictureInPicture.possible}
+      action={act(props.onTogglePictureInPicture)}
+    />
+  )
 
   const topBar = (
     <HStack spacing={10} padding={{ leading: 8, trailing: 16, top: 8, bottom: 30 }} background={<Rectangle fill={topScrim} ignoresSafeArea />}>
@@ -121,12 +136,14 @@ export const PlayerChrome = (props: Props) => {
       )}
       <Spacer />
       {props.bottomTrailing}
+      {pipButton}
       {canRotate && <ChromeButton icon="arrow.down.right.and.arrow.up.left" label="退出全屏" action={act(props.onExitLandscape)} />}
     </HStack>
   ) : (
     <HStack spacing={8} padding={{ horizontal: 6, top: 24, bottom: 2 }} background={bottomScrim}>
       {playButton}
       <Spacer />
+      {pipButton}
       {canRotate && <ChromeButton icon="arrow.up.left.and.arrow.down.right" label="横屏全屏" action={act(props.onEnterLandscape)} />}
     </HStack>
   )
@@ -146,7 +163,7 @@ export const PlayerChrome = (props: Props) => {
         <Spacer />
         {bottomBar}
       </VStack>
-      {canPlay && paused && (
+      {canPlay && paused && !pictureInPicture?.active && (
         <Button action={act(props.onTogglePlay)} buttonStyle="plain" accessibilityLabel="继续播放">
           <Image systemName="play.fill" font={26} foregroundStyle="#FFFFFF" frame={{ width: 64, height: 64 }} background="rgba(0,0,0,0.5)" clipShape="circle" />
         </Button>

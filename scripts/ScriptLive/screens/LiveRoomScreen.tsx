@@ -35,6 +35,7 @@ import { Ticking } from '../components/Ticking'
 import type { LiveDanmaku, LiveMessage, LivePlayQuality, LiveRoomDetail, LiveSuperChatMessage, SiteId } from '../core/types'
 import { colorToHex } from '../core/types'
 import { useLivePlayback } from '../hooks/useLivePlayback'
+import { useNowPlaying } from '../hooks/useNowPlaying'
 import { usePlayerOrientation } from '../hooks/usePlayerOrientation'
 import { useStore } from '../hooks/useStore'
 import { useThemeScheme } from '../hooks/useThemeScheme'
@@ -77,6 +78,7 @@ const currentQualityLevel = async (): Promise<QualityLevel> => {
 
 /**
  * 直播间：播放器（Pro 原生 / 免费网页）+ 滚动弹幕 + 聊天、醒目留言、简介。
+ * 原生播放器可进入系统画中画；画中画依赖直播间页面里的播放器，关闭直播间即结束。
  * @param siteId 平台
  * @param roomId 房间号；抖音可能是开播编号，详情返回后以固定网页房间号为准
  */
@@ -257,12 +259,23 @@ export const LiveRoomScreen = ({ siteId, roomId }: { siteId: SiteId; roomId: str
     setDanmakuOn(!danmakuOn)
   }
 
-  const togglePlay = async () => {
+  const setPaused = async (paused: boolean) => {
     try {
-      await playback.setPaused(playback.state.status !== 'paused')
+      await playback.setPaused(paused)
     } catch (error) {
       console.error('[ScriptLive] 切换播放状态失败', error)
       setPlayError(`切换播放状态失败：${errorMessage(error)}`)
+    }
+  }
+
+  const togglePlay = () => setPaused(playback.state.status !== 'paused')
+
+  const togglePictureInPicture = async () => {
+    try {
+      await playback.togglePictureInPicture()
+    } catch (error) {
+      console.error('[ScriptLive] 切换画中画失败', error)
+      await Dialog.alert({ title: '无法切换画中画', message: errorMessage(error) })
     }
   }
 
@@ -345,9 +358,27 @@ export const LiveRoomScreen = ({ siteId, roomId }: { siteId: SiteId; roomId: str
     }
   }, [settings.autoExitEnable, settings.autoExitMinutes])
 
-  const { state } = playback
+  const { state, pictureInPicture } = playback
+  const pipActive = !!pictureInPicture?.active
   const quality = qualities[qualityIndex]
   const style = SITE_STYLE[siteId]
+
+  // 画中画窗口里没有弹幕；进出画中画时清掉积压的弹幕，回到画面内从最新的开始
+  useEffect(() => {
+    feed.clear()
+  }, [pipActive])
+
+  // 原生播放器用 layer 渲染，锁屏与控制中心的信息和播放 / 暂停由这里提供
+  useNowPlaying(
+    living && state.engine === 'native' && detail
+      ? {
+          title: detail.title || detail.userName,
+          artist: `${detail.userName} · ${style.name}`,
+          playing: state.status === 'playing' || state.status === 'buffering'
+        }
+      : null,
+    setPaused
+  )
 
   const playerStatus = (() => {
     if (loadError) return null
@@ -361,9 +392,29 @@ export const LiveRoomScreen = ({ siteId, roomId }: { siteId: SiteId; roomId: str
 
   const failure = playError ?? (state.status === 'error' ? state.error : null)
 
-  /** 叠在播放器控件下方的状态：失败时给出原因与重试，加载中显示转圈 */
+  /** 叠在播放器控件下方的状态：画中画占位，失败时给出原因与重试，加载中显示转圈 */
   const renderStatus = (landscape: boolean) =>
-    failure ? (
+    pipActive ? (
+      <VStack
+        spacing={10}
+        padding={16}
+        frame={{ maxWidth: 'infinity', maxHeight: 'infinity' }}
+        background={<Rectangle fill="#000000" ignoresSafeArea={fullBleed(landscape)} />}
+      >
+        <Image systemName="pip" font={30} foregroundStyle="rgba(255,255,255,0.82)" />
+        <Text font="subheadline" bold foregroundStyle="#FFFFFF">
+          正在画中画播放
+        </Text>
+        <Button action={togglePictureInPicture} buttonStyle="plain">
+          <HStack spacing={6} padding={{ horizontal: 14, vertical: 8 }} background="rgba(255,255,255,0.16)" clipShape="capsule">
+            <Image systemName="pip.exit" font={13} foregroundStyle="#FFFFFF" />
+            <Text font="footnote" bold foregroundStyle="#FFFFFF">
+              回到画面内
+            </Text>
+          </HStack>
+        </Button>
+      </VStack>
+    ) : failure ? (
       <VStack
         spacing={10}
         padding={16}
@@ -413,20 +464,20 @@ export const LiveRoomScreen = ({ siteId, roomId }: { siteId: SiteId; roomId: str
             </VStack>
           </ZStack>
         )}
+        {/* layer 模式只显示画面，控件由 PlayerChrome 提供；画中画期间这个视图必须保持挂载 */}
         {living && state.engine === 'native' && state.nativeReady && playback.nativePlayer && (
           <AVPlayerView
             player={playback.nativePlayer}
             pipStatus={pipStatus}
-            showsPlaybackControls={false}
-            allowsPictureInPicturePlayback={false}
-            updatesNowPlayingInfoCenter
+            renderingMode="layer"
+            pictureInPictureController={playback.pipController ?? undefined}
             frame={{ maxWidth: 'infinity', maxHeight: 'infinity' }}
           />
         )}
         {living && state.engine === 'web' && playback.webController && (
           <WebView controller={playback.webController} frame={{ maxWidth: 'infinity', maxHeight: 'infinity' }} />
         )}
-        {living && danmakuOn && (
+        {living && danmakuOn && !pipActive && (
           <DanmakuOverlay
             feed={feed}
             fontSize={settings.danmakuSize}
@@ -439,7 +490,7 @@ export const LiveRoomScreen = ({ siteId, roomId }: { siteId: SiteId; roomId: str
       </ZStack>
       <PlayerChrome
         landscape={landscape}
-        pinned={!living || !state.engine || !!failure || state.status === 'idle' || state.status === 'paused'}
+        pinned={!living || !state.engine || !!failure || state.status === 'idle' || state.status === 'paused' || pipActive}
         canPlay={living && !!state.engine && !failure}
         paused={state.status === 'paused'}
         muted={state.engine === 'web' && state.muted}
@@ -447,11 +498,13 @@ export const LiveRoomScreen = ({ siteId, roomId }: { siteId: SiteId; roomId: str
         subtitle={detail ? `${detail.userName} · ${style.name}` : undefined}
         badge={detail?.status ? `直播中 · ${formatOnline(online)}` : detail?.isRecord ? '轮播录像' : undefined}
         canRotate={orientation.canRotate}
+        pictureInPicture={pictureInPicture}
         onTogglePlay={togglePlay}
         onUnmute={unmute}
         onRefresh={retryPlay}
         onEnterLandscape={orientation.enterLandscape}
         onExitLandscape={orientation.exitLandscape}
+        onTogglePictureInPicture={togglePictureInPicture}
         status={renderStatus(landscape)}
         topTrailing={
           living ? (

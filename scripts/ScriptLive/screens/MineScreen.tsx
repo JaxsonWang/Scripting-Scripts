@@ -12,7 +12,7 @@ import { historyStore } from '../services/history'
 import { parseRoomLink } from '../services/link-parser'
 import { settingsStore } from '../services/settings'
 import { FULL_FRAME, SITE_STYLE, TILE, accentGlow, brandGradient, palette } from '../theme'
-import { errorMessage } from '../utils/format'
+import { errorMessage, formatInterval } from '../utils/format'
 import { BilibiliLoginScreen } from './BilibiliLoginScreen'
 import { ChangelogScreen } from './ChangelogScreen'
 import { DouyinCookieScreen } from './DouyinCookieScreen'
@@ -25,7 +25,8 @@ import {
   FollowSettingsScreen,
   PlayerSettingsScreen,
   ShieldWordsSettingsScreen,
-  SiteOrderSettingsScreen
+  SiteOrderSettingsScreen,
+  WidgetSettingsScreen
 } from './SettingsScreens'
 import { SyncScreen } from './SyncScreen'
 
@@ -190,6 +191,14 @@ export const MineScreen = () => {
             </NavigationLink>
             <NavigationLink destination={<AutoExitSettingsScreen />}>
               <SettingRow icon="timer" color={TILE.purple} title="定时关闭" value={settings.autoExitEnable ? `${settings.autoExitMinutes} 分钟` : '关闭'} />
+            </NavigationLink>
+            <NavigationLink destination={<WidgetSettingsScreen />}>
+              <SettingRow
+                icon="rectangle.3.group.fill"
+                color={TILE.yellow}
+                title="桌面小组件"
+                value={`${settings.widgetSource === 'mix' ? '综合' : SITE_STYLE[settings.widgetSource].short} · ${formatInterval(settings.widgetRefreshMinutes)}`}
+              />
             </NavigationLink>
           </Section>
 

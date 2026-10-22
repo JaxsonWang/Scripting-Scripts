@@ -14,18 +14,22 @@ import {
   TextField,
   Toggle,
   VStack,
+  Widget,
   useEffect,
   useObservable,
   useState
 } from 'scripting'
-import type { AppSettings, QualityLevel } from '../services/settings'
+import type { WidgetFamily } from 'scripting'
+import type { AppSettings, QualityLevel, WidgetSource } from '../services/settings'
 import { AppearancePicker } from '../components/AppearancePicker'
+import { IconTile } from '../components/IconTile'
 import { ScreenBackground } from '../components/ScreenBackground'
 import { SiteLogo } from '../components/SiteLogo'
 import { useStore } from '../hooks/useStore'
 import { scheduleAutoRefresh } from '../services/follows'
-import { settingsStore, updateSettings } from '../services/settings'
-import { SITE_STYLE, palette, radius } from '../theme'
+import { ALL_SITES, WIDGET_REFRESH_OPTIONS, settingsStore, updateSettings } from '../services/settings'
+import { SITE_STYLE, TILE, palette, radius } from '../theme'
+import { errorMessage, formatInterval } from '../utils/format'
 
 const rowBackground = <Rectangle fill={palette.card} />
 
@@ -354,6 +358,117 @@ export const AutoExitSettingsScreen = () => {
           format={value => `${value} 分钟`}
           onChange={autoExitMinutes => updateSettings({ autoExitMinutes })}
         />
+      </Section>
+    </ScreenList>
+  )
+}
+
+const WIDGET_PREVIEWS: { family: WidgetFamily; title: string }[] = [
+  { family: 'systemSmall', title: '小号' },
+  { family: 'systemMedium', title: '中号' },
+  { family: 'systemLarge', title: '大号' }
+]
+
+/** 推荐来源的一行：图标 + 名称 + 说明，选中项右侧打勾 */
+const SourceRow = ({
+  icon,
+  title,
+  subtitle,
+  selected,
+  onTap
+}: {
+  icon: JSX.Element
+  title: string
+  subtitle: string
+  selected: boolean
+  onTap: () => void
+}) => (
+  <Button action={onTap} buttonStyle="plain">
+    <HStack spacing={12} padding={{ vertical: 2 }} contentShape="rect">
+      {icon}
+      <VStack alignment="leading" spacing={2}>
+        <Text foregroundStyle={palette.textPrimary}>{title}</Text>
+        <Text font="caption" foregroundStyle={palette.textTertiary}>
+          {subtitle}
+        </Text>
+      </VStack>
+      <Spacer />
+      {selected && <Image systemName="checkmark" font={15} fontWeight="semibold" foregroundStyle={palette.accent} />}
+    </HStack>
+  </Button>
+)
+
+/** 桌面小组件：推荐来源、换一批的频率与各尺寸预览；改动后桌面小组件立即刷新。 */
+export const WidgetSettingsScreen = () => {
+  const settings = useStore(settingsStore)
+  const select = (widgetSource: WidgetSource) => updateSettings({ widgetSource })
+
+  const preview = async (family: WidgetFamily) => {
+    try {
+      await Widget.preview({ family })
+    } catch (error) {
+      console.error('[ScriptLive] 小组件预览失败', error)
+      await Dialog.alert({ title: '小组件预览失败', message: errorMessage(error) })
+    }
+  }
+
+  return (
+    <ScreenList title="桌面小组件">
+      <Section header={<Text>推荐来源</Text>} listRowBackground={rowBackground}>
+        <SourceRow
+          icon={<IconTile icon="sparkles" color={TILE.red} />}
+          title="综合推荐"
+          subtitle="四个平台轮流挑选"
+          selected={settings.widgetSource === 'mix'}
+          onTap={() => select('mix')}
+        />
+        {ALL_SITES.map(id => (
+          <SourceRow
+            key={id}
+            icon={<SiteLogo siteId={id} size={30} />}
+            title={SITE_STYLE[id].name}
+            subtitle={`只推荐${SITE_STYLE[id].short}的热门直播`}
+            selected={settings.widgetSource === id}
+            onTap={() => select(id)}
+          />
+        ))}
+      </Section>
+      <Section header={<Text>换一批</Text>} listRowBackground={rowBackground}>
+        <Picker
+          title="更新频率"
+          pickerStyle="menu"
+          value={settings.widgetRefreshMinutes}
+          onChanged={(widgetRefreshMinutes: number) => updateSettings({ widgetRefreshMinutes })}
+        >
+          {WIDGET_REFRESH_OPTIONS.map(minutes => (
+            <Text key={minutes} tag={minutes}>
+              {formatInterval(minutes)}
+            </Text>
+          ))}
+        </Picker>
+      </Section>
+      <Section
+        header={<Text>预览</Text>}
+        listRowBackground={rowBackground}
+        footer={<Text font="footnote">在主屏幕添加 Scripting 小组件，长按选择「编辑小组件」，脚本选 ScriptLive，点按直播间直接进入观看。</Text>}
+      >
+        <HStack spacing={8}>
+          <Text foregroundStyle={palette.textPrimary}>直播推荐</Text>
+          <Spacer />
+          {WIDGET_PREVIEWS.map(item => (
+            <Button key={item.family} buttonStyle="plain" action={() => void preview(item.family)}>
+              <Text
+                font="subheadline"
+                foregroundStyle={palette.accent}
+                padding={{ horizontal: 12, vertical: 6 }}
+                background={palette.fillMuted}
+                clipShape="capsule"
+              >
+                {item.title}
+              </Text>
+            </Button>
+          ))}
+        </HStack>
       </Section>
     </ScreenList>
   )

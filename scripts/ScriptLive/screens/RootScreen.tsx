@@ -3,15 +3,25 @@ import { useThemeScheme } from '../hooks/useThemeScheme'
 import { refreshLiveStates, scheduleAutoRefresh } from '../services/follows'
 import { settingsStore } from '../services/settings'
 import { palette } from '../theme'
+import type { RoomTarget } from '../types'
 import { CategoryScreen } from './CategoryScreen'
 import { FollowScreen } from './FollowScreen'
 import { HomeScreen } from './HomeScreen'
 import { MineScreen } from './MineScreen'
+import { openRoom } from './open-room'
 
-/** 四个标签页：首页推荐、分类、关注、我的 */
-export const RootScreen = () => {
+/**
+ * 四个标签页：首页推荐、分类、关注、我的
+ * @param launch 从桌面小组件点开的直播间
+ */
+export const RootScreen = ({ launch }: { launch: RoomTarget | null }) => {
   const selection = useObservable(0)
   const colorScheme = useThemeScheme()
+
+  // 直播间叠在首页之上全屏打开（与首页点开一致），关闭后回到首页
+  useEffect(() => {
+    if (launch) openRoom(launch)
+  }, [])
 
   // 启动时刷新一次关注状态，并按设置开启定时刷新；设置变化后重新调度
   useEffect(() => {

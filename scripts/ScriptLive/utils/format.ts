@@ -49,5 +49,12 @@ export const formatLiveDuration = (showTime?: string): string => {
   return hours > 0 ? `${hours} 小时 ${minutes} 分` : `${minutes} 分钟`
 }
 
+/** 换批间隔：30 → 「每 30 分钟」，60 → 「每小时」，1440 → 「每天」 */
+export const formatInterval = (minutes: number): string => {
+  if (minutes >= 1440) return '每天'
+  if (minutes === 60) return '每小时'
+  return minutes % 60 === 0 ? `每 ${minutes / 60} 小时` : `每 ${minutes} 分钟`
+}
+
 /** 统一的错误文案 */
 export const errorMessage = (error: unknown): string => (error instanceof Error ? error.message : String(error))

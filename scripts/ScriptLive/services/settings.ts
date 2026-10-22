@@ -1,3 +1,4 @@
+import { Widget } from 'scripting'
 import type { SiteId } from '../core/types'
 import { createStore } from './store'
 
@@ -5,6 +6,12 @@ export type ThemeMode = 'auto' | 'light' | 'dark'
 
 /** 清晰度偏好：0 最低 1 中等 2 最高，与上游一致 */
 export type QualityLevel = 0 | 1 | 2
+
+/** 小组件推荐来源：mix 为四个平台轮流挑选 */
+export type WidgetSource = 'mix' | SiteId
+
+/** 小组件换一批的间隔（分钟）；都能整除一天，换批时间对齐整点 */
+export const WIDGET_REFRESH_OPTIONS = [30, 60, 120, 180, 360, 720, 1440]
 
 export type AppSettings = {
   themeMode: ThemeMode
@@ -31,6 +38,8 @@ export type AppSettings = {
   followAutoRefresh: boolean
   followRefreshMinutes: number
   followConcurrency: number
+  widgetSource: WidgetSource
+  widgetRefreshMinutes: number
 }
 
 export const ALL_SITES: SiteId[] = ['bilibili', 'douyu', 'huya', 'douyin']
@@ -53,20 +62,34 @@ export const DEFAULT_SETTINGS: AppSettings = {
   autoExitMinutes: 60,
   followAutoRefresh: false,
   followRefreshMinutes: 10,
-  followConcurrency: 4
+  followConcurrency: 4,
+  widgetSource: 'mix',
+  widgetRefreshMinutes: 60
 }
 
-/** 合并新增字段，并保证平台顺序包含且只包含全部平台 */
+/** 合并新增字段，保证平台顺序包含且只包含全部平台，小组件选项落在可选范围内（备份导入的设置也经过这里） */
 const normalize = (stored: AppSettings): AppSettings => {
   const merged = { ...DEFAULT_SETTINGS, ...stored }
   const order = merged.siteOrder.filter(id => ALL_SITES.includes(id))
   ALL_SITES.forEach(id => !order.includes(id) && order.push(id))
-  return { ...merged, siteOrder: order }
+  return {
+    ...merged,
+    siteOrder: order,
+    widgetSource: merged.widgetSource === 'mix' || ALL_SITES.includes(merged.widgetSource) ? merged.widgetSource : DEFAULT_SETTINGS.widgetSource,
+    widgetRefreshMinutes: WIDGET_REFRESH_OPTIONS.includes(merged.widgetRefreshMinutes) ? merged.widgetRefreshMinutes : DEFAULT_SETTINGS.widgetRefreshMinutes
+  }
 }
 
 export const settingsStore = createStore<AppSettings>('settings', DEFAULT_SETTINGS, normalize)
 
-export const updateSettings = (patch: Partial<AppSettings>) => settingsStore.update(current => ({ ...current, ...patch }))
+/** 改变桌面小组件内容或配色的设置 */
+const WIDGET_KEYS: (keyof AppSettings)[] = ['themeMode', 'widgetSource', 'widgetRefreshMinutes']
+
+/** 保存设置；涉及小组件的改动立即刷新桌面小组件 */
+export const updateSettings = (patch: Partial<AppSettings>) => {
+  settingsStore.update(current => normalize({ ...current, ...patch }))
+  if (WIDGET_KEYS.some(key => key in patch)) Widget.reloadAll()
+}
 
 /**
  * 按屏蔽词过滤弹幕。
