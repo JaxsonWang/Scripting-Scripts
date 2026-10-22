@@ -7,6 +7,7 @@ import {
   NavigationLink,
   NavigationStack,
   Path,
+  Picker,
   Rectangle,
   Script,
   Section,
@@ -19,7 +20,7 @@ import {
 } from 'scripting'
 import type { WidgetFamily } from 'scripting'
 import { HistoryService } from '../services/history'
-import { SettingsService } from '../services/settings'
+import { SettingsService, WIDGET_REFRESH_OPTIONS } from '../services/settings'
 import { ChangelogScreen } from './ChangelogScreen'
 import { SourceManagementScreen } from './SourceManagementScreen'
 import { ScreenBackground } from '../components/ScreenBackground'
@@ -62,6 +63,7 @@ export const SettingsScreen = () => {
   const [syncing, setSyncing] = useState(false)
   const [lastSyncedAt, setLastSyncedAt] = useState<number | null>(null)
   const [sources, setSources] = useState(() => SettingsService.getSources())
+  const [widgetRefreshMinutes, setWidgetRefreshMinutes] = useState(SettingsService.getWidgetRefreshMinutes)
   const enabledSourceCount = sources.filter(SettingsService.isSourceEnabled).length
 
   const getIcloudSettingsPath = () => {
@@ -149,6 +151,16 @@ export const SettingsScreen = () => {
     }
   }
 
+  const changeWidgetRefreshMinutes = async (minutes: number) => {
+    try {
+      SettingsService.setWidgetRefreshMinutes(minutes)
+      setWidgetRefreshMinutes(minutes)
+    } catch (error) {
+      console.error('[SettingsScreen] 小组件刷新频率保存失败', error)
+      await Dialog.alert({ title: '保存失败', message: error instanceof Error ? error.message : '请重试' })
+    }
+  }
+
   const syncStatusLabel = syncing
     ? '正在写入 iCloud...'
     : icloudSyncEnabled && lastSyncedAt
@@ -196,13 +208,20 @@ export const SettingsScreen = () => {
           header={<Text>桌面小组件</Text>}
           footer={
             <Text font="footnote" foregroundStyle={palette.textSecondary}>
-              每天按当前视频源推荐电影和剧集，配色跟随上方外观。在主屏幕添加 Scripting 小组件，长按选择「编辑小组件」，脚本选 ScriptFlix。
+              按所选频率重新挑选电影和剧集，实际刷新时间由系统调度。在主屏幕添加 Scripting 小组件，长按选择「编辑小组件」，脚本选 ScriptFlix。
             </Text>
           }
         >
+          <Picker title="刷新频率" pickerStyle="menu" value={widgetRefreshMinutes} onChanged={changeWidgetRefreshMinutes}>
+            {WIDGET_REFRESH_OPTIONS.map(minutes => (
+              <Text key={minutes} tag={minutes}>
+                {minutes === 1440 ? '每天' : minutes === 60 ? '每小时' : minutes % 60 === 0 ? `每 ${minutes / 60} 小时` : `每 ${minutes} 分钟`}
+              </Text>
+            ))}
+          </Picker>
           <HStack spacing={8}>
             <VStack alignment="leading" spacing={2}>
-              <Text foregroundStyle={palette.textPrimary}>每日推荐</Text>
+              <Text foregroundStyle={palette.textPrimary}>影视推荐</Text>
               <Text font="caption2" foregroundStyle={palette.textSecondary}>
                 预览各尺寸效果
               </Text>

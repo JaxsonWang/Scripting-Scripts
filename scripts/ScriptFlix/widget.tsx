@@ -3,7 +3,7 @@ import type { WidgetReloadPolicy } from 'scripting'
 import { RecommendWidget, WidgetMessage, posterTargets } from './components/RecommendWidget'
 import type { WidgetEnvironment, WidgetPoster } from './components/RecommendWidget'
 import { AppearanceService } from './services/appearance'
-import { DailyPicksService } from './services/daily-picks'
+import { DailyPicksService, widgetSlot } from './services/daily-picks'
 import { SettingsService } from './services/settings'
 import { createDiagnosticLogger, describeDiagnosticUrl, redactDiagnosticError } from './utils/diagnostics'
 import type { DailyPick } from './types'
@@ -11,12 +11,6 @@ import type { DailyPick } from './types'
 const RETRY_MINUTES = 30
 
 const log = createDiagnosticLogger('widget')
-
-/** 次日 00:05 刷新，换上新一天的推荐 */
-const nextDayPolicy = (now: Date): WidgetReloadPolicy => ({
-  policy: 'after',
-  date: new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 5)
-})
 
 const retryPolicy = (now: Date): WidgetReloadPolicy => ({ policy: 'after', date: new Date(now.getTime() + RETRY_MINUTES * 60_000) })
 
@@ -61,14 +55,16 @@ const run = async () => {
 
   const source = SettingsService.getCurrentSource()
   if (!source) {
-    Widget.present(<WidgetMessage icon="sparkles.tv" title="开启每日推荐" message="在 ScriptFlix 中添加或启用视频源" env={env} />, {
+    Widget.present(<WidgetMessage icon="sparkles.tv" title="开启影视推荐" message="在 ScriptFlix 中添加或启用视频源" env={env} />, {
       reloadPolicy: { policy: 'atEnd' }
     })
     return
   }
 
   try {
-    const snapshot = await DailyPicksService.getDailyPicks(source, now)
+    const intervalMinutes = SettingsService.getWidgetRefreshMinutes()
+    const slot = widgetSlot(now, intervalMinutes)
+    const snapshot = await DailyPicksService.getDailyPicks(source, now, intervalMinutes)
     if (snapshot.picks.length === 0) {
       Widget.present(<WidgetMessage icon="film.stack" title="今日暂无推荐" message={`「${source.name}」暂无可推荐的电影或剧集`} env={env} />, {
         reloadPolicy: retryPolicy(now)
@@ -83,7 +79,7 @@ const run = async () => {
       posters.push(toPoster(pick, snapshot.sourceUrl, snapshot.sourceName, image))
     }
     log('present', { family: env.family, picks: snapshot.picks.length, covers: posters.filter(poster => poster.image).length })
-    Widget.present(<RecommendWidget posters={posters} sourceName={snapshot.sourceName} env={env} />, { reloadPolicy: nextDayPolicy(now) })
+    Widget.present(<RecommendWidget posters={posters} sourceName={snapshot.sourceName} env={env} />, { reloadPolicy: { policy: 'after', date: slot.next } })
   } catch (error) {
     const message = redactDiagnosticError(error)
     log('error', { source: describeDiagnosticUrl(source.url), error: message })

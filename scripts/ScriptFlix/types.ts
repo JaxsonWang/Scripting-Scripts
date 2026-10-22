@@ -217,9 +217,10 @@ export type DailyPick = {
   blurb: string
 }
 
-/** 当天、当前源的推荐快照；同一天内各尺寸小组件共用 */
+/** 当前轮次、当前源的推荐快照；同一轮各尺寸小组件共用 */
 export type DailyPicksSnapshot = {
   day: string
+  slotKey: string
   sourceUrl: string
   sourceName: string
   picks: DailyPick[]

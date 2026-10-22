@@ -6,6 +6,23 @@ const AppStorage = Storage
 
 const STORAGE_KEY_SOURCES = 'script_flix_sources'
 const STORAGE_KEY_INDEX = 'script_flix_currentSourceIndex'
+const STORAGE_KEY_WIDGET_REFRESH = 'script_flix_widget_refresh_minutes'
+
+/** 小组件换批间隔（分钟），与 ScriptLive 保持一致 */
+export const WIDGET_REFRESH_OPTIONS = [30, 60, 120, 180, 360, 720, 1440]
+export const DEFAULT_WIDGET_REFRESH_MINUTES = 60
+
+const getWidgetRefreshMinutes = (): number => {
+  const stored = AppStorage.get<number>(STORAGE_KEY_WIDGET_REFRESH)
+  return stored !== null && WIDGET_REFRESH_OPTIONS.includes(stored) ? stored : DEFAULT_WIDGET_REFRESH_MINUTES
+}
+
+/** 保存刷新频率，并请求系统重新生成小组件时间线 */
+const setWidgetRefreshMinutes = (minutes: number) => {
+  if (!WIDGET_REFRESH_OPTIONS.includes(minutes)) throw new Error('请选择有效的小组件刷新频率')
+  if (!AppStorage.set(STORAGE_KEY_WIDGET_REFRESH, minutes)) throw new Error('刷新频率保存失败，请重试')
+  Widget.reloadAll()
+}
 
 const defaultSources: ApiSource[] = []
 
@@ -135,9 +152,11 @@ const removeSource = (index: number) => {
 }
 
 /**
- * 对外暴露的设置工具，负责管理所有视频源相关操作
+ * 对外暴露的设置工具，负责视频源与小组件刷新频率
  */
 export const SettingsService = {
+  getWidgetRefreshMinutes,
+  setWidgetRefreshMinutes,
   getSources,
   saveSources,
   getCurrentSourceIndex,

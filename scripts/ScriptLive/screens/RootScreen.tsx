@@ -1,14 +1,17 @@
-import { Tab, TabView, useEffect, useObservable } from 'scripting'
+import { Label, Tab, TabView, VStack, useEffect, useObservable } from 'scripting'
 import { useThemeScheme } from '../hooks/useThemeScheme'
 import { refreshLiveStates, scheduleAutoRefresh } from '../services/follows'
 import { settingsStore } from '../services/settings'
-import { palette } from '../theme'
+import { FULL_FRAME, palette } from '../theme'
 import type { RoomTarget } from '../types'
 import { CategoryScreen } from './CategoryScreen'
 import { FollowScreen } from './FollowScreen'
 import { HomeScreen } from './HomeScreen'
 import { MineScreen } from './MineScreen'
 import { openRoom } from './open-room'
+
+// Tab 仅支持 iOS 18+；iOS 17 使用 TabView 的 tabItem 与 tag。
+const SUPPORTS_TAB = Number.parseInt(Device.systemVersion, 10) >= 18
 
 /**
  * 四个标签页：首页推荐、分类、关注、我的
@@ -22,6 +25,13 @@ export const RootScreen = ({ launch }: { launch: RoomTarget | null }) => {
   useEffect(() => {
     if (launch) openRoom(launch)
   }, [])
+
+  const tabs = [
+    { title: '首页', systemImage: 'play.tv', content: <HomeScreen /> },
+    { title: '分类', systemImage: 'square.grid.2x2', content: <CategoryScreen /> },
+    { title: '关注', systemImage: 'heart.text.square', content: <FollowScreen /> },
+    { title: '我的', systemImage: 'person.crop.circle', content: <MineScreen /> }
+  ]
 
   // 启动时刷新一次关注状态，并按设置开启定时刷新；设置变化后重新调度
   useEffect(() => {
@@ -44,18 +54,17 @@ export const RootScreen = ({ launch }: { launch: RoomTarget | null }) => {
       toolbarBackground={palette.bg}
       toolbarColorScheme={colorScheme}
     >
-      <Tab title="首页" systemImage="play.tv" value={0}>
-        <HomeScreen />
-      </Tab>
-      <Tab title="分类" systemImage="square.grid.2x2" value={1}>
-        <CategoryScreen />
-      </Tab>
-      <Tab title="关注" systemImage="heart.text.square" value={2}>
-        <FollowScreen />
-      </Tab>
-      <Tab title="我的" systemImage="person.crop.circle" value={3}>
-        <MineScreen />
-      </Tab>
+      {tabs.map(({ title, systemImage, content }, index) =>
+        SUPPORTS_TAB ? (
+          <Tab key={index} title={title} systemImage={systemImage} value={index}>
+            {content}
+          </Tab>
+        ) : (
+          <VStack key={index} spacing={0} frame={FULL_FRAME} tag={index} tabItem={<Label title={title} systemImage={systemImage} />}>
+            {content}
+          </VStack>
+        )
+      )}
     </TabView>
   )
 }

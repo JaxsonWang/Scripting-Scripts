@@ -1,4 +1,5 @@
 import { fetchCategories, fetchVideoList } from './api'
+import { DEFAULT_WIDGET_REFRESH_MINUTES } from './settings'
 import type { ApiSource, Category, DailyPick, DailyPicksSnapshot, VideoItem } from '../types'
 
 const AppStorage = Storage
@@ -27,7 +28,20 @@ type Lane = { label: string; types: Category[] }
 /** 本地日期，作为「每日」的边界 */
 const dayKey = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
 
-/** 把「日期 + 源地址」折算成随机种子：同一天同一源结果稳定，隔天轮换 */
+/** 按本地时间划分推荐轮次；每天模式保留次日 00:05 请求刷新，其余频率从 0 点对齐 */
+export const widgetSlot = (now: Date, intervalMinutes: number) => {
+  const day = dayKey(now)
+  if (intervalMinutes === 1440) {
+    return { key: day, next: new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 5) }
+  }
+  const index = Math.floor((now.getHours() * 60 + now.getMinutes()) / intervalMinutes)
+  return {
+    key: `${day}#${intervalMinutes}#${index}`,
+    next: new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, (index + 1) * intervalMinutes)
+  }
+}
+
+/** 把「轮次 + 源地址」折算成随机种子：同一轮同一源结果稳定，下一轮重新挑选 */
 const seedOf = (text: string) => {
   let seed = 2166136261
   for (let i = 0; i < text.length; i++) {
@@ -107,10 +121,10 @@ const toPick = (video: VideoItem, lane: string): DailyPick => {
 const isRecommendable = (video: VideoItem) => !!video.vod_name?.trim() && /^https?:\/\//.test(video.vod_pic || '') && !EXCLUDED_TYPE.test(video.type_name || '')
 
 /**
- * 拉取并挑选今日推荐：每个栏目按种子选一个子分类取最新一页，
+ * 拉取并挑选本轮推荐：每个栏目按种子选一个子分类取最新一页，
  * 再按「随机值 + 评分加权」排序，有评分的作品更容易排到前面，最后各栏目轮流取用。
  * @param source 当前视频源
- * @param random 当天的随机序列
+ * @param random 本轮的随机序列
  */
 const buildPicks = async (source: ApiSource, random: () => number): Promise<DailyPick[]> => {
   const { class: categories = [] } = await fetchCategories(source.url)
@@ -145,19 +159,21 @@ const buildPicks = async (source: ApiSource, random: () => number): Promise<Dail
 }
 
 /**
- * 读取当前源的今日推荐；当天已生成过就直接复用，保证同一天各尺寸小组件、每次刷新内容一致
+ * 读取当前源的本轮推荐；同一轮各尺寸共用缓存，换轮或修改频率后重新挑选
  * @param source 当前视频源
  * @param now 当前时间
+ * @param intervalMinutes 换批间隔（分钟），默认每小时
  */
-const getDailyPicks = async (source: ApiSource, now: Date): Promise<DailyPicksSnapshot> => {
+const getDailyPicks = async (source: ApiSource, now: Date, intervalMinutes = DEFAULT_WIDGET_REFRESH_MINUTES): Promise<DailyPicksSnapshot> => {
   const day = dayKey(now)
+  const slot = widgetSlot(now, intervalMinutes)
   const cached = AppStorage.get<DailyPicksSnapshot>(STORAGE_KEY)
-  if (cached && cached.day === day && cached.sourceUrl === source.url && cached.picks.length > 0) {
+  if (cached && cached.slotKey === slot.key && cached.sourceUrl === source.url && cached.picks.length > 0) {
     return { ...cached, sourceName: source.name }
   }
 
-  const picks = await buildPicks(source, createRandom(seedOf(`${day}|${source.url}`)))
-  const snapshot: DailyPicksSnapshot = { day, sourceUrl: source.url, sourceName: source.name, picks }
+  const picks = await buildPicks(source, createRandom(seedOf(`${slot.key}|${source.url}`)))
+  const snapshot: DailyPicksSnapshot = { day, slotKey: slot.key, sourceUrl: source.url, sourceName: source.name, picks }
   if (picks.length > 0) {
     AppStorage.set(STORAGE_KEY, snapshot)
   }
