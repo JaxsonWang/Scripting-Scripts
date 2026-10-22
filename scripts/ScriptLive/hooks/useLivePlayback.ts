@@ -123,7 +123,6 @@ export const useLivePlayback = (siteId: SiteId) => {
           else console.warn('[ScriptLive] 网页播放器提示', event.message)
         }
         const inline = await web.play(siteId, line)
-        console.log('[ScriptLive] 网页原位播放检测', JSON.stringify(inline))
         if (token === tokenRef.current) patch({ inline })
       }
     } catch (error) {
