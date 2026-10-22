@@ -1,6 +1,24 @@
 import { Color, ColorScheme, Size, VirtualNode, KeyboardType, Edge, Point, KeywordPoint, Visibility, ReadableStream, FunctionComponent, AppIntent, AppIntentProtocol, Cookie, MapCoordinate, MapRegion, MapPointsOfInterestSpec, MapStyleSpec } from "scripting"
 
 declare global {
+  /** Internal native asset transform. Usage and lifecycle: dedicated AssetCrypto spec. */
+  namespace __AssetCrypto__ {
+    interface OpenOptions {
+      format: "tfLegacy"
+      dpInfo: Data
+      guid: Data
+      expectedByteCount: number
+    }
+    interface CloseOptions { abort?: boolean }
+    interface Session {
+      update(data: Data): Promise<Data>
+      close(options?: CloseOptions): Promise<Data>
+    }
+    type ErrorCode = "INVALID_CONFIGURATION" | "INVALID_STATE" | "INPUT_TOO_LARGE" | "LENGTH_MISMATCH" | "DECRYPTION_FAILED" | "BUSY" | "ERR_PRO_REQUIRED"
+    interface CryptoError extends Error { code: ErrorCode }
+    function openDecryptor(options: OpenOptions): Promise<Session>
+  }
+
 
   /** Foreground App-only VoiceOver announcements. No import is required. */
   namespace Accessibility {
@@ -60,8 +78,10 @@ declare global {
     getState(): Promise<VPNLocalDevState>
     setEnabled(enabled: boolean, options?: {expectedState?: string}): Promise<VPNLocalDevState>
     /** Requires LocalDevVPN permission, a reachable reflected IPv4 address, and a pairing PSK. Uses the system route, including external VPNs; no Scripting VPN start is required. */
-    openRSDTunnel(options: {host: string; port: number; preSharedKey: Uint8Array | ArrayBuffer; identity?: string; mtu?: number; timeout?: number}): Promise<VPNRSDTunnel>
-    /** Cancels this context's pending opening and waits for native cleanup. Does not close an established tunnel. */
+    openRSDTunnel(options: {host: string; port: number; preSharedKey: Data | Uint8Array | ArrayBuffer; identity?: string; mtu?: number; timeout?: number}): Promise<VPNRSDTunnel>
+    /** Acquires an independent handle to the App's ready native tunnel, without pairing secrets. null when none is ready. */
+    attachRSDTunnel(): Promise<VPNRSDTunnel | null>
+    /** Cancels this context's pending open/attach and waits for native cleanup. Does not close an established tunnel. */
     cancelRSDTunnelOpening(): Promise<void>
   }
   interface VPNRSDDiagnostic {
@@ -87,10 +107,20 @@ declare global {
     bufferedReceiveBytes: number
     bufferedWriteBytes: number
   }
+  interface VPNRSDService {
+    readonly name: string
+    readonly port: number
+    readonly usesRemoteXPC: boolean
+    readonly entitlement: string | null
+  }
   interface VPNRSDTunnel {
     getState(): Promise<VPNRSDState>
     /** Opens an independent TCP stream. At most four connections across all handles sharing this native tunnel. */
-    connect(options: {port: number}): Promise<VPNRSDConnection>
+    connect(options: ({port: number; serviceName?: never} | {serviceName: string; port?: never}) & {timeout?: number}): Promise<VPNRSDConnection>
+    /** Cached per native tunnel. Explicit refresh replaces the cached directory. Deadline in ms, 1-300000; default 30000. */
+    listServices(options?: {refresh?: boolean; timeout?: number}): Promise<VPNRSDService[]>
+    /** Resolves an exact advertised name; does not connect or run a service-specific handshake. */
+    resolveService(options: {serviceName: string; timeout?: number}): Promise<VPNRSDService>
     /** Closes this handle's connections to port, including opens already pending when the close is applied. */
     closeConnections(options: {port: number}): Promise<void>
     /** Closes this handle and its connections. Other handles remain active; the last release reclaims the native tunnel. */
@@ -100,7 +130,11 @@ declare global {
     /** Reads 1–16384 bytes per call; null means peer EOF. Only one pending read. */
     read(maximum?: number): Promise<Uint8Array | null>
     /** Writes at most 16384 bytes per call. Only one pending write. */
-    write(bytes: Uint8Array | ArrayBuffer): Promise<void>
+    write(bytes: Data | Uint8Array | ArrayBuffer): Promise<void>
+    /** Native Data chunk, or null for peer EOF. Shares read's pending slot and 1-16384 byte limit. */
+    readData(maximum?: number): Promise<Data | null>
+    /** Snapshots native Data at admission. Shares write's pending slot and 16384 byte limit. */
+    writeData(bytes: Data): Promise<void>
     /** Sends TCP FIN while retaining the readable side. */
     end(): Promise<void>
     close(): Promise<void>
@@ -166,9 +200,17 @@ declare global {
    * Provides the information abouts the device, also some methods to use the capabilities of the device.
    *
    */
-  /** Requests and replies with a running main session of the same script, including supported App Group extensions. Global; no import required. */
+  /** Public main-App script services and same-script entry/extension requests. Global; no import required. */
   namespace ScriptSession {
     type Value = null | boolean | number | string | Value[] | { [key: string]: Value }
+    interface ServiceRequest {
+      readonly id: string
+      readonly caller: { readonly name: string; readonly env: string }
+    }
+    /** One public serial handler per script. Duplicate registration throws; replies keep the script alive. */
+    function serve(handler: (message: Value, request: ServiceRequest) => Value | void | Promise<Value | void>): string
+    /** Main-App JS only. Reuses a server or starts index.tsx once, waiting up to 10 seconds for serve. Total timeout defaults to 30000 ms, range 100...300000. */
+    function call<T extends Value = Value>(options: { name: string; message: Value; timeout?: number }): Promise<T>
     /** Registers only from the main App index/home_screen. Returns a fresh ID; persist it for other entries. */
     function register(handler: (message: Value) => Value | void | Promise<Value | void>): string
     /** No autolaunch, wake or keep-alive. 64 KiB JSON; timeout defaults to 10000 ms, range 100...30000, including sleep. */
@@ -178,6 +220,12 @@ declare global {
   }
 
   namespace Device {
+    /** Device physical memory in bytes, not the current process memory limit. */
+    const physicalMemory: number
+    /** Current host process memory footprint in bytes; null if the query fails. Includes other scripts and host allocations. Read on demand; avoid tight polling. */
+    const processMemoryUsage: number | null
+    /** Advisory bytes remaining before the current process reaches its current memory limit, not device-wide free RAM. Read fresh; 0 can also mean unavailable or the limit is exceeded. */
+    const availableMemory: number
     /** Scripting host App version (CFBundleShortVersionString), or an empty string if unavailable. No import required. */
     const appVersion: string
     /** Scripting host App build number (CFBundleVersion), preserved as a string; empty if unavailable. */
@@ -1454,6 +1502,21 @@ declare global {
    * The interface to store data in Keychain.
    */
   namespace Keychain {
+    /**
+     * Presents an authenticated sheet for choosing a string from a script's Keychain.
+     * Tap a key to select it, then tap Confirm to return its current UTF-8 value.
+     * Returns null when cancelled or dismissed; an empty string is a valid value.
+     * title sets the navigation title; prompt displays instructions above the list.
+     * Requires a foreground app presentation context. Unsupported contexts or concurrent
+     * requests reject. Read or decoding errors are shown in the sheet for retry/cancel.
+     * The picker lists script-scoped items, including skill and workspace scopes;
+     * shared storage and internal application credentials are excluded.
+     */
+    function pick(options?: {
+      title?: string
+      prompt?: string
+    }): Promise<string | null>
+
     /**
      * Encrypts and saves the `key` with the given `value`.
      *
@@ -16181,7 +16244,7 @@ If the length of the value parameter exceeds the length of the `maximumUpdateVal
   /**
    * Controls background keep-alive behavior for the Scripting App.
    * 
-   * Only available in `Script.env === "index"`.
+   * Available in the main Scripting App: `Script.env === "index"` or `Script.env === "home_screen"`.
    *
    * Request `keepAlive()` while foregrounded, before starting background work.
    * Release it with `stopKeepAlive()` when the work finishes.
@@ -19432,7 +19495,7 @@ If the length of the value parameter exceeds the length of the `maximumUpdateVal
      */
     getItems(): Promise<SpotlightIndexedItem[]>
   }
-  /** Persistent HTTP(S) download queues. Available in main-app scripts. */
+  /** Persistent HTTP(S) download queues. Available in main-app scripts (index and home_screen). */
   namespace DownloadManager {
     type Mode = 'background' | 'foreground'
     type State = 'waiting' | 'running' | 'retrying' | 'suspended' | 'verifying' | 'publishing' | 'canceled' | 'completed' | 'failed' | 'removed'
@@ -19598,7 +19661,7 @@ export { }
 /** Native device-service transports and protocols. Available in App scripts; no import is needed. */
 declare global {
 namespace DeviceServices {
-  type PlistValue = string | number | boolean | Date | Uint8Array | PlistValue[] | { [key: string]: PlistValue }
+  type PlistValue = string | number | bigint | boolean | Date | Uint8Array | PlistValue[] | { [key: string]: PlistValue }
   interface ConnectionOptions {
     host: string
     port: number
@@ -19610,7 +19673,7 @@ namespace DeviceServices {
   interface MessageOptions { timeout?: number }
   interface Connection {
     writePlist(value: PlistValue, options?: MessageOptions & { format?: "binary" | "xml" }): Promise<void>
-    /** Returns null only for EOF before the next message header. */
+    /** Returns null only for EOF before the next message header. Integers outside the safe number range use bigint. */
     readPlist(options?: MessageOptions): Promise<PlistValue | null>
     /** RSDCheckin followed by StartService acknowledgment; TLS-required services are rejected. */
     checkin(options?: MessageOptions & { label?: string }): Promise<void>
@@ -19619,11 +19682,11 @@ namespace DeviceServices {
     close(): Promise<void>
   }
   interface RSDServiceOptions {
-    port: number
-    /** Optional descriptive name; does not discover or select a port. */
+    port?: number
+    /** Exact advertised name when port is omitted; descriptive metadata when port is provided. */
     serviceName?: string
     label?: string
-    /** Total connect/check-in deadline in milliseconds, 1–300000; default 30000. */
+    /** Total directory/connection/check-in deadline in milliseconds, 1–300000; default 30000. */
     timeout?: number
     maximumFrameBytes?: number
   }
@@ -19639,7 +19702,7 @@ namespace DeviceServices {
     /** Closes only this session's children and pending opens; does not close the borrowed tunnel handle. */
     close(): Promise<void>
   }
-  /** Borrows a genuine script-owned native tunnel. Pairing and discovery remain script responsibilities. */
+  /** Borrows a genuine script-owned native tunnel. Pairing remains the script's responsibility; service names resolve natively. */
   function openRSDSession(tunnel: VPNRSDTunnel): Promise<RSDSession>
   interface FileProgress { bytesTransferred: number; totalBytes: number }
   interface FileResult { bytesTransferred: number; seconds: number; sha256: string }

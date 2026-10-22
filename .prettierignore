@@ -63,3 +63,4 @@ tsconfig.json
 *.config.ts
 *.config.mts
 scripts/挂历小组件/utils/lunar.js
+scripts/ScriptLive/assets/

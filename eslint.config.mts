@@ -58,7 +58,8 @@ export default [
       '*.sln',
       '*.sw?',
       'watch.ts',
-      'scripts/挂历小组件/utils/lunar.js'
+      'scripts/挂历小组件/utils/lunar.js',
+      'scripts/ScriptLive/assets/**' // 第三方 mpegts.js（Apache-2.0），保持上游构建产物
     ]
   },
 

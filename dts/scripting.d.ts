@@ -12510,7 +12510,7 @@ declare namespace Widget {
      */
     function present(node: VirtualNode, reloadPolicy?: WidgetReloadPolicy): void;
     /**
-     * Previews the widget with the specified parameters. This method allows you to preview how the widget will look with different parameters. You should only call this method in the `index.tsx` context, it's not available in other environments like `widget.tsx` or `intent.tsx`.
+     * Previews the widget with the specified parameters. This method allows you to preview how the widget will look with different parameters. Call this method in the main Scripting App (Script.env is "index" or "home_screen"). It is not available in widget or intent extension environments.
      * @param options The options for previewing the widget.
      * @param options.family The family of the widget to preview. Defaults to `systemSmall`.
      * @param options.parameters The parameters for the widget preview.
