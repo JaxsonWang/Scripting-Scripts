@@ -78,10 +78,10 @@ export const PlayerChrome = (props: Props) => {
     return stopTimer
   }, [pinned, landscape])
 
-  /** 操作控件时顺带重新计时 */
+  /** 先执行操作（如转屏请求），再重新计时收起控件 */
   const act = (action: () => void) => () => {
-    show()
     action()
+    show()
   }
 
   const shown = pinned || visible
@@ -133,7 +133,7 @@ export const PlayerChrome = (props: Props) => {
 
   return (
     <ZStack frame={{ maxWidth: 'infinity', maxHeight: 'infinity' }}>
-      <Rectangle fill="clear" contentShape="rect" ignoresSafeArea={landscape} onTapGesture={toggle} />
+      <Rectangle fill="clear" contentShape="rect" ignoresSafeArea={{ edges: landscape ? 'all' : [] }} onTapGesture={toggle} />
       {props.status}
       <VStack
         spacing={0}

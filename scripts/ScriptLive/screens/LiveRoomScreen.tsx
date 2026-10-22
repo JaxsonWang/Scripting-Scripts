@@ -24,15 +24,14 @@ import {
 import type { PIPStatus } from 'scripting'
 import { Chip, SiteBadge } from '../components/Chips'
 import { DanmakuMenu } from '../components/DanmakuMenu'
-import { DanmakuOverlay } from '../components/DanmakuOverlay'
-import type { DanmakuFeed } from '../components/DanmakuOverlay'
-import { ChatList, SuperChatList } from '../components/LiveChat'
-import type { ChatLine } from '../components/LiveChat'
+import { DanmakuFeed, DanmakuOverlay } from '../components/DanmakuOverlay'
+import { ChatFeed, ChatList, SuperChatList } from '../components/LiveChat'
 import { PlayerChrome } from '../components/PlayerChrome'
 import { Avatar } from '../components/RoomCard'
 import { ScreenBackground } from '../components/ScreenBackground'
 import { SectionHeader } from '../components/SectionHeader'
 import { EmptyView, LoadingView } from '../components/StateView'
+import { Ticking } from '../components/Ticking'
 import type { LiveDanmaku, LiveMessage, LivePlayQuality, LiveRoomDetail, LiveSuperChatMessage, SiteId } from '../core/types'
 import { colorToHex } from '../core/types'
 import { useLivePlayback } from '../hooks/useLivePlayback'
@@ -49,9 +48,17 @@ import { errorMessage, formatLiveDuration, formatOnline } from '../utils/format'
 
 type Panel = 'chat' | 'sc' | 'info'
 
-const MAX_CHAT = 200
+/**
+ * iPhone 竖屏播放器高度：屏幕短边的 16:9。
+ * 横竖屏切换只改 frame 的取值、不增减修饰符，SwiftUI 保留同一个播放器视图，转屏时不会重建画面。
+ */
+const PORTRAIT_PLAYER_HEIGHT = Math.round((Math.min(Device.screen.width, Device.screen.height) * 9) / 16)
 
-const CHAT_FLUSH_MS = 500
+/** 横屏铺满整屏；竖屏用空边集合，修饰符始终存在，只改取值 */
+const fullBleed = (landscape: boolean) => ({ edges: landscape ? ('all' as const) : [] })
+
+/** 横竖屏布局切换的动画，与系统转屏同时进行 */
+const ROTATE_ANIMATION = Animation.smooth({ duration: 0.3 })
 
 /** 与上游一致：最高取第一档，最低取最后一档，中等取中间 */
 const pickQualityIndex = (count: number, level: QualityLevel) => (level === 2 ? 0 : level === 0 ? count - 1 : Math.floor(count / 2))
@@ -89,19 +96,16 @@ export const LiveRoomScreen = ({ siteId, roomId }: { siteId: SiteId; roomId: str
   const [qualityIndex, setQualityIndex] = useState(0)
   const [playError, setPlayError] = useState<string | null>(null)
   const [online, setOnline] = useState(0)
-  const [chat, setChat] = useState<ChatLine[]>([])
   const [superChats, setSuperChats] = useState<LiveSuperChatMessage[]>([])
   const [scError, setScError] = useState<string | null>(null)
   const [danmakuClosed, setDanmakuClosed] = useState<string | null>(null)
   const [danmakuOn, setDanmakuOn] = useState(settings.danmakuEnable)
   const [panel, setPanel] = useState<Panel>('chat')
   const [exitAt, setExitAt] = useState<number | null>(null)
-  const [, setTick] = useState(0)
 
-  const feed = useRef<DanmakuFeed | null>(null)
+  const [feed] = useState(() => new DanmakuFeed())
+  const [chatFeed] = useState(() => new ChatFeed())
   const danmakuRef = useRef<LiveDanmaku | null>(null)
-  const pendingChat = useRef<ChatLine[]>([])
-  const chatId = useRef(0)
   const danmakuOnRef = useRef(danmakuOn)
   danmakuOnRef.current = danmakuOn
   const detailRef = useRef<LiveRoomDetail | null>(null)
@@ -111,7 +115,7 @@ export const LiveRoomScreen = ({ siteId, roomId }: { siteId: SiteId; roomId: str
   const followed = follows.some(user => user.id === followId(siteId, realRoomId))
   const living = !!detail && (detail.status || !!detail.isRecord)
 
-  const addSystem = (message: string) => pendingChat.current.push({ id: ++chatId.current, kind: 'system', message })
+  const addSystem = (message: string) => chatFeed.addSystem(message)
 
   const handleMessage = (message: LiveMessage) => {
     if (message.type === 'online') setOnline(message.online)
@@ -120,8 +124,8 @@ export const LiveRoomScreen = ({ siteId, roomId }: { siteId: SiteId; roomId: str
     } else if (message.type === 'chat') {
       if (isShielded(message.message, settingsStore.get().shieldWords)) return
       const color = colorToHex(message.color)
-      pendingChat.current.push({ id: ++chatId.current, kind: 'chat', userName: message.userName, message: message.message, color })
-      if (danmakuOnRef.current) feed.current?.push({ text: message.message, color })
+      chatFeed.addChat(message.userName, message.message, color)
+      if (danmakuOnRef.current) feed.push({ text: message.message, color })
     }
   }
 
@@ -208,7 +212,7 @@ export const LiveRoomScreen = ({ siteId, roomId }: { siteId: SiteId; roomId: str
     setQualities([])
     setSuperChats([])
     setScError(null)
-    feed.current?.clear()
+    feed.clear()
     await playback.reset()
     addSystem('正在读取直播间信息')
     try {
@@ -249,7 +253,7 @@ export const LiveRoomScreen = ({ siteId, roomId }: { siteId: SiteId; roomId: str
   }
 
   const toggleDanmaku = () => {
-    if (danmakuOn) feed.current?.clear()
+    if (danmakuOn) feed.clear()
     setDanmakuOn(!danmakuOn)
   }
 
@@ -297,24 +301,19 @@ export const LiveRoomScreen = ({ siteId, roomId }: { siteId: SiteId; roomId: str
   useEffect(() => {
     mounted.current = true
     loadRoom()
-    const flush = setInterval(() => {
-      if (!pendingChat.current.length) return
-      const batch = pendingChat.current
-      pendingChat.current = []
-      setChat(list => [...list, ...batch].slice(-MAX_CHAT))
-    }, CHAT_FLUSH_MS)
-    // 每秒刷新一次：醒目留言倒计时、开播时长与定时关闭倒计时
-    const ticker = setInterval(() => {
-      setTick(tick => tick + 1)
-      setSuperChats(list => (list.some(item => item.endTime <= Date.now()) ? list.filter(item => item.endTime > Date.now()) : list))
-    }, 1000)
     return () => {
       mounted.current = false
-      clearInterval(flush)
-      clearInterval(ticker)
       stopDanmaku().catch(error => console.warn('[ScriptLive] 关闭弹幕失败', error))
     }
   }, [siteId, roomId])
+
+  // 醒目留言到期时从列表移除（SC 角标计数随之更新）；倒计时由 SC 面板自己每秒刷新
+  useEffect(() => {
+    if (!superChats.length) return
+    const nextEnd = Math.min(...superChats.map(item => item.endTime))
+    const timer = setTimeout(() => setSuperChats(list => list.filter(item => item.endTime > Date.now())), Math.max(0, nextEnd - Date.now()) + 50)
+    return () => clearTimeout(timer)
+  }, [superChats])
 
   // 定时关闭：到时询问是否延迟，10 秒内未选择则直接关闭脚本
   useEffect(() => {
@@ -369,7 +368,7 @@ export const LiveRoomScreen = ({ siteId, roomId }: { siteId: SiteId; roomId: str
         spacing={10}
         padding={16}
         frame={{ maxWidth: 'infinity', maxHeight: 'infinity' }}
-        background={<Rectangle fill="rgba(0,0,0,0.6)" ignoresSafeArea={landscape} />}
+        background={<Rectangle fill="rgba(0,0,0,0.6)" ignoresSafeArea={fullBleed(landscape)} />}
       >
         <Image systemName="exclamationmark.triangle.fill" font={24} foregroundStyle="#FBBF24" />
         <Text font="footnote" foregroundStyle="#FFFFFF" multilineTextAlignment="center" lineLimit={3}>
@@ -387,50 +386,57 @@ export const LiveRoomScreen = ({ siteId, roomId }: { siteId: SiteId; roomId: str
 
   /**
    * 播放器：竖屏 16:9，横屏为影院模式——黑底、视频与弹幕铺满整屏，控件留在安全区内。
-   * 两种方向下视图结构保持一致，转屏时播放器和弹幕画布不会重建。
+   * 横竖屏只改各修饰符的取值，视图结构和修饰符组成保持不变，转屏时播放器、网页视图和弹幕画布都不会重建。
    */
   const renderPlayer = (landscape: boolean) => (
     <ZStack
-      frame={landscape ? { maxWidth: 'infinity', maxHeight: 'infinity' } : { maxWidth: 'infinity' }}
-      aspectRatio={landscape ? undefined : { value: 16 / 9, contentMode: 'fit' }}
-      background={<Rectangle fill="#000000" ignoresSafeArea={landscape} />}
+      frame={
+        Device.isiPhone
+          ? {
+              maxWidth: 'infinity',
+              minHeight: landscape ? 0 : PORTRAIT_PLAYER_HEIGHT,
+              maxHeight: landscape ? 'infinity' : PORTRAIT_PLAYER_HEIGHT
+            }
+          : { maxWidth: 'infinity' }
+      }
+      aspectRatio={Device.isiPhone ? undefined : { value: 16 / 9, contentMode: 'fit' }}
     >
-      {detail && !living && (
-        <ZStack frame={{ maxWidth: 'infinity', maxHeight: 'infinity' }} clipped ignoresSafeArea={landscape}>
-          {!!detail.cover && <Image imageUrl={detail.cover} resizable scaleToFill opacity={0.35} blur={12} />}
-          <VStack spacing={8}>
-            <Image systemName="moon.zzz.fill" font={30} foregroundStyle="#FFFFFF" />
-            <Text font="headline" foregroundStyle="#FFFFFF">
-              主播未开播
-            </Text>
-          </VStack>
-        </ZStack>
-      )}
-      {living && state.engine === 'native' && state.nativeReady && playback.nativePlayer && (
-        <AVPlayerView
-          player={playback.nativePlayer}
-          pipStatus={pipStatus}
-          showsPlaybackControls={false}
-          allowsPictureInPicturePlayback={false}
-          updatesNowPlayingInfoCenter
-          frame={{ maxWidth: 'infinity', maxHeight: 'infinity' }}
-          ignoresSafeArea={landscape}
-        />
-      )}
-      {living && state.engine === 'web' && playback.webController && (
-        <WebView controller={playback.webController} frame={{ maxWidth: 'infinity', maxHeight: 'infinity' }} ignoresSafeArea={landscape} />
-      )}
-      {living && danmakuOn && (
-        <DanmakuOverlay
-          feed={feed}
-          fontSize={settings.danmakuSize}
-          duration={settings.danmakuSpeed}
-          area={settings.danmakuArea}
-          opacity={settings.danmakuOpacity}
-          paused={state.status === 'paused'}
-          fullBleed={landscape}
-        />
-      )}
+      <ZStack frame={{ maxWidth: 'infinity', maxHeight: 'infinity' }} background="#000000" clipped ignoresSafeArea={fullBleed(landscape)}>
+        {detail && !living && (
+          <ZStack frame={{ maxWidth: 'infinity', maxHeight: 'infinity' }} clipped>
+            {!!detail.cover && <Image imageUrl={detail.cover} resizable scaleToFill opacity={0.35} blur={12} />}
+            <VStack spacing={8}>
+              <Image systemName="moon.zzz.fill" font={30} foregroundStyle="#FFFFFF" />
+              <Text font="headline" foregroundStyle="#FFFFFF">
+                主播未开播
+              </Text>
+            </VStack>
+          </ZStack>
+        )}
+        {living && state.engine === 'native' && state.nativeReady && playback.nativePlayer && (
+          <AVPlayerView
+            player={playback.nativePlayer}
+            pipStatus={pipStatus}
+            showsPlaybackControls={false}
+            allowsPictureInPicturePlayback={false}
+            updatesNowPlayingInfoCenter
+            frame={{ maxWidth: 'infinity', maxHeight: 'infinity' }}
+          />
+        )}
+        {living && state.engine === 'web' && playback.webController && (
+          <WebView controller={playback.webController} frame={{ maxWidth: 'infinity', maxHeight: 'infinity' }} />
+        )}
+        {living && danmakuOn && (
+          <DanmakuOverlay
+            feed={feed}
+            fontSize={settings.danmakuSize}
+            duration={settings.danmakuSpeed}
+            area={settings.danmakuArea}
+            opacity={settings.danmakuOpacity}
+            paused={state.status === 'paused'}
+          />
+        )}
+      </ZStack>
       <PlayerChrome
         landscape={landscape}
         pinned={!living || !state.engine || !!failure || state.status === 'idle' || state.status === 'paused'}
@@ -571,9 +577,14 @@ export const LiveRoomScreen = ({ siteId, roomId }: { siteId: SiteId; roomId: str
           {living && !!formatLiveDuration(detail.showTime) && (
             <HStack spacing={3}>
               <Image systemName="clock" font={10} foregroundStyle={palette.textTertiary} />
-              <Text font="caption" monospacedDigit foregroundStyle={palette.textTertiary}>
-                {formatLiveDuration(detail.showTime)}
-              </Text>
+              <Ticking
+                interval={30_000}
+                render={() => (
+                  <Text font="caption" monospacedDigit foregroundStyle={palette.textTertiary}>
+                    {formatLiveDuration(detail.showTime)}
+                  </Text>
+                )}
+              />
             </HStack>
           )}
         </HStack>
@@ -590,18 +601,27 @@ export const LiveRoomScreen = ({ siteId, roomId }: { siteId: SiteId; roomId: str
     </HStack>
   )
 
-  const infoRow = (icon: string, label: string, value: string) => (
-    <HStack key={label} spacing={10} padding={{ vertical: 6 }}>
-      <Image systemName={icon} font={14} foregroundStyle={style.color} frame={{ width: 20 }} />
-      <Text font="subheadline" foregroundStyle={palette.textSecondary}>
-        {label}
-      </Text>
-      <Spacer />
+  /**
+   * 简介里的一行信息。
+   * @param value 固定文字；传函数时按 15 秒刷新，用于开播时长、定时关闭倒计时
+   */
+  const infoRow = (icon: string, label: string, value: string | (() => string)) => {
+    const valueText = (text: string) => (
       <Text font="subheadline" lineLimit={1} foregroundStyle={palette.textPrimary}>
-        {value}
+        {text}
       </Text>
-    </HStack>
-  )
+    )
+    return (
+      <HStack key={label} spacing={10} padding={{ vertical: 6 }}>
+        <Image systemName={icon} font={14} foregroundStyle={style.color} frame={{ width: 20 }} />
+        <Text font="subheadline" foregroundStyle={palette.textSecondary}>
+          {label}
+        </Text>
+        <Spacer />
+        {typeof value === 'string' ? valueText(value) : <Ticking interval={15_000} render={() => valueText(value())} />}
+      </HStack>
+    )
+  }
 
   const info = detail && (
     <ScrollView scrollIndicator="hidden">
@@ -618,7 +638,7 @@ export const LiveRoomScreen = ({ siteId, roomId }: { siteId: SiteId; roomId: str
           >
             {infoRow('number', '房间号', detail.roomId)}
             {infoRow('dot.radiowaves.left.and.right', '状态', detail.status ? '直播中' : detail.isRecord ? '轮播录像' : '未开播')}
-            {detail.status && !!formatLiveDuration(detail.showTime) && infoRow('clock', '已开播', formatLiveDuration(detail.showTime))}
+            {detail.status && !!formatLiveDuration(detail.showTime) && infoRow('clock', '已开播', () => formatLiveDuration(detail.showTime))}
             {infoRow('play.rectangle', '播放器', state.engine === 'native' ? '原生播放器（Pro）' : '网页播放器')}
             {state.engine === 'web' && !!state.inline && infoRow('rectangle.inset.filled', '原位播放', state.inline.inlineAllowed ? '允许' : '不允许')}
             {state.engine === 'web' && state.inline?.inlineAllowed === false && (
@@ -626,7 +646,7 @@ export const LiveRoomScreen = ({ siteId, roomId }: { siteId: SiteId; roomId: str
                 {`Scripting 的网页视图没有开启原位播放（allowsInlineMediaPlayback），视频会进入系统全屏。页面已带 playsinline（当前 ${state.inline.playsInline ? '生效' : '未生效'}），这项原生设置只能由 Scripting 开放。`}
               </Text>
             )}
-            {exitAt !== null && infoRow('timer', '定时关闭', `${Math.max(0, Math.ceil((exitAt - Date.now()) / 60_000))} 分钟后`)}
+            {exitAt !== null && infoRow('timer', '定时关闭', () => `${Math.max(0, Math.ceil((exitAt - Date.now()) / 60_000))} 分钟后`)}
             {!!state.note && (
               <Text font="footnote" foregroundStyle={palette.warning} lineSpacing={3}>
                 {state.note}
@@ -657,14 +677,16 @@ export const LiveRoomScreen = ({ siteId, roomId }: { siteId: SiteId; roomId: str
   return (
     <EnvironmentValuesReader keys={['verticalSizeClass']}>
       {({ verticalSizeClass }) => {
-        // iPhone 横屏时垂直尺寸类为 compact：隐藏导航栏、状态栏与聊天面板，播放器铺满全屏
-        const landscape = verticalSizeClass === 'compact'
+        // 按钮锁定方向时立即采用目标布局；随手机旋转时以尺寸类为准（iPhone 横屏为 compact）。
+        // 横屏隐藏导航栏、状态栏，聊天面板收起，播放器铺满全屏
+        const landscape = orientation.locked ? orientation.locked === 'landscape' : verticalSizeClass === 'compact'
         return (
           <NavigationStack statusBarHidden={landscape} persistentSystemOverlays={landscape ? 'hidden' : 'automatic'}>
             <VStack
               spacing={0}
               frame={FULL_FRAME}
-              background={landscape ? <Rectangle fill="#000000" ignoresSafeArea /> : <ScreenBackground />}
+              background={<ScreenBackground />}
+              animation={{ animation: ROTATE_ANIMATION, value: landscape }}
               toolbarVisibility={{ visibility: landscape ? 'hidden' : 'automatic', bars: ['navigationBar'] }}
               preferredColorScheme={colorScheme}
               environments={{ colorScheme }}
@@ -684,33 +706,48 @@ export const LiveRoomScreen = ({ siteId, roomId }: { siteId: SiteId; roomId: str
               }}
             >
               {renderPlayer(landscape)}
-              {landscape ? null : loadError ? (
-                <EmptyView icon="exclamationmark.triangle" title="直播间加载失败" message={loadError} actionTitle="重试" onAction={loadRoom} />
-              ) : !detail ? (
-                <LoadingView label="正在读取直播间信息" />
-              ) : (
-                <VStack spacing={0} frame={FULL_FRAME}>
-                  {controlBar}
-                  {header}
-                  <ScrollView axes="horizontal" scrollIndicator="hidden">
-                    <HStack spacing={8} padding={{ horizontal: 14, vertical: 8 }}>
-                      <Chip label="聊天" active={panel === 'chat'} onTap={() => setPanel('chat')} />
-                      {settings.showSuperChat && <Chip label="SC" count={superChats.length} active={panel === 'sc'} onTap={() => setPanel('sc')} />}
-                      <Chip label="简介" active={panel === 'info'} onTap={() => setPanel('info')} />
-                    </HStack>
-                  </ScrollView>
-                  <Rectangle fill={palette.separator} frame={{ height: 0.5 }} />
-                  <VStack frame={FULL_FRAME}>
-                    {panel === 'chat' || (panel === 'sc' && !settings.showSuperChat) ? (
-                      <ChatList lines={chat} fontSize={settings.chatTextSize} closedReason={danmakuClosed} onReconnect={reconnectDanmaku} />
-                    ) : panel === 'sc' && settings.showSuperChat ? (
-                      <SuperChatList items={superChats} error={scError} />
-                    ) : (
-                      info
-                    )}
+              {/* 横屏时收起而不卸载：转回竖屏只需展开，聊天记录和滚动位置都在 */}
+              <VStack
+                spacing={0}
+                frame={{ ...FULL_FRAME, maxHeight: landscape ? 0 : 'infinity' }}
+                opacity={landscape ? 0 : 1}
+                allowsHitTesting={!landscape}
+                clipped
+              >
+                {loadError ? (
+                  <EmptyView icon="exclamationmark.triangle" title="直播间加载失败" message={loadError} actionTitle="重试" onAction={loadRoom} />
+                ) : !detail ? (
+                  <LoadingView label="正在读取直播间信息" />
+                ) : (
+                  <VStack spacing={0} frame={FULL_FRAME}>
+                    {controlBar}
+                    {header}
+                    <ScrollView axes="horizontal" scrollIndicator="hidden">
+                      <HStack spacing={8} padding={{ horizontal: 14, vertical: 8 }}>
+                        <Chip label="聊天" active={panel === 'chat'} onTap={() => setPanel('chat')} />
+                        {settings.showSuperChat && <Chip label="SC" count={superChats.length} active={panel === 'sc'} onTap={() => setPanel('sc')} />}
+                        <Chip label="简介" active={panel === 'info'} onTap={() => setPanel('info')} />
+                      </HStack>
+                    </ScrollView>
+                    <Rectangle fill={palette.separator} frame={{ height: 0.5 }} />
+                    <VStack frame={FULL_FRAME}>
+                      {panel === 'chat' || (panel === 'sc' && !settings.showSuperChat) ? (
+                        <ChatList
+                          feed={chatFeed}
+                          active={!landscape}
+                          fontSize={settings.chatTextSize}
+                          closedReason={danmakuClosed}
+                          onReconnect={reconnectDanmaku}
+                        />
+                      ) : panel === 'sc' && settings.showSuperChat ? (
+                        <SuperChatList items={superChats} error={scError} />
+                      ) : (
+                        info
+                      )}
+                    </VStack>
                   </VStack>
-                </VStack>
-              )}
+                )}
+              </VStack>
             </VStack>
           </NavigationStack>
         )
