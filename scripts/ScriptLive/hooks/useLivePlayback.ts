@@ -104,6 +104,8 @@ export const useLivePlayback = (siteId: SiteId) => {
           if (token !== tokenRef.current) return
           if (status === TimeControlStatus.playing) patch({ status: 'playing', error: null })
           else if (status === TimeControlStatus.waitingToPlayAtSpecifiedRate) patch({ status: 'buffering' })
+          // 起播前也会报告 paused，只有播放开始后的暂停（如锁屏控制中心）才更新界面
+          else setState(current => (current.status === 'playing' || current.status === 'buffering' ? { ...current, status: 'paused' } : current))
         }
         const accepted = player.setSource(line.url, source.headers ? { headers: source.headers } : undefined)
         // setSource 成功后才能挂载 AVPlayerView，否则视图绑定不到画面
@@ -154,12 +156,21 @@ export const useLivePlayback = (siteId: SiteId) => {
     await webRef.current?.stop()
   }
 
+  /**
+   * 暂停或继续。直播继续播放时重新加载当前线路，回到直播进度而不是从暂停处接着播。
+   * @param paused 是否暂停
+   */
   const setPaused = async (paused: boolean) => {
-    if (sourceRef.current?.engine === 'native') {
-      if (paused) nativeRef.current?.pause()
-      else nativeRef.current?.play()
-    } else await webRef.current?.setPaused(paused)
-    if (paused) patch({ status: 'paused' })
+    if (!paused) return playLine(lineRef.current)
+    tokenRef.current++
+    if (sourceRef.current?.engine === 'native') nativeRef.current?.pause()
+    else await webRef.current?.setPaused(true)
+    patch({ status: 'paused' })
+  }
+
+  /** 网页播放器因自动播放策略静音后，由用户点按恢复声音 */
+  const unmute = async () => {
+    await webRef.current?.setMuted(false)
   }
 
   /** 停止播放并清空状态，用于未开播或重新加载房间 */
@@ -187,6 +198,7 @@ export const useLivePlayback = (siteId: SiteId) => {
     start,
     playLine,
     setPaused,
+    unmute,
     reset
   }
 }

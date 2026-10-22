@@ -38,18 +38,19 @@ const loadMpegts = async (): Promise<string> => {
 const PAGE_SCRIPT = String.raw`
 (() => {
   const video = document.getElementById('v')
-  const tip = document.getElementById('tip')
   let flv = null
   const post = message => { try { window.webkit.messageHandlers.playerEvent.postMessage(message) } catch (e) {} }
   const destroyFlv = () => { if (flv) { try { flv.destroy() } catch (e) {} flv = null } }
   const tryPlay = () => video.play().catch(() => {
-    // 带声音的自动播放被拦截时静音播放，并提示点按恢复声音
+    // 带声音的自动播放被拦截时静音播放，由脚本界面提示点按恢复声音
     video.muted = true
-    tip.style.display = 'block'
     post({ type: 'muted', muted: true })
-    return video.play().catch(error => post({ type: 'error', message: String(error && error.message || error), fatal: false }))
+    return video.play().catch(error => {
+      // 静音也无法自动播放时停在暂停态，由播放器控件的「继续播放」再次发起
+      post({ type: 'error', message: String(error && error.message || error), fatal: false })
+      post({ type: 'paused' })
+    })
   })
-  tip.onclick = () => { video.muted = false; tip.style.display = 'none'; post({ type: 'muted', muted: false }) }
   video.addEventListener('playing', () => post({ type: 'playing' }))
   video.addEventListener('waiting', () => post({ type: 'waiting' }))
   video.addEventListener('pause', () => post({ type: 'paused' }))
@@ -76,6 +77,7 @@ const PAGE_SCRIPT = String.raw`
     tryPlay()
   }
   window.__setPaused = paused => { if (paused) video.pause(); else tryPlay() }
+  window.__setMuted = muted => { video.muted = muted; post({ type: 'muted', muted }) }
   window.__stop = () => { destroyFlv(); video.pause(); video.removeAttribute('src'); video.load() }
 })()
 `
@@ -87,18 +89,17 @@ const pageHtml = (mpegts: string) => `<!doctype html>
 <style>
 html,body{margin:0;height:100%;background:#000;overflow:hidden}
 video{width:100%;height:100%;object-fit:contain;background:#000}
-#tip{display:none;position:absolute;right:10px;bottom:46px;padding:6px 12px;border-radius:14px;background:rgba(0,0,0,.6);color:#fff;font:600 13px -apple-system;z-index:2}
 </style></head>
 <body>
-<video id="v" playsinline webkit-playsinline autoplay controls disableremoteplayback></video>
-<div id="tip">🔇 点按开启声音</div>
+<video id="v" playsinline webkit-playsinline autoplay disableremoteplayback></video>
 <script>${mpegts}</script>
 <script>${PAGE_SCRIPT}</script>
 </body></html>`
 
 /**
  * 免费用户的网页播放器：WKWebView 的 <video> 直接播放 HLS，FLV 交给 mpegts.js（需要 ManagedMediaSource，iOS 17.1+）。
- * 网页播放无法附带自定义请求头。
+ * 网页播放无法附带自定义请求头。<video> 不显示网页控件，播放、暂停与声音由直播间的播放器控件统一操作，
+ * 这样网页与原生播放器的全屏、弹幕层级保持一致。
  */
 export class WebLivePlayer {
   readonly controller = new WebViewController()
@@ -130,6 +131,10 @@ export class WebLivePlayer {
 
   async setPaused(paused: boolean) {
     if (this.loadedSite) await this.controller.evaluateJavaScript(`window.__setPaused(${paused})`)
+  }
+
+  async setMuted(muted: boolean) {
+    if (this.loadedSite) await this.controller.evaluateJavaScript(`window.__setMuted(${muted})`)
   }
 
   async stop() {

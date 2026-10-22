@@ -17,6 +17,8 @@ type Props = {
   area: number
   opacity: number
   paused?: boolean
+  /** 横屏时铺到安全区外，弹幕从屏幕最右侧飞到最左侧 */
+  fullBleed?: boolean
 }
 
 const MAX_PENDING = 60
@@ -26,7 +28,7 @@ const LANE_GAP = 6
  * 滚动弹幕层：叠在播放器上，不拦截触摸。
  * 每条弹幕进入时测一次宽度并选择最先腾空的轨道，之后每帧只做平移绘制；轨道都占满时丢弃最旧的待显示弹幕。
  */
-export const DanmakuOverlay = ({ feed, fontSize, duration, area, opacity, paused }: Props) => {
+export const DanmakuOverlay = ({ feed, fontSize, duration, area, opacity, paused, fullBleed }: Props) => {
   const pending = useRef<DanmakuItem[]>([])
   const flying = useRef<Flying[]>([])
   /** 每条轨道上最后一条弹幕完全进入画面的时间 */
@@ -96,6 +98,7 @@ export const DanmakuOverlay = ({ feed, fontSize, duration, area, opacity, paused
       schedule={{ minimumInterval: 1 / 30 }}
       allowsHitTesting={false}
       frame={{ maxWidth: 'infinity', maxHeight: 'infinity' }}
+      ignoresSafeArea={!!fullBleed}
     />
   )
 }

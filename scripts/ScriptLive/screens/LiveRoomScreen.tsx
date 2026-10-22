@@ -21,12 +21,14 @@ import {
   useRef,
   useState
 } from 'scripting'
-import type { LinearGradient, PIPStatus } from 'scripting'
+import type { PIPStatus } from 'scripting'
 import { Chip, SiteBadge } from '../components/Chips'
+import { DanmakuMenu } from '../components/DanmakuMenu'
 import { DanmakuOverlay } from '../components/DanmakuOverlay'
 import type { DanmakuFeed } from '../components/DanmakuOverlay'
 import { ChatList, SuperChatList } from '../components/LiveChat'
 import type { ChatLine } from '../components/LiveChat'
+import { PlayerChrome } from '../components/PlayerChrome'
 import { Avatar } from '../components/RoomCard'
 import { ScreenBackground } from '../components/ScreenBackground'
 import { SectionHeader } from '../components/SectionHeader'
@@ -49,8 +51,6 @@ type Panel = 'chat' | 'sc' | 'info'
 
 const MAX_CHAT = 200
 
-/** 横屏顶部操作栏下的压暗渐变，保证白色文字在亮画面上可读 */
-const landscapeScrim: LinearGradient = { colors: ['rgba(0,0,0,0.62)', 'rgba(0,0,0,0)'], startPoint: 'top', endPoint: 'bottom' }
 const CHAT_FLUSH_MS = 500
 
 /** 与上游一致：最高取第一档，最低取最后一档，中等取中间 */
@@ -253,6 +253,24 @@ export const LiveRoomScreen = ({ siteId, roomId }: { siteId: SiteId; roomId: str
     setDanmakuOn(!danmakuOn)
   }
 
+  const togglePlay = async () => {
+    try {
+      await playback.setPaused(playback.state.status !== 'paused')
+    } catch (error) {
+      console.error('[ScriptLive] 切换播放状态失败', error)
+      setPlayError(`切换播放状态失败：${errorMessage(error)}`)
+    }
+  }
+
+  const unmute = async () => {
+    try {
+      await playback.unmute()
+    } catch (error) {
+      console.error('[ScriptLive] 开启声音失败', error)
+      await Dialog.alert({ title: '无法开启声音', message: errorMessage(error) })
+    }
+  }
+
   const openInBrowser = async () => {
     if (!detail?.url) return
     try {
@@ -344,15 +362,41 @@ export const LiveRoomScreen = ({ siteId, roomId }: { siteId: SiteId; roomId: str
 
   const failure = playError ?? (state.status === 'error' ? state.error : null)
 
+  /** 叠在播放器控件下方的状态：失败时给出原因与重试，加载中显示转圈 */
+  const renderStatus = (landscape: boolean) =>
+    failure ? (
+      <VStack
+        spacing={10}
+        padding={16}
+        frame={{ maxWidth: 'infinity', maxHeight: 'infinity' }}
+        background={<Rectangle fill="rgba(0,0,0,0.6)" ignoresSafeArea={landscape} />}
+      >
+        <Image systemName="exclamationmark.triangle.fill" font={24} foregroundStyle="#FBBF24" />
+        <Text font="footnote" foregroundStyle="#FFFFFF" multilineTextAlignment="center" lineLimit={3}>
+          {failure}
+        </Text>
+        <Button action={retryPlay} buttonStyle="plain">
+          <Text font="footnote" bold foregroundStyle="#FFFFFF" padding={{ horizontal: 16, vertical: 8 }} background={brandGradient} clipShape="capsule">
+            重试
+          </Text>
+        </Button>
+      </VStack>
+    ) : playerStatus ? (
+      <VStack allowsHitTesting={false}>{playerStatus}</VStack>
+    ) : null
+
+  /**
+   * 播放器：竖屏 16:9，横屏为影院模式——黑底、视频与弹幕铺满整屏，控件留在安全区内。
+   * 两种方向下视图结构保持一致，转屏时播放器和弹幕画布不会重建。
+   */
   const renderPlayer = (landscape: boolean) => (
     <ZStack
       frame={landscape ? { maxWidth: 'infinity', maxHeight: 'infinity' } : { maxWidth: 'infinity' }}
       aspectRatio={landscape ? undefined : { value: 16 / 9, contentMode: 'fit' }}
-      ignoresSafeArea={landscape ? { edges: 'vertical' } : false}
-      background="#000000"
+      background={<Rectangle fill="#000000" ignoresSafeArea={landscape} />}
     >
       {detail && !living && (
-        <ZStack>
+        <ZStack frame={{ maxWidth: 'infinity', maxHeight: 'infinity' }} clipped ignoresSafeArea={landscape}>
           {!!detail.cover && <Image imageUrl={detail.cover} resizable scaleToFill opacity={0.35} blur={12} />}
           <VStack spacing={8}>
             <Image systemName="moon.zzz.fill" font={30} foregroundStyle="#FFFFFF" />
@@ -366,13 +410,15 @@ export const LiveRoomScreen = ({ siteId, roomId }: { siteId: SiteId; roomId: str
         <AVPlayerView
           player={playback.nativePlayer}
           pipStatus={pipStatus}
+          showsPlaybackControls={false}
           allowsPictureInPicturePlayback={false}
           updatesNowPlayingInfoCenter
           frame={{ maxWidth: 'infinity', maxHeight: 'infinity' }}
+          ignoresSafeArea={landscape}
         />
       )}
       {living && state.engine === 'web' && playback.webController && (
-        <WebView controller={playback.webController} frame={{ maxWidth: 'infinity', maxHeight: 'infinity' }} />
+        <WebView controller={playback.webController} frame={{ maxWidth: 'infinity', maxHeight: 'infinity' }} ignoresSafeArea={landscape} />
       )}
       {living && danmakuOn && (
         <DanmakuOverlay
@@ -382,23 +428,42 @@ export const LiveRoomScreen = ({ siteId, roomId }: { siteId: SiteId; roomId: str
           area={settings.danmakuArea}
           opacity={settings.danmakuOpacity}
           paused={state.status === 'paused'}
+          fullBleed={landscape}
         />
       )}
-      {playerStatus && <VStack allowsHitTesting={false}>{playerStatus}</VStack>}
-      {!!failure && (
-        <VStack spacing={10} padding={16} background="rgba(0,0,0,0.6)" frame={{ maxWidth: 'infinity', maxHeight: 'infinity' }}>
-          <Image systemName="exclamationmark.triangle.fill" font={24} foregroundStyle="#FBBF24" />
-          <Text font="footnote" foregroundStyle="#FFFFFF" multilineTextAlignment="center" lineLimit={3}>
-            {failure}
-          </Text>
-          <Button action={retryPlay} buttonStyle="plain">
-            <Text font="footnote" bold foregroundStyle="#FFFFFF" padding={{ horizontal: 16, vertical: 8 }} background={brandGradient} clipShape="capsule">
-              重试
-            </Text>
-          </Button>
-        </VStack>
-      )}
-      {landscape && landscapeBar}
+      <PlayerChrome
+        landscape={landscape}
+        pinned={!living || !state.engine || !!failure || state.status === 'idle' || state.status === 'paused'}
+        canPlay={living && !!state.engine && !failure}
+        paused={state.status === 'paused'}
+        muted={state.engine === 'web' && state.muted}
+        title={detail?.title || detail?.userName || style.short}
+        subtitle={detail ? `${detail.userName} · ${style.name}` : undefined}
+        badge={detail?.status ? `直播中 · ${formatOnline(online)}` : detail?.isRecord ? '轮播录像' : undefined}
+        canRotate={orientation.canRotate}
+        onTogglePlay={togglePlay}
+        onUnmute={unmute}
+        onRefresh={retryPlay}
+        onEnterLandscape={orientation.enterLandscape}
+        onExitLandscape={orientation.exitLandscape}
+        status={renderStatus(landscape)}
+        topTrailing={
+          living ? (
+            <HStack spacing={16}>
+              {qualityMenu}
+              {lineMenu}
+            </HStack>
+          ) : null
+        }
+        bottomTrailing={
+          living ? (
+            <HStack spacing={4}>
+              {danmakuButton}
+              {danmakuOn && <DanmakuMenu settings={settings} />}
+            </HStack>
+          ) : null
+        }
+      />
     </ZStack>
   )
 
@@ -446,12 +511,18 @@ export const LiveRoomScreen = ({ siteId, roomId }: { siteId: SiteId; roomId: str
 
   const danmakuButton = (
     <Button action={toggleDanmaku} buttonStyle="plain" accessibilityLabel={danmakuOn ? '关闭弹幕' : '开启弹幕'}>
-      <Image systemName={danmakuOn ? 'text.bubble.fill' : 'text.bubble'} font={17} foregroundStyle={danmakuOn ? palette.live : 'rgba(255,255,255,0.64)'} />
+      <Image
+        systemName={danmakuOn ? 'text.bubble.fill' : 'text.bubble'}
+        font={17}
+        foregroundStyle={danmakuOn ? palette.live : 'rgba(255,255,255,0.64)'}
+        frame={{ width: 32, height: 32 }}
+        contentShape="rect"
+      />
     </Button>
   )
 
   const controlBar = living && (
-    <HStack spacing={10} padding={{ horizontal: 14, vertical: 8 }} background="rgba(8,7,10,0.82)">
+    <HStack spacing={6} padding={{ leading: 14, trailing: 8, vertical: 4 }} background="rgba(8,7,10,0.82)">
       <Text
         font="caption2"
         bold
@@ -466,47 +537,11 @@ export const LiveRoomScreen = ({ siteId, roomId }: { siteId: SiteId; roomId: str
       {lineMenu}
       <Spacer />
       {danmakuButton}
+      {danmakuOn && <DanmakuMenu settings={settings} />}
       <Button action={retryPlay} buttonStyle="plain" accessibilityLabel="重新播放">
-        <Image systemName="arrow.clockwise" font={16} foregroundStyle="rgba(255,255,255,0.82)" />
+        <Image systemName="arrow.clockwise" font={16} foregroundStyle="rgba(255,255,255,0.82)" frame={{ width: 32, height: 32 }} contentShape="rect" />
       </Button>
-      {orientation.canRotate && (
-        <Button action={orientation.enterLandscape} buttonStyle="plain" accessibilityLabel="横屏全屏">
-          <Image systemName="arrow.up.left.and.arrow.down.right" font={16} foregroundStyle="rgba(255,255,255,0.82)" />
-        </Button>
-      )}
     </HStack>
-  )
-
-  // 横屏时叠在画面顶部：退出全屏、标题与常用操作；透明区域不拦截触摸，原生 / 网页播放器自带的控件照常可用
-  const landscapeBar = (
-    <VStack frame={{ maxWidth: 'infinity', maxHeight: 'infinity', alignment: 'top' }}>
-      <HStack spacing={14} padding={{ horizontal: 16, top: 12, bottom: 24 }} background={landscapeScrim}>
-        <Button action={orientation.exitLandscape} buttonStyle="plain" accessibilityLabel="退出全屏">
-          <Image
-            systemName="arrow.down.right.and.arrow.up.left"
-            font={15}
-            foregroundStyle="#FFFFFF"
-            frame={{ width: 34, height: 34 }}
-            background="rgba(0,0,0,0.38)"
-            clipShape="circle"
-          />
-        </Button>
-        <VStack alignment="leading" spacing={2}>
-          <Text font="headline" bold lineLimit={1} foregroundStyle="#FFFFFF">
-            {detail?.title || detail?.userName || style.short}
-          </Text>
-          {!!detail && (
-            <Text font="caption" lineLimit={1} foregroundStyle="rgba(255,255,255,0.72)">
-              {living ? `${detail.userName} · ${formatOnline(online)} 人气` : detail.userName}
-            </Text>
-          )}
-        </VStack>
-        <Spacer />
-        {living && qualityMenu}
-        {living && lineMenu}
-        {living && danmakuButton}
-      </HStack>
-    </VStack>
   )
 
   const header = detail && (
