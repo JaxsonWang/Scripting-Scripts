@@ -10,6 +10,7 @@ export type Paged<T> = {
   hasMore: boolean
   error: string | null
   reload: () => Promise<void>
+  retry: () => Promise<void>
   loadMore: () => Promise<void>
 }
 
@@ -32,10 +33,12 @@ export function usePaged<T>(load: ((page: number) => Promise<PagedResult<T>>) | 
   const pageRef = useRef(1)
   const busyRef = useRef(false)
   const hasMoreRef = useRef(false)
+  const failedPageRef = useRef<{ page: number; append: boolean } | null>(null)
 
   const fetchPage = async (page: number, append: boolean) => {
     const loader = loadRef.current
     const token = ++tokenRef.current
+    failedPageRef.current = null
     if (!loader) {
       busyRef.current = false
       setLoading(false)
@@ -66,6 +69,7 @@ export function usePaged<T>(load: ((page: number) => Promise<PagedResult<T>>) | 
     } catch (failure) {
       if (token !== tokenRef.current) return
       console.error('[ScriptLive] 加载列表失败', failure)
+      failedPageRef.current = { page, append }
       setError(errorMessage(failure))
     } finally {
       if (token === tokenRef.current) {
@@ -78,8 +82,14 @@ export function usePaged<T>(load: ((page: number) => Promise<PagedResult<T>>) | 
 
   const reload = () => fetchPage(1, false)
 
+  const retry = async () => {
+    const failed = failedPageRef.current
+    if (busyRef.current || !failed) return
+    await fetchPage(failed.page, failed.append)
+  }
+
   const loadMore = async () => {
-    if (busyRef.current || !hasMoreRef.current) return
+    if (busyRef.current || failedPageRef.current || !hasMoreRef.current) return
     await fetchPage(pageRef.current + 1, true)
   }
 
@@ -90,5 +100,5 @@ export function usePaged<T>(load: ((page: number) => Promise<PagedResult<T>>) | 
     reload()
   }, deps)
 
-  return { items, loading, loadingMore, hasMore, error, reload, loadMore }
+  return { items, loading, loadingMore, hasMore, error, reload, retry, loadMore }
 }

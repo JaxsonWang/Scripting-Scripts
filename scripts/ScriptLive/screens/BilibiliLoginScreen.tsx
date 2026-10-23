@@ -1,8 +1,25 @@
-import { Button, HStack, Image, List, Navigation, ProgressView, QRImage, Rectangle, Section, Spacer, Text, VStack, useEffect, useState } from 'scripting'
+import {
+  Button,
+  HStack,
+  Image,
+  List,
+  Navigation,
+  ProgressView,
+  QRImage,
+  Rectangle,
+  Section,
+  Spacer,
+  Text,
+  VStack,
+  useEffect,
+  useRef,
+  useState
+} from 'scripting'
 import type { BilibiliQRStatus } from '../core/sites/bilibili-account'
 import { generateBilibiliQRCode, getBilibiliUserInfo, pollBilibiliQRCode } from '../core/sites/bilibili-account'
 import { ScreenBackground } from '../components/ScreenBackground'
 import { accountStore, setBilibiliAccount } from '../services/accounts'
+import type { BilibiliUser } from '../services/accounts'
 import { useStore } from '../hooks/useStore'
 import { brandGradient, palette, radius } from '../theme'
 import { errorMessage } from '../utils/format'
@@ -61,6 +78,24 @@ export const BilibiliLoginScreen = () => {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [refreshToken, setRefreshToken] = useState(0)
+  const [verifying, setVerifying] = useState(false)
+  /** 登录完成或离开页面后置为 true，之后到达的扫码或 Cookie 验证结果不再写入账号 */
+  const closedRef = useRef(false)
+
+  useEffect(
+    () => () => {
+      closedRef.current = true
+    },
+    []
+  )
+
+  /** 扫码与手动填写谁先验证成功谁生效，只写入、关闭一次 */
+  const completeLogin = (cookie: string, user: BilibiliUser) => {
+    if (closedRef.current) return
+    closedRef.current = true
+    setBilibiliAccount(cookie, user)
+    dismiss()
+  }
 
   useEffect(() => {
     let disposed = false
@@ -79,8 +114,7 @@ export const BilibiliLoginScreen = () => {
           try {
             const user = await getBilibiliUserInfo(next.cookie)
             if (disposed) return
-            setBilibiliAccount(next.cookie, user)
-            dismiss()
+            completeLogin(next.cookie, user)
             return
           } catch (userError) {
             console.error('[ScriptLive] 读取 B站账号失败', userError)
@@ -133,15 +167,15 @@ export const BilibiliLoginScreen = () => {
       confirmLabel: '登录'
     })
     const value = cookie?.trim()
-    if (!value) return
+    if (!value || closedRef.current) return
+    // 验证期间禁用入口，不会出现先提交的结果覆盖后提交的情况
+    setVerifying(true)
     try {
-      setLoading(true)
-      const user = await getBilibiliUserInfo(value)
-      setBilibiliAccount(value, user)
-      dismiss()
+      completeLogin(value, await getBilibiliUserInfo(value))
     } catch (manualError) {
       console.error('[ScriptLive] 手动登录 B站失败', manualError)
-      setLoading(false)
+      if (closedRef.current) return
+      setVerifying(false)
       await Dialog.alert({ title: 'Cookie 无效', message: errorMessage(manualError) })
     }
   }
@@ -240,7 +274,7 @@ export const BilibiliLoginScreen = () => {
         </Section>
       )}
       <Section header={<Text>其他方式</Text>} listRowBackground={<Rectangle fill={palette.card} />}>
-        <Button title="手动填写 Cookie" action={() => void handleManualCookie()} />
+        <Button title={verifying ? '正在验证 Cookie…' : '手动填写 Cookie'} disabled={verifying} action={() => void handleManualCookie()} />
       </Section>
     </List>
   )

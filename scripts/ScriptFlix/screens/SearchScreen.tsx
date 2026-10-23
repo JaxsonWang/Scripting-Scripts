@@ -78,12 +78,12 @@ export const SearchScreen = ({ embedded = false }: { embedded?: boolean }) => {
     setSourceStates(prev => {
       const next: SourceStateMap = {}
       sources.forEach(source => {
-        next[source.name] = prev[source.name] || { status: 'idle', count: 0 }
+        next[source.url] = prev[source.url] || { status: 'idle', count: 0 }
       })
       return next
     })
 
-    if (selectedSource !== 'all' && !sources.some(src => src.name === selectedSource)) {
+    if (selectedSource !== 'all' && !sources.some(src => src.url === selectedSource)) {
       setSelectedSource('all')
     }
   }, [sources, selectedSource])
@@ -91,8 +91,8 @@ export const SearchScreen = ({ embedded = false }: { embedded?: boolean }) => {
   const resetSourceStates = () => {
     setSourceStates(prev => {
       const cleared: SourceStateMap = {}
-      Object.keys(prev).forEach(name => {
-        cleared[name] = { status: 'idle', count: 0 }
+      Object.keys(prev).forEach(url => {
+        cleared[url] = { status: 'idle', count: 0 }
       })
       return cleared
     })
@@ -126,30 +126,28 @@ export const SearchScreen = ({ embedded = false }: { embedded?: boolean }) => {
       return
     }
 
-    const activeSources = SettingsService.getEnabledSources()
-    setSources(activeSources)
-
-    if (activeSources.length === 0) {
-      setError('请先在设置里添加或启用视频源')
-      return
-    }
-
-    Keyboard.hide()
-
     const requestId = activeRequestRef.current + 1
     activeRequestRef.current = requestId
+    const activeSources = SettingsService.getEnabledSources()
+    setSources(activeSources)
+    Keyboard.hide()
 
-    setLoading(true)
+    setLoading(activeSources.length > 0)
     setError(null)
     setResults([])
     setSelectedSource('all')
     setLastKeyword(trimmed)
 
     const initialMap = activeSources.reduce((acc, source) => {
-      acc[source.name] = { status: 'loading', count: 0 }
+      acc[source.url] = { status: 'loading', count: 0 }
       return acc
     }, {} as SourceStateMap)
     setSourceStates(initialMap)
+
+    if (activeSources.length === 0) {
+      setError('请先在设置里添加或启用视频源')
+      return
+    }
 
     try {
       let hasError = false
@@ -164,7 +162,7 @@ export const SearchScreen = ({ embedded = false }: { embedded?: boolean }) => {
               }
               return {
                 ...prev,
-                [source.name]: nextState
+                [source.url]: nextState
               }
             })
           }
@@ -241,7 +239,7 @@ export const SearchScreen = ({ embedded = false }: { embedded?: boolean }) => {
     () =>
       sources.map(source => ({
         source,
-        state: sourceStates[source.name] || { status: 'idle', count: 0 }
+        state: sourceStates[source.url] || { status: 'idle', count: 0 }
       })),
     [sources, sourceStates]
   )
@@ -258,11 +256,13 @@ export const SearchScreen = ({ embedded = false }: { embedded?: boolean }) => {
     if (selectedSource === 'all') {
       return sortedResults
     }
-    return sortedResults.filter(item => item.sourceName === selectedSource)
+    return sortedResults.filter(item => item.sourceUrl === selectedSource)
   }, [sortedResults, selectedSource])
 
   const sourcesWithHits = useMemo(() => sourceStateEntries.filter(entry => entry.state.count > 0).length, [sourceStateEntries])
   const errorSourceCount = useMemo(() => sourceStateEntries.filter(entry => entry.state.status === 'error').length, [sourceStateEntries])
+
+  const selectedSourceName = sources.find(source => source.url === selectedSource)?.name ?? ''
 
   const statusLabel = useMemo(() => {
     if (sources.length === 0) {
@@ -282,13 +282,13 @@ export const SearchScreen = ({ embedded = false }: { embedded?: boolean }) => {
     }
 
     if (filteredResults.length === 0) {
-      const scope = selectedSource === 'all' ? '任一源' : selectedSource
+      const scope = selectedSource === 'all' ? '任一源' : selectedSourceName
       return `未在${scope}中搜到 “${lastKeyword}”`
     }
 
-    const scope = selectedSource === 'all' ? `${sourcesWithHits}/${sources.length} 个源` : selectedSource
+    const scope = selectedSource === 'all' ? `${sourcesWithHits}/${sources.length} 个源` : selectedSourceName
     return `展示 ${filteredResults.length} 条结果 · 覆盖 ${scope}`
-  }, [sources.length, loading, error, lastKeyword, filteredResults.length, selectedSource, sourcesWithHits])
+  }, [sources.length, loading, error, lastKeyword, filteredResults.length, selectedSource, selectedSourceName, sourcesWithHits])
 
   const filterItems = useMemo(
     () => [
@@ -296,7 +296,7 @@ export const SearchScreen = ({ embedded = false }: { embedded?: boolean }) => {
       ...sourceStateEntries
         .filter(entry => entry.state.count > 0)
         .map(entry => ({
-          key: entry.source.name,
+          key: entry.source.url,
           label: entry.source.name,
           count: entry.state.count
         }))
@@ -344,7 +344,7 @@ export const SearchScreen = ({ embedded = false }: { embedded?: boolean }) => {
           ))}
         </HStack>
       </ScrollView>
-      <SectionHeader title={selectedSource === 'all' ? '全部结果' : selectedSource} accessory={`${results.length} 条 · 异常源 ${errorSourceCount}`} />
+      <SectionHeader title={selectedSource === 'all' ? '全部结果' : selectedSourceName} accessory={`${results.length} 条 · 异常源 ${errorSourceCount}`} />
       {filteredResults.length > 0 && (loading || !!error) && (
         <Text font="footnote" foregroundStyle={error ? palette.warning : palette.textSecondary} padding={{ horizontal: 16 }}>
           {statusLabel}
@@ -360,7 +360,7 @@ export const SearchScreen = ({ embedded = false }: { embedded?: boolean }) => {
         <ScrollView scrollIndicator="hidden">
           <LazyVGrid columns={GRID_COLUMNS} spacing={18} padding={{ horizontal: 16, bottom: 24 }}>
             {filteredResults.map(item => (
-              <VStack key={`${item.sourceName}-${item.vod_id}`} spacing={6} alignment="leading">
+              <VStack key={`${item.sourceUrl}-${item.vod_id}`} spacing={6} alignment="leading">
                 <VideoCard video={item} onTap={openPlayer} />
                 <Text font="caption2" foregroundStyle={palette.textTertiary} lineLimit={1}>
                   {item.sourceName}

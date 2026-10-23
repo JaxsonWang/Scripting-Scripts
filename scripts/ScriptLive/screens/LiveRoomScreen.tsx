@@ -112,6 +112,9 @@ export const LiveRoomScreen = ({ siteId, roomId }: { siteId: SiteId; roomId: str
   danmakuOnRef.current = danmakuOn
   const detailRef = useRef<LiveRoomDetail | null>(null)
   const mounted = useRef(true)
+  const roomRequestRef = useRef(0)
+  const qualityRequestRef = useRef(0)
+  const danmakuRequestRef = useRef(0)
 
   const realRoomId = detail?.roomId ?? roomId
   const followed = follows.some(user => user.id === followId(siteId, realRoomId))
@@ -138,25 +141,28 @@ export const LiveRoomScreen = ({ siteId, roomId }: { siteId: SiteId; roomId: str
   }
 
   const connectDanmaku = async (room: LiveRoomDetail) => {
-    await stopDanmaku()
-    const danmaku = site.getDanmaku()
-    danmakuRef.current = danmaku
-    const isCurrent = () => mounted.current && danmakuRef.current === danmaku
-    danmaku.onMessage = message => isCurrent() && handleMessage(message)
-    danmaku.onReady = () => {
-      if (!isCurrent()) return
-      setDanmakuClosed(null)
-      addSystem('弹幕服务器连接正常')
-    }
-    danmaku.onClose = reason => {
-      if (!isCurrent()) return
-      setDanmakuClosed(reason || '连接已关闭')
-      addSystem(`弹幕连接已断开：${reason || '连接已关闭'}`)
-    }
-    setDanmakuClosed(null)
-    addSystem('开始连接弹幕服务器')
+    const request = ++danmakuRequestRef.current
+    const isCurrent = () => mounted.current && detailRef.current === room && request === danmakuRequestRef.current
     try {
+      await stopDanmaku()
+      if (!isCurrent()) return
+      const danmaku = site.getDanmaku()
+      danmakuRef.current = danmaku
+      danmaku.onMessage = message => isCurrent() && handleMessage(message)
+      danmaku.onReady = () => {
+        if (!isCurrent()) return
+        setDanmakuClosed(null)
+        addSystem('弹幕服务器连接正常')
+      }
+      danmaku.onClose = reason => {
+        if (!isCurrent()) return
+        setDanmakuClosed(reason || '连接已关闭')
+        addSystem(`弹幕连接已断开：${reason || '连接已关闭'}`)
+      }
+      setDanmakuClosed(null)
+      addSystem('开始连接弹幕服务器')
       await danmaku.start(room.danmakuData)
+      if (!isCurrent()) await danmaku.stop()
     } catch (error) {
       console.error('[ScriptLive] 弹幕连接失败', error)
       if (isCurrent()) {
@@ -168,32 +174,37 @@ export const LiveRoomScreen = ({ siteId, roomId }: { siteId: SiteId; roomId: str
 
   const playQuality = async (room: LiveRoomDetail, list: LivePlayQuality[], index: number) => {
     const quality = list[index]
-    if (!quality) return
+    if (!mounted.current || detailRef.current !== room || !quality) return
+    const request = ++qualityRequestRef.current
+    const isCurrent = () => mounted.current && detailRef.current === room && request === qualityRequestRef.current
     setQualityIndex(index)
     setPlayError(null)
     try {
       const playUrl = await site.getPlayUrls(room, quality)
-      if (!mounted.current || detailRef.current !== room) return
+      if (!isCurrent()) return
       await playback.start(playUrl, settingsStore.get().forceHttps)
     } catch (error) {
       console.error('[ScriptLive] 读取播放地址失败', error)
-      if (mounted.current) setPlayError(`读取播放地址失败：${errorMessage(error)}`)
+      if (isCurrent()) setPlayError(`读取播放地址失败：${errorMessage(error)}`)
     }
   }
 
   const loadQualities = async (room: LiveRoomDetail) => {
+    const request = ++qualityRequestRef.current
+    const isCurrent = () => mounted.current && detailRef.current === room && request === qualityRequestRef.current
     try {
       const list = await site.getPlayQualities(room)
-      if (!mounted.current || detailRef.current !== room) return
+      if (!isCurrent()) return
       setQualities(list)
       if (!list.length) {
         setPlayError('无法读取播放清晰度')
         return
       }
-      await playQuality(room, list, pickQualityIndex(list.length, await currentQualityLevel()))
+      const level = await currentQualityLevel()
+      if (isCurrent()) await playQuality(room, list, pickQualityIndex(list.length, level))
     } catch (error) {
       console.error('[ScriptLive] 读取清晰度失败', error)
-      if (mounted.current) setPlayError(`读取清晰度失败：${errorMessage(error)}`)
+      if (isCurrent()) setPlayError(`读取清晰度失败：${errorMessage(error)}`)
     }
   }
 
@@ -201,25 +212,32 @@ export const LiveRoomScreen = ({ siteId, roomId }: { siteId: SiteId; roomId: str
     if (!settingsStore.get().showSuperChat) return
     try {
       const list = await site.getSuperChatMessages(room.roomId)
-      if (mounted.current) setSuperChats(current => [...list.filter(item => !current.some(existing => existing.id === item.id)), ...current])
+      if (mounted.current && detailRef.current === room)
+        setSuperChats(current => [...list.filter(item => !current.some(existing => existing.id === item.id)), ...current])
     } catch (error) {
       console.warn('[ScriptLive] 读取醒目留言失败', error)
-      if (mounted.current) setScError(errorMessage(error))
+      if (mounted.current && detailRef.current === room) setScError(errorMessage(error))
     }
   }
 
   const loadRoom = async () => {
+    const request = ++roomRequestRef.current
+    const isCurrent = () => mounted.current && request === roomRequestRef.current
+    // 上一轮的取流和弹幕连接就此作废；详情保留到新数据返回，刷新时页面不闪空
+    qualityRequestRef.current++
+    danmakuRequestRef.current++
     setLoadError(null)
     setPlayError(null)
     setQualities([])
     setSuperChats([])
     setScError(null)
     feed.clear()
-    await playback.reset()
-    addSystem('正在读取直播间信息')
     try {
+      await Promise.all([playback.reset(), stopDanmaku()])
+      if (!isCurrent()) return
+      addSystem('正在读取直播间信息')
       const room = await site.getRoomDetail(roomId)
-      if (!mounted.current) return
+      if (!isCurrent()) return
       detailRef.current = room
       setDetail(room)
       setOnline(room.online)
@@ -234,7 +252,7 @@ export const LiveRoomScreen = ({ siteId, roomId }: { siteId: SiteId; roomId: str
       connectDanmaku(room)
     } catch (error) {
       console.error('[ScriptLive] 读取直播间失败', error)
-      if (mounted.current) setLoadError(errorMessage(error))
+      if (isCurrent()) setLoadError(errorMessage(error))
     }
   }
 

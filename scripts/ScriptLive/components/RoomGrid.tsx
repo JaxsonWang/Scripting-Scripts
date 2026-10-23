@@ -17,7 +17,7 @@ export const roomKey = (room: LiveRoomItem) => room.roomId
 export function PagedFooter<T>({ paged }: { paged: Paged<T> }) {
   if (paged.error && paged.items.length) {
     return (
-      <Button action={paged.loadMore} buttonStyle="plain">
+      <Button action={paged.retry} buttonStyle="plain">
         <Text font="footnote" foregroundStyle={palette.accent} padding={16} frame={{ maxWidth: 'infinity' }}>
           加载失败，点按重试
         </Text>
@@ -52,7 +52,7 @@ type RoomGridProps = {
 export const RoomGrid = ({ paged, onTap, emptyTitle = '暂时没有直播间', lead, skip = 0 }: RoomGridProps) => {
   if (paged.loading && !paged.items.length) return <LoadingView />
   if (paged.error && !paged.items.length) {
-    return <EmptyView icon="wifi.exclamationmark" title="加载失败" message={paged.error} actionTitle="重试" onAction={paged.reload} />
+    return <EmptyView icon="wifi.exclamationmark" title="加载失败" message={paged.error} actionTitle="重试" onAction={paged.retry} />
   }
   if (!paged.items.length) return <EmptyView title={emptyTitle} />
   return (

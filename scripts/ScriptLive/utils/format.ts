@@ -19,7 +19,7 @@ export const formatDateTime = (date: Date): string =>
 
 /** 解析记录、备份中的日期时间或 ISO 时间；无法解析时返回 0 */
 export const parseDateTime = (text: string): number => {
-  const match = /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2}):(\d{2})(?:\.(\d{1,6}))?/.exec(text ?? '')
+  const match = /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2}):(\d{2})(?:\.(\d{1,6}))?$/.exec(text ?? '')
   if (!match) {
     const time = Date.parse(text)
     return Number.isNaN(time) ? 0 : time

@@ -1,4 +1,21 @@
-import { Button, HStack, Image, List, NavigationLink, NavigationStack, Path, Rectangle, Script, Section, Spacer, Text, VStack, useState } from 'scripting'
+import {
+  Button,
+  HStack,
+  Image,
+  List,
+  NavigationLink,
+  NavigationStack,
+  Path,
+  Rectangle,
+  Script,
+  Section,
+  Spacer,
+  Text,
+  VStack,
+  useEffect,
+  useState
+} from 'scripting'
+import { getBilibiliUserInfo } from '../core/sites/bilibili-account'
 import { SettingRow } from '../components/IconTile'
 import { PageHeader } from '../components/PageHeader'
 import { Avatar } from '../components/RoomCard'
@@ -79,7 +96,28 @@ export const MineScreen = () => {
   const [loginPresented, setLoginPresented] = useState(false)
   const version = Script.metadata?.version || '未知'
   const liveCount = follows.filter(user => liveStates[user.id] === 2).length
-  const user = account.bilibiliUser
+  const hasBilibiliCookie = !!account.bilibiliCookie
+  const user = hasBilibiliCookie ? account.bilibiliUser : null
+  const [verifyError, setVerifyError] = useState<string | null>(null)
+
+  // 备份恢复只带回 Cookie，这里用它读取账号资料；失败时显示原因，由用户清除后重新登录
+  useEffect(() => {
+    const cookie = account.bilibiliCookie
+    if (!cookie || account.bilibiliUser) return
+    let cancelled = false
+    setVerifyError(null)
+    getBilibiliUserInfo(cookie)
+      .then(info => {
+        if (!cancelled) setBilibiliAccount(cookie, info)
+      })
+      .catch(error => {
+        console.warn('[ScriptLive] 验证 B站 Cookie 失败', error)
+        if (!cancelled) setVerifyError(errorMessage(error))
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [account.bilibiliCookie, account.bilibiliUser])
 
   const openParser = async () => {
     const input = await Dialog.prompt({
@@ -104,9 +142,9 @@ export const MineScreen = () => {
 
   const logoutBilibili = async () => {
     const confirmed = await Dialog.confirm({
-      title: '退出 B站账号',
-      message: '退出后需要重新扫码才能使用登录权限。确定退出吗？',
-      confirmLabel: '退出',
+      title: user ? '退出 B站账号' : '清除 B站 Cookie',
+      message: '将清除本机保存的 B站 Cookie 和账号资料。',
+      confirmLabel: user ? '退出' : '清除',
       cancelLabel: '取消'
     })
     if (confirmed) setBilibiliAccount('', null)
@@ -118,14 +156,18 @@ export const MineScreen = () => {
         <Avatar url={user?.face} size={56} />
         <VStack alignment="leading" spacing={4}>
           <Text font="title3" bold lineLimit={1} foregroundStyle={palette.textPrimary}>
-            {user ? user.uname : '未登录'}
+            {user ? user.uname : hasBilibiliCookie ? 'B站 Cookie 已保存' : '未登录'}
           </Text>
           <Text font="caption" lineLimit={1} foregroundStyle={palette.textSecondary}>
-            {user ? `B站 · UID ${user.uid}` : '登录 B站，观看更高画质'}
+            {user ? `B站 · UID ${user.uid}` : hasBilibiliCookie ? (verifyError ?? '正在验证登录状态…') : '登录 B站，观看更高画质'}
           </Text>
         </VStack>
         <Spacer />
-        {user ? <PillButton title="退出" onTap={() => void logoutBilibili()} /> : <PillButton title="扫码登录" primary onTap={() => setLoginPresented(true)} />}
+        {hasBilibiliCookie ? (
+          <PillButton title={user ? '退出' : '清除'} onTap={() => void logoutBilibili()} />
+        ) : (
+          <PillButton title="扫码登录" primary onTap={() => setLoginPresented(true)} />
+        )}
       </HStack>
       <Rectangle fill={palette.separator} frame={{ height: 0.5 }} />
       <HStack>

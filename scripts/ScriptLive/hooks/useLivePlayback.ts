@@ -69,15 +69,22 @@ export const useLivePlayback = (siteId: SiteId) => {
   const tokenRef = useRef(0)
   const lineRef = useRef(0)
   const audioReadyRef = useRef(false)
+  const disposedRef = useRef(false)
 
   const patch = (next: Partial<PlaybackState>) => setState(current => ({ ...current, ...next }))
 
-  const ensureNative = async (): Promise<AVPlayer> => {
+  const ensureNative = async (token: number): Promise<AVPlayer | null> => {
     if (!audioReadyRef.current) {
       await SharedAudioSession.setCategory('playback', [])
+      if (token !== tokenRef.current) return null
       await SharedAudioSession.setActive(true)
+      if (disposedRef.current) {
+        await SharedAudioSession.setActive(false).catch(error => console.warn('[ScriptLive] 释放音频会话失败', error))
+        return null
+      }
       audioReadyRef.current = true
     }
+    if (token !== tokenRef.current) return null
     if (!nativeRef.current) nativeRef.current = new AVPlayer()
     return nativeRef.current
   }
@@ -111,14 +118,15 @@ export const useLivePlayback = (siteId: SiteId) => {
   const playLine = async (index: number) => {
     const source = sourceRef.current
     const line = source?.lines[index]
-    if (!source || !line) return
+    if (disposedRef.current || !source || !line) return
     const token = ++tokenRef.current
     lineRef.current = index
     userPausedRef.current = false
     patch({ lineIndex: index, status: 'loading' })
     try {
       if (source.engine === 'native') {
-        const player = await ensureNative()
+        const player = await ensureNative(token)
+        if (!player || token !== tokenRef.current) return
         await exitPictureInPicture()
         if (token !== tokenRef.current) return
         player.onReadyToPlay = () => {
@@ -163,12 +171,14 @@ export const useLivePlayback = (siteId: SiteId) => {
    * @param forceHttps 是否把 http 地址替换为 https
    */
   const start = async (playUrl: LivePlayUrl, forceHttps: boolean) => {
+    if (disposedRef.current) return
     const lines = playUrl.lines.map(line => withHttps(line, forceHttps))
     const hlsLines = lines.filter(line => line.format === 'hls')
     const engine: PlaybackEngine = isPro && hlsLines.length > 0 ? 'native' : 'web'
     const usable = engine === 'native' ? hlsLines : lines
     const note = isPro && engine === 'web' && lines.length > 0 ? '该清晰度只有 FLV 线路，原生播放器无法解码，已使用网页播放器' : null
-    await stopCurrent()
+    const token = await stopCurrent()
+    if (token !== tokenRef.current) return
     // 先创建网页控制器，下面这次渲染就能挂载 WebView，页面加载与视图挂载不再依赖后续状态更新
     if (engine === 'web') ensureWeb()
     sourceRef.current = { lines: usable, headers: playUrl.headers, engine }
@@ -177,10 +187,11 @@ export const useLivePlayback = (siteId: SiteId) => {
   }
 
   const stopCurrent = async () => {
-    tokenRef.current++
+    const token = ++tokenRef.current
     nativeRef.current?.pause()
     await exitPictureInPicture()
-    await webRef.current?.stop()
+    if (token === tokenRef.current) await webRef.current?.stop()
+    return token
   }
 
   /**
@@ -203,9 +214,9 @@ export const useLivePlayback = (siteId: SiteId) => {
       return
     }
     if (!paused) return playLine(lineRef.current)
-    tokenRef.current++
+    const token = ++tokenRef.current
     await webRef.current?.setPaused(true)
-    patch({ status: 'paused' })
+    if (token === tokenRef.current) patch({ status: 'paused' })
   }
 
   /** 开启或退出画中画。start() 只能在用户操作中调用，请求被拒绝或启动失败时提示原因 */
@@ -225,7 +236,8 @@ export const useLivePlayback = (siteId: SiteId) => {
 
   /** 停止播放并清空状态，用于未开播或重新加载房间 */
   const reset = async () => {
-    await stopCurrent()
+    const token = await stopCurrent()
+    if (token !== tokenRef.current) return
     sourceRef.current = null
     setState(INITIAL)
   }
@@ -247,9 +259,11 @@ export const useLivePlayback = (siteId: SiteId) => {
       }
     }
     return () => {
+      disposedRef.current = true
       tokenRef.current++
       // 先释放画中画句柄，再释放它所依赖的播放器
       pip?.dispose()
+      for (const resolve of pipStopWaiters.current.splice(0)) resolve()
       nativeRef.current?.dispose()
       webRef.current?.dispose()
       if (audioReadyRef.current) SharedAudioSession.setActive(false).catch(error => console.warn('[ScriptLive] 释放音频会话失败', error))

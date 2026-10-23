@@ -29,17 +29,21 @@ export const HomeScreen = () => {
   const [videos, setVideos] = useState<VideoItem[]>([])
   const [categories, setCategories] = useState<Category[]>([])
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const [selectedMainType, setSelectedMainType] = useState<number | null>(null)
   const [selectedSubType, setSelectedSubType] = useState<number | null>(null)
   const [page, setPage] = useState(1)
   const [hasMore, setHasMore] = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
+  const activeRequestRef = useRef(0)
+  /** 列表请求进行中（含首屏与翻页），同一帧内重复触发的翻页只发一次 */
+  const busyRef = useRef(false)
 
   const dismiss = Navigation.useDismiss()
 
   // 使用 ref 存储最新状态，避免 useCallback 依赖过多
-  const stateRef = useRef({ categories, selectedMainType, selectedSubType, page, hasMore, loadingMore })
-  stateRef.current = { categories, selectedMainType, selectedSubType, page, hasMore, loadingMore }
+  const stateRef = useRef({ source, categories, selectedMainType, selectedSubType, page, hasMore, error })
+  stateRef.current = { source, categories, selectedMainType, selectedSubType, page, hasMore, error }
 
   /**
    * 获取当前筛选的类型 ID
@@ -63,35 +67,47 @@ export const HomeScreen = () => {
    */
   const loadData = useCallback(
     async (targetPage: number = 1, append = false) => {
-      const currentSource = SettingsService.getCurrentSource()
-      setSource(currentSource)
-      setSources(SettingsService.getEnabledSources())
+      const currentSource = stateRef.current.source
+      const requestId = ++activeRequestRef.current
+      setError(null)
 
       if (!currentSource) {
+        busyRef.current = false
         setVideos([])
         setHasMore(false)
+        setLoading(false)
+        setLoadingMore(false)
         return
       }
 
+      busyRef.current = true
       if (append) {
         setLoadingMore(true)
       } else {
+        setVideos([])
+        setPage(1)
+        setHasMore(false)
         setLoading(true)
+        setLoadingMore(false)
       }
       try {
         const typeIds = getFetchTypeIds()
         const res = await fetchVideoList(currentSource.url, targetPage, typeIds)
+        if (activeRequestRef.current !== requestId) return
         setVideos(prev => (append ? [...prev, ...(res.list || [])] : res.list || []))
         setPage(targetPage)
         const totalPages = res.pagecount || targetPage
         setHasMore(targetPage < totalPages)
       } catch (e) {
         console.error(e)
+        if (activeRequestRef.current === requestId) {
+          setError(e instanceof Error ? e.message : String(e))
+        }
       } finally {
-        if (append) {
-          setLoadingMore(false)
-        } else {
+        if (activeRequestRef.current === requestId) {
+          busyRef.current = false
           setLoading(false)
+          setLoadingMore(false)
         }
       }
     },
@@ -106,18 +122,14 @@ export const HomeScreen = () => {
   }, [categories, selectedMainType])
 
   useEffect(() => {
-    if (source?.url) {
-      setHasMore(true)
-      setPage(1)
-      loadData(1, false)
+    void loadData(1, false)
+    return () => {
+      activeRequestRef.current += 1
     }
   }, [source?.url, selectedMainType, selectedSubType, loadData])
 
   useEffect(() => {
-    setSelectedSubType(null)
-  }, [selectedMainType])
-
-  useEffect(() => {
+    let cancelled = false
     const fetchAndSetCategories = async () => {
       if (!source?.url) {
         setCategories([])
@@ -125,64 +137,89 @@ export const HomeScreen = () => {
       }
       try {
         const result = await fetchCategories(source.url)
-        setCategories(result.class || [])
+        if (!cancelled && stateRef.current.source?.url === source.url) setCategories(result.class || [])
       } catch (error) {
         console.error('Failed to fetch categories', error)
-        setCategories([])
+        if (!cancelled && stateRef.current.source?.url === source.url) setCategories([])
       }
     }
 
     fetchAndSetCategories()
+    return () => {
+      cancelled = true
+    }
   }, [source?.url])
 
   const handleLoadMore = useCallback(() => {
-    const { page: currentPage, hasMore: more, loadingMore: isLoading } = stateRef.current
-    if (!isLoading && more) {
+    const { page: currentPage, hasMore: more } = stateRef.current
+    if (!busyRef.current && more) {
       loadData(currentPage + 1, true)
     }
   }, [loadData])
 
   const handleGridItemAppear = useCallback(
     (index: number) => {
-      const { hasMore: more, loadingMore: isLoading } = stateRef.current
-      if (!more || isLoading) {
-        return
-      }
-      if (index >= videos.length - 1) {
+      // 翻页失败后不自动重试，由底部「重试加载更多」发起
+      if (index >= videos.length - 1 && !stateRef.current.error) {
         handleLoadMore()
       }
     },
     [videos.length, handleLoadMore]
   )
 
-  /**
-   * 打开设置页并在关闭后刷新列表
-   */
-  const openSettings = useCallback(() => {
-    Navigation.present({
-      element: <SettingsScreen />
-    }).then(() => loadData())
-  }, [loadData])
+  /** 首页切换和设置返回共用同一次源切换，旧分类不能带入新源。 */
+  const refreshSource = useCallback(() => {
+    const next = SettingsService.getCurrentSource()
+    const changed = next?.url !== stateRef.current.source?.url
+    setSources(SettingsService.getEnabledSources())
+    setSource(next)
+    if (changed) {
+      // 旧源的在途请求作废；新源列表由 source 变化触发的 effect 加载
+      activeRequestRef.current += 1
+      setCategories([])
+      setSelectedMainType(null)
+      setSelectedSubType(null)
+      setVideos([])
+      setPage(1)
+      setHasMore(false)
+      setLoading(!!next)
+      setLoadingMore(false)
+    }
+    return changed
+  }, [])
+
+  /** 打开设置页并在关闭后刷新列表。 */
+  const openSettings = useCallback(async () => {
+    await Navigation.present({ element: <SettingsScreen /> })
+    if (!refreshSource()) await loadData()
+  }, [loadData, refreshSource])
 
   /**
    * 切换当前视频源
    */
   const handleSelectSource = useCallback(
     (next: ApiSource) => {
-      if (next.url === source?.url) {
+      if (next.url === stateRef.current.source?.url) {
         return
       }
       SettingsService.selectSourceByUrl(next.url)
-      setSource(next)
-      setCategories([])
-      setSelectedMainType(null)
-      setSelectedSubType(null)
-      setVideos([])
-      setPage(1)
-      setHasMore(true)
+      refreshSource()
     },
-    [source?.url]
+    [refreshSource]
   )
+
+  const handleSelectMainType = (typeId: number | null) => {
+    if (typeId === stateRef.current.selectedMainType) return
+    activeRequestRef.current += 1
+    setSelectedMainType(typeId)
+    setSelectedSubType(null)
+  }
+
+  const handleSelectSubType = (typeId: number | null) => {
+    if (typeId === stateRef.current.selectedSubType) return
+    activeRequestRef.current += 1
+    setSelectedSubType(typeId)
+  }
 
   /**
    * 退出应用
@@ -244,18 +281,18 @@ export const HomeScreen = () => {
       </ScrollView>
       <ScrollView axes="horizontal" scrollIndicator="hidden">
         <HStack spacing={8} padding={{ horizontal: 16 }}>
-          <FilterChip label="全部" active={selectedMainType === null} onTap={() => setSelectedMainType(null)} />
+          <FilterChip label="全部" active={selectedMainType === null} onTap={() => handleSelectMainType(null)} />
           {mainCategories.map(cat => (
-            <FilterChip key={cat.type_id} label={cat.type_name} active={selectedMainType === cat.type_id} onTap={() => setSelectedMainType(cat.type_id)} />
+            <FilterChip key={cat.type_id} label={cat.type_name} active={selectedMainType === cat.type_id} onTap={() => handleSelectMainType(cat.type_id)} />
           ))}
         </HStack>
       </ScrollView>
       {selectedMainType !== null && subCategories.length > 0 && (
         <ScrollView axes="horizontal" scrollIndicator="hidden">
           <HStack spacing={8} padding={{ horizontal: 16 }}>
-            <FilterChip label="全部" active={selectedSubType === null} onTap={() => setSelectedSubType(null)} />
+            <FilterChip label="全部" active={selectedSubType === null} onTap={() => handleSelectSubType(null)} />
             {subCategories.map(cat => (
-              <FilterChip key={cat.type_id} label={cat.type_name} active={selectedSubType === cat.type_id} onTap={() => setSelectedSubType(cat.type_id)} />
+              <FilterChip key={cat.type_id} label={cat.type_name} active={selectedSubType === cat.type_id} onTap={() => handleSelectSubType(cat.type_id)} />
             ))}
           </HStack>
         </ScrollView>
@@ -263,6 +300,8 @@ export const HomeScreen = () => {
       <ScrollView scrollIndicator="hidden">
         {loading ? (
           <LoadingView />
+        ) : error && videos.length === 0 ? (
+          <EmptyView title="加载失败" message={error} actionTitle="重试" onAction={() => void loadData()} />
         ) : videos.length === 0 ? (
           <EmptyView title="暂无内容" />
         ) : (
@@ -285,9 +324,18 @@ export const HomeScreen = () => {
                   </VStack>
                 ))}
               </LazyVGrid>
-              <Text font="caption" foregroundStyle={palette.textTertiary}>
-                {hasMore ? (loadingMore ? '加载中…' : '上拉加载更多') : '已经到底了'}
-              </Text>
+              {error ? (
+                <VStack spacing={8}>
+                  <Text font="footnote" foregroundStyle={palette.warning}>
+                    {error}
+                  </Text>
+                  <Button title="重试加载更多" action={handleLoadMore} foregroundStyle={palette.accent} />
+                </VStack>
+              ) : (
+                <Text font="caption" foregroundStyle={palette.textTertiary}>
+                  {hasMore ? (loadingMore ? '加载中…' : '上拉加载更多') : '已经到底了'}
+                </Text>
+              )}
             </VStack>
           </VStack>
         )}

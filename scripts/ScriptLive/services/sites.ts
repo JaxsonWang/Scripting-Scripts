@@ -15,4 +15,4 @@ const SITES: Record<SiteId, LiveSite> = {
 
 export const getSite = (id: SiteId): LiveSite => SITES[id]
 
-export const isSiteId = (value: unknown): value is SiteId => typeof value === 'string' && value in SITES
+export const isSiteId = (value: unknown): value is SiteId => typeof value === 'string' && Object.prototype.hasOwnProperty.call(SITES, value)

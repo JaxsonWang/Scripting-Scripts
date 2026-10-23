@@ -93,6 +93,8 @@ export const PlayerScreen = ({ id, sourceUrl, sourceName }: PlayerScreenProps) =
   const [currentGroupIndex, setCurrentGroupIndex] = useState(0)
   const [currentEpisodeIndex, setCurrentEpisodeIndex] = useState(0)
   const [loading, setLoading] = useState(true)
+  const [detailError, setDetailError] = useState<string | null>(null)
+  const [detailRequest, setDetailRequest] = useState(0)
   const [playback] = useState<Playback>(() =>
     Script.hasFullAccess() ? { kind: 'native', player: new AVPlayer() } : { kind: 'web', controller: new WebViewController() }
   )
@@ -104,9 +106,13 @@ export const PlayerScreen = ({ id, sourceUrl, sourceName }: PlayerScreenProps) =
   const orientation = usePlayerOrientation(playback.kind === 'native')
 
   useEffect(() => {
+    let cancelled = false
+    setLoading(true)
+    setDetailError(null)
     log('open', { backend: playback.kind, source: describeDiagnosticUrl(sourceUrl) })
     fetchVideoDetail(sourceUrl, id)
       .then(res => {
+        if (cancelled) return
         if (res.list && res.list.length > 0) {
           const v = res.list[0]
           setVideo(v)
@@ -132,9 +138,19 @@ export const PlayerScreen = ({ id, sourceUrl, sourceName }: PlayerScreenProps) =
           setPlayGroups(groups)
         }
       })
-      .catch(error => log('detail.error', { error: redactDiagnosticError(error) }))
-      .finally(() => setLoading(false))
-  }, [id, sourceUrl, sourceName])
+      .catch(error => {
+        if (cancelled) return
+        const message = redactDiagnosticError(error)
+        log('detail.error', { error: message })
+        setDetailError(message)
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [id, sourceUrl, sourceName, detailRequest])
 
   useEffect(() => {
     const currentEpisode = playGroups[currentGroupIndex]?.episodes[currentEpisodeIndex]
@@ -227,11 +243,17 @@ export const PlayerScreen = ({ id, sourceUrl, sourceName }: PlayerScreenProps) =
     [playback]
   )
 
-  if (loading || !video) {
+  if (loading || detailError || !video) {
     return (
       <NavigationStack preferredColorScheme={colorScheme} tint={palette.accent}>
         <VStack frame={FULL_SCREEN_FRAME} background={<ScreenBackground />} toolbar={{ cancellationAction: <Button title="返回" action={dismiss} /> }}>
-          {loading ? <LoadingView /> : <EmptyView title="未找到视频" />}
+          {loading ? (
+            <LoadingView />
+          ) : detailError ? (
+            <EmptyView title="视频加载失败" message={detailError} actionTitle="重试" onAction={() => setDetailRequest(request => request + 1)} />
+          ) : (
+            <EmptyView title="未找到视频" />
+          )}
         </VStack>
       </NavigationStack>
     )

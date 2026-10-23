@@ -152,11 +152,7 @@ export const WHITE: LiveMessageColor = { r: 255, g: 255, b: 255 }
  * @param value 站点下发的颜色整数
  */
 export const numberToColor = (value: number): LiveMessageColor => {
-  let hex = Math.max(0, Math.floor(value)).toString(16)
-  if (hex.length === 4) hex = `00${hex}`
-  if (hex.length === 8) hex = hex.slice(2)
-  if (hex.length !== 6) return WHITE
-  return { r: parseInt(hex.slice(0, 2), 16), g: parseInt(hex.slice(2, 4), 16), b: parseInt(hex.slice(4, 6), 16) }
+  return { r: (value >>> 16) & 0xff, g: (value >>> 8) & 0xff, b: value & 0xff }
 }
 
 export const colorToHex = ({ r, g, b }: LiveMessageColor): string => `#${[r, g, b].map(v => v.toString(16).padStart(2, '0')).join('')}`

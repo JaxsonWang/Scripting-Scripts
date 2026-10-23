@@ -7,8 +7,20 @@ import { createSignal, createStore } from './store'
 
 export const DEFAULT_TAG = '全部'
 
+/** 旧版本批量导入时用毫秒时间戳作标签 ID，同一批可能重复；读取时给重复项换新 ID，按 ID 删除、重命名才不会误伤其他标签 */
+const uniqueTagIds = (tags: FollowTag[]): FollowTag[] => {
+  const seen = new Set<string>()
+  return tags.map(tag => {
+    if (!seen.has(tag.id)) {
+      seen.add(tag.id)
+      return tag
+    }
+    return { ...tag, id: UUID.string() }
+  })
+}
+
 export const followStore = createStore<FollowUser[]>('follows', [])
-export const tagStore = createStore<FollowTag[]>('follow_tags', [])
+export const tagStore = createStore<FollowTag[]>('follow_tags', [], uniqueTagIds)
 
 /** 每个关注的直播状态只在内存中保存，打开脚本后重新查询 */
 export const liveStateStore = createSignal<Record<string, LiveState>>({})
@@ -35,7 +47,7 @@ export const removeFollow = (id: string) => {
 export const addTag = (name: string): boolean => {
   const tag = name.trim()
   if (!tag || tag === DEFAULT_TAG || tagStore.get().some(item => item.tag === tag)) return false
-  tagStore.update(tags => [...tags, { id: `${Date.now()}`, tag, userId: [] }])
+  tagStore.update(tags => [...tags, { id: UUID.string(), tag, userId: [] }])
   return true
 }
 

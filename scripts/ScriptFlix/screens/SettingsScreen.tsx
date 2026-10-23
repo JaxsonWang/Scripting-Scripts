@@ -16,6 +16,8 @@ import {
   Toggle,
   VStack,
   Widget,
+  useEffect,
+  useRef,
   useState
 } from 'scripting'
 import type { WidgetFamily } from 'scripting'
@@ -33,6 +35,8 @@ import type { CloudSnapshot } from '../types'
 const AppStorage = Storage
 const ICLOUD_SYNC_KEY = 'script_flix_icloud_sync_enabled'
 const BANNER_IMAGE_FILE_PATH = Path.join(Script.directory, 'assets', 'banner.webp')
+// 同一个备份文件按调用顺序写入；关闭再打开设置页也共用这条队列。
+let cloudSyncQueue: Promise<void> = Promise.resolve()
 
 const THEME_HINTS = {
   auto: '跟随系统外观，白天日间、夜晚夜间自动切换',
@@ -61,10 +65,20 @@ export const SettingsScreen = () => {
   const colorScheme = AppearanceService.colorSchemeOf(themeMode)
   const [icloudSyncEnabled, setIcloudSyncEnabled] = useState<boolean>(() => AppStorage.get(ICLOUD_SYNC_KEY) ?? false)
   const [syncing, setSyncing] = useState(false)
+  /** 开启同步时正在读取并应用云端备份；期间不能关闭页面或改动视频源，避免恢复结果与首页、源列表错位 */
+  const [restoring, setRestoring] = useState(false)
   const [lastSyncedAt, setLastSyncedAt] = useState<number | null>(null)
   const [sources, setSources] = useState(() => SettingsService.getSources())
   const [widgetRefreshMinutes, setWidgetRefreshMinutes] = useState(SettingsService.getWidgetRefreshMinutes)
+  const mountedRef = useRef(true)
   const enabledSourceCount = sources.filter(SettingsService.isSourceEnabled).length
+
+  useEffect(
+    () => () => {
+      mountedRef.current = false
+    },
+    []
+  )
 
   const getIcloudSettingsPath = () => {
     if (!FileManager.isiCloudEnabled) {
@@ -89,55 +103,60 @@ export const SettingsScreen = () => {
     }
   }
 
-  const restoreSettingsFromICloud = async () => {
-    try {
-      const { filePath } = getIcloudSettingsPath()
-      const exists = await FileManager.exists(filePath)
-      if (!exists) {
-        return false
-      }
-      const raw = await FileManager.readAsString(filePath)
-      const snapshot = JSON.parse(raw) as CloudSnapshot
-      applySnapshot(snapshot)
-      return true
-    } catch (error) {
-      console.error('[SettingsScreen] restore iCloud settings failed', error)
-      const message = error instanceof Error ? error.message : 'settings.json 解析失败'
-      await Dialog.alert({ title: 'iCloud 同步失败', message })
-      return false
-    }
+  /** 读取云端备份；文件不存在时返回 undefined */
+  const readICloudSnapshot = async () => {
+    const { filePath } = getIcloudSettingsPath()
+    if (!(await FileManager.exists(filePath))) return
+    return JSON.parse(await FileManager.readAsString(filePath)) as CloudSnapshot
   }
 
-  const syncSettingsToICloud = async () => {
-    try {
-      setSyncing(true)
-      const snapshot = {
-        sources: SettingsService.getSources(),
-        currentSourceIndex: SettingsService.getCurrentSourceIndex(),
-        history: HistoryService.getHistory()
+  const syncSettingsToICloud = () => {
+    setSyncing(true)
+    const task = cloudSyncQueue.then(async () => {
+      try {
+        const snapshot = {
+          sources: SettingsService.getSources(),
+          currentSourceIndex: SettingsService.getCurrentSourceIndex(),
+          history: HistoryService.getHistory()
+        }
+        const { folder, filePath } = getIcloudSettingsPath()
+        await FileManager.createDirectory(folder, true)
+        await FileManager.writeAsString(filePath, JSON.stringify(snapshot, null, 2))
+        if (mountedRef.current) setLastSyncedAt(Date.now())
+      } catch (error) {
+        console.error('[SettingsScreen] iCloud sync failed', error)
+        const message = error instanceof Error ? error.message : '未知错误'
+        if (mountedRef.current) await Dialog.alert({ title: 'iCloud 同步失败', message })
       }
-      const { folder, filePath } = getIcloudSettingsPath()
-      await FileManager.createDirectory(folder, true)
-      await FileManager.writeAsString(filePath, JSON.stringify(snapshot, null, 2))
-      setLastSyncedAt(Date.now())
-    } catch (error) {
-      console.error('[SettingsScreen] iCloud sync failed', error)
-      const message = error instanceof Error ? error.message : '未知错误'
-      await Dialog.alert({ title: 'iCloud 同步失败', message })
-    } finally {
-      setSyncing(false)
-    }
+    })
+    cloudSyncQueue = task
+    return task.then(() => {
+      // 队尾写完才结束同步状态；还有排队的写入时保持进行中
+      if (mountedRef.current && cloudSyncQueue === task) setSyncing(false)
+    })
   }
 
   const handleIcloudToggle = async (value: boolean) => {
-    setIcloudSyncEnabled(value)
-    AppStorage.set(ICLOUD_SYNC_KEY, value)
-    if (value) {
-      const restored = await restoreSettingsFromICloud()
-      if (restored) {
-        setSources(SettingsService.getSources())
-      }
-      await syncSettingsToICloud()
+    if (!value) {
+      setIcloudSyncEnabled(false)
+      AppStorage.set(ICLOUD_SYNC_KEY, false)
+      return
+    }
+
+    setRestoring(true)
+    try {
+      const snapshot = await readICloudSnapshot()
+      if (!mountedRef.current) return
+      if (snapshot !== undefined) applySnapshot(snapshot)
+      setIcloudSyncEnabled(true)
+      AppStorage.set(ICLOUD_SYNC_KEY, true)
+      void syncSettingsToICloud()
+    } catch (error) {
+      console.error('[SettingsScreen] restore iCloud settings failed', error)
+      const message = error instanceof Error ? error.message : 'settings.json 解析失败'
+      if (mountedRef.current) await Dialog.alert({ title: 'iCloud 同步失败', message })
+    } finally {
+      if (mountedRef.current) setRestoring(false)
     }
   }
 
@@ -161,14 +180,15 @@ export const SettingsScreen = () => {
     }
   }
 
-  const syncStatusLabel = syncing
-    ? '正在写入 iCloud...'
-    : icloudSyncEnabled && lastSyncedAt
-      ? `最近同步：${new Date(lastSyncedAt).toLocaleString()}`
-      : `开启后将在 iCloud Drive/${getScriptFolderRelativePath()}/settings.json 生成设置备份`
+  const syncStatusLabel =
+    restoring || syncing
+      ? '正在同步 iCloud...'
+      : icloudSyncEnabled && lastSyncedAt
+        ? `最近同步：${new Date(lastSyncedAt).toLocaleString()}`
+        : `开启后将在 iCloud Drive/${getScriptFolderRelativePath()}/settings.json 生成设置备份`
 
   return (
-    <NavigationStack preferredColorScheme={colorScheme} tint={palette.accent}>
+    <NavigationStack preferredColorScheme={colorScheme} tint={palette.accent} interactiveDismissDisabled={restoring}>
       <List
         foregroundStyle={palette.textPrimary}
         background={<ScreenBackground />}
@@ -177,11 +197,12 @@ export const SettingsScreen = () => {
         toolbarColorScheme={colorScheme}
         navigationTitle="设置"
         toolbar={{
-          cancellationAction: <Button title="完成" action={dismiss} />
+          cancellationAction: <Button title="完成" action={dismiss} disabled={restoring} />
         }}
       >
         <Section listRowBackground={<Rectangle fill={palette.card} />} header={<Text>视频源</Text>}>
           <NavigationLink
+            disabled={restoring}
             destination={<SourceManagementScreen icloudSyncEnabled={icloudSyncEnabled} onRequestSync={syncSettingsToICloud} onSourcesChange={setSources} />}
           >
             <VStack alignment="leading" spacing={2}>
@@ -251,7 +272,13 @@ export const SettingsScreen = () => {
             </Text>
           }
         >
-          <Toggle title="iCloud 同步" foregroundStyle={palette.accent} value={icloudSyncEnabled} onChanged={handleIcloudToggle} />
+          <Toggle
+            title="iCloud 同步"
+            foregroundStyle={palette.accent}
+            value={icloudSyncEnabled || restoring}
+            onChanged={handleIcloudToggle}
+            disabled={restoring}
+          />
         </Section>
         <Section
           listRowBackground={<Rectangle fill={palette.card} />}

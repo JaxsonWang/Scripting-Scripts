@@ -39,18 +39,29 @@ const PAGE_SCRIPT = String.raw`
 (() => {
   const video = document.getElementById('v')
   let flv = null
-  const post = message => { try { window.webkit.messageHandlers.playerEvent.postMessage(message) } catch (e) {} }
+  let playRequest = 0
+  // 线路请求编号随消息跨桥回传，排队中的旧事件不能更新新线路。
+  let sourceRequest = 0
+  const post = (message, request = sourceRequest) => { try { window.webkit.messageHandlers.playerEvent.postMessage({ ...message, request }) } catch (e) {} }
   const destroyFlv = () => { if (flv) { try { flv.destroy() } catch (e) {} flv = null } }
-  const tryPlay = () => video.play().catch(() => {
-    // 带声音的自动播放被拦截时静音播放，由脚本界面提示点按恢复声音
-    video.muted = true
-    post({ type: 'muted', muted: true })
+  // play() 被拒只说明这次没播起来（如来电、切后台时系统打断）；媒体源失败由 video 的 error 事件和 mpegts 的 ERROR 上报为致命错误
+  const report = error => post({ type: 'error', message: String(error && error.message || error), fatal: false })
+  const tryPlay = () => {
+    const request = ++playRequest
     return video.play().catch(error => {
-      // 静音也无法自动播放时停在暂停态，由播放器控件的「继续播放」再次发起
-      post({ type: 'error', message: String(error && error.message || error), fatal: false })
-      post({ type: 'paused' })
+      if (request !== playRequest) return
+      if (!error || error.name !== 'NotAllowedError') return report(error)
+      // 带声音的自动播放被拦截时静音播放，由脚本界面提示点按恢复声音
+      video.muted = true
+      post({ type: 'muted', muted: true })
+      return video.play().catch(error => {
+        if (request !== playRequest) return
+        report(error)
+        // 静音也无法自动播放时停在暂停态，由播放器控件的「继续播放」再次发起
+        if (error && error.name === 'NotAllowedError') post({ type: 'paused' })
+      })
     })
-  })
+  }
   video.addEventListener('playing', () => post({ type: 'playing' }))
   video.addEventListener('waiting', () => post({ type: 'waiting' }))
   video.addEventListener('pause', () => post({ type: 'paused' }))
@@ -58,17 +69,20 @@ const PAGE_SCRIPT = String.raw`
     const error = video.error
     post({ type: 'error', message: error ? 'MediaError ' + error.code + (error.message ? ': ' + error.message : '') : '播放失败', fatal: true })
   })
-  window.__play = (url, format) => {
+  window.__play = (url, format, request) => {
+    playRequest++
+    sourceRequest = request
     destroyFlv()
     video.removeAttribute('src')
     video.load()
+    post({ type: 'muted', muted: video.muted })
     if (format === 'flv') {
       if (!window.mpegts || !mpegts.getFeatureList().mseLivePlayback) {
         post({ type: 'error', message: '当前系统不支持网页播放 FLV（需要 iOS 17.1 及以上）', fatal: true })
         return
       }
       flv = mpegts.createPlayer({ type: 'flv', isLive: true, url }, { enableWorker: false, lazyLoad: false, liveBufferLatencyChasing: true, liveBufferLatencyMaxLatency: 6, liveBufferLatencyMinRemain: 1 })
-      flv.on(mpegts.Events.ERROR, (type, detail) => post({ type: 'error', message: type + ': ' + detail, fatal: true }))
+      flv.on(mpegts.Events.ERROR, (type, detail) => post({ type: 'error', message: type + ': ' + detail, fatal: true }, request))
       flv.attachMediaElement(video)
       flv.load()
     } else {
@@ -76,9 +90,9 @@ const PAGE_SCRIPT = String.raw`
     }
     tryPlay()
   }
-  window.__setPaused = paused => { if (paused) video.pause(); else tryPlay() }
+  window.__setPaused = (paused, request) => { sourceRequest = request; if (paused) { playRequest++; video.pause() } else tryPlay() }
   window.__setMuted = muted => { video.muted = muted; post({ type: 'muted', muted }) }
-  window.__stop = () => { destroyFlv(); video.pause(); video.removeAttribute('src'); video.load() }
+  window.__stop = request => { playRequest++; sourceRequest = request; destroyFlv(); video.pause(); video.removeAttribute('src'); video.load() }
 })()
 `
 
@@ -104,24 +118,47 @@ video{width:100%;height:100%;object-fit:contain;background:#000}
 export class WebLivePlayer {
   readonly controller = new WebViewController()
   private loadedSite: SiteId | null = null
+  private loadingPage: Promise<void> | null = null
+  private handlerAdded = false
+  private playRequest = 0
+  private disposed = false
   onEvent?: (event: WebPlayerEvent) => void
 
   private async ensurePage(siteId: SiteId) {
-    if (this.loadedSite === siteId) return
-    if (this.loadedSite === null) {
-      await this.controller.addScriptMessageHandler<WebPlayerEvent>('playerEvent', event => {
-        if (event) this.onEvent?.(event)
-      })
+    while (this.loadingPage) await this.loadingPage
+    if (this.disposed || this.loadedSite === siteId) return
+    this.loadingPage = this.loadPage(siteId)
+    try {
+      await this.loadingPage
+    } finally {
+      this.loadingPage = null
     }
-    const loaded = await this.controller.loadHTML(pageHtml(await loadMpegts()), PAGE_ORIGIN[siteId])
+  }
+
+  private async loadPage(siteId: SiteId) {
+    if (!this.handlerAdded) {
+      await this.controller.addScriptMessageHandler<WebPlayerEvent & { request: number }>('playerEvent', event => {
+        if (!event || this.disposed || event.request !== this.playRequest) return
+        if (event.type === 'error' && event.fatal) this.playRequest++
+        this.onEvent?.(event)
+      })
+      this.handlerAdded = true
+    }
+    if (this.disposed) return
+    const mpegts = await loadMpegts()
+    if (this.disposed) return
+    const loaded = await this.controller.loadHTML(pageHtml(mpegts), PAGE_ORIGIN[siteId])
+    if (this.disposed) return
     if (!loaded) throw new Error('网页播放器加载失败')
     this.loadedSite = siteId
   }
 
-  async play(siteId: SiteId, line: LivePlayLine): Promise<WebInlineSupport> {
+  async play(siteId: SiteId, line: LivePlayLine): Promise<WebInlineSupport | null> {
+    const request = ++this.playRequest
     await this.ensurePage(siteId)
+    if (this.disposed || request !== this.playRequest) return null
     return this.controller.evaluateJavaScript<WebInlineSupport>(`
-      window.__play(${JSON.stringify(line.url)}, ${JSON.stringify(line.format)})
+      window.__play(${JSON.stringify(line.url)}, ${JSON.stringify(line.format)}, ${request})
       return {
         playsInline: document.getElementById('v').playsInline,
         inlineAllowed: window.matchMedia('(-webkit-video-playable-inline)').matches
@@ -130,7 +167,8 @@ export class WebLivePlayer {
   }
 
   async setPaused(paused: boolean) {
-    if (this.loadedSite) await this.controller.evaluateJavaScript(`window.__setPaused(${paused})`)
+    const request = ++this.playRequest
+    if (this.loadedSite) await this.controller.evaluateJavaScript(`window.__setPaused(${paused}, ${request})`)
   }
 
   async setMuted(muted: boolean) {
@@ -138,10 +176,13 @@ export class WebLivePlayer {
   }
 
   async stop() {
-    if (this.loadedSite) await this.controller.evaluateJavaScript('window.__stop()')
+    const request = ++this.playRequest
+    if (this.loadedSite) await this.controller.evaluateJavaScript(`window.__stop(${request})`)
   }
 
   dispose() {
+    this.disposed = true
+    this.playRequest++
     this.onEvent = undefined
     this.controller.dispose()
   }

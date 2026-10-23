@@ -18,7 +18,7 @@ type Mode = 'room' | 'anchor'
 const AnchorList = ({ paged, siteId }: { paged: Paged<LiveAnchorItem>; siteId: SiteId }) => {
   if (paged.loading && !paged.items.length) return <LoadingView />
   if (paged.error && !paged.items.length) {
-    return <EmptyView icon="exclamationmark.magnifyingglass" title="搜索失败" message={paged.error} actionTitle="重试" onAction={paged.reload} />
+    return <EmptyView icon="exclamationmark.magnifyingglass" title="搜索失败" message={paged.error} actionTitle="重试" onAction={paged.retry} />
   }
   if (!paged.items.length) return <EmptyView icon="person.crop.circle.badge.questionmark" title="没有找到主播" />
 

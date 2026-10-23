@@ -135,15 +135,19 @@ const restoreBackupZip = async (zipPath: string) => {
   mergeFollows(normalizeFollows(follows), normalizeTags(tags))
   const histories = normalizeHistory(await readJsonFile(folder, FILES.histories))
   if (histories.length) {
-    const merged = new Map([...historyStore.get(), ...histories].map(item => [item.id, item]))
+    const merged = new Map(historyStore.get().map(item => [item.id, item]))
+    for (const item of histories) {
+      const existing = merged.get(item.id)
+      if (!existing || parseDateTime(item.updateTime) > parseDateTime(existing.updateTime)) merged.set(item.id, item)
+    }
     historyStore.set([...merged.values()].sort((a, b) => parseDateTime(b.updateTime) - parseDateTime(a.updateTime)).slice(0, 200))
   }
   const words = await readJsonFile(folder, FILES.blockedWords)
   if (Array.isArray(words)) updateSettings({ shieldWords: Array.from(new Set([...settingsStore.get().shieldWords, ...words.map(String)])) })
   const bilibili = await readJsonFile(folder, FILES.bilibili)
-  if (typeof bilibili?.cookie === 'string' && bilibili.cookie) setBilibiliAccount(bilibili.cookie, null)
+  if (typeof bilibili?.cookie === 'string') setBilibiliAccount(bilibili.cookie, null)
   const settings = await readJsonFile(folder, FILES.settings)
-  if (settings && typeof settings === 'object') updateSettings(settings)
+  if (settings && typeof settings === 'object') updateSettings({ ...settings, shieldWords: settingsStore.get().shieldWords })
   await FileManager.remove(folder)
 }
 

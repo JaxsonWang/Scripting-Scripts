@@ -1,6 +1,249 @@
 import { Color, ColorScheme, Size, VirtualNode, KeyboardType, Edge, Point, KeywordPoint, Visibility, ReadableStream, FunctionComponent, AppIntent, AppIntentProtocol, Cookie, MapCoordinate, MapRegion, MapPointsOfInterestSpec, MapStyleSpec } from "scripting"
 
 declare global {
+  /** iOS/iPadOS 27+ screen capture in a live main App script. The system picker authorizes shared content. */
+  namespace ScreenCapture {
+    const isSupported: boolean
+    const isAvailable: boolean
+    function getRecordingCapabilities(): ScreenCaptureRecordingCapabilities
+    function createSession(options?: ScreenCaptureOptions): Promise<ScreenCaptureSession>
+    function start(options?: ScreenCaptureOptions): Promise<ScreenCaptureSession>
+    function capture(options?: ScreenCaptureCaptureOptions): Promise<ScreenCaptureImageFrame>
+    function presentRecordingEditor(filePath: string): Promise<void>
+  }
+
+  type ScreenCaptureScope = "system" | "display" | "app"
+  type ScreenCaptureState = "ready" | "starting" | "running" | "stopping" | "stopped" | "failed"
+  type ScreenCaptureFrameStatus = "complete" | "idle" | "blank" | "suspended" | "started" | "stopped" | "unknown"
+
+  interface ScreenCaptureOptions {
+    scope?: ScreenCaptureScope
+    picker?: { showsMicrophoneControl?: boolean; showsCameraControl?: boolean }
+    configuration?: ScreenCaptureConfiguration
+    signal?: import("scripting").AbortSignal
+  }
+  interface ScreenCaptureConfiguration {
+    preset?: "hdrRecordingPreservedSDRHDR10"
+    width?: number
+    height?: number
+    capturesAudio?: boolean
+    sampleRate?: number
+    channelCount?: number
+    excludesCurrentProcessAudio?: boolean
+    captureDynamicRange?: "sdr" | "hdrCanonicalDisplay"
+  }
+  interface ScreenCaptureCaptureOptions extends ScreenCaptureOptions {
+    delayMs?: number
+    timeoutMs?: number
+    image?: ScreenCaptureImageOptions
+  }
+  interface ScreenCaptureReadOptions {
+    timeoutMs?: number
+    signal?: import("scripting").AbortSignal
+  }
+  interface ScreenCaptureImageOptions {
+    maxDimension?: number
+    dynamicRange?: "preserve" | "sdr"
+  }
+  interface ScreenCaptureSelection {
+    readonly requestedScope: ScreenCaptureScope
+    readonly style: "display" | "window" | "unknown"
+    readonly contentRect: ScreenCaptureRect
+    readonly pointPixelScale: number
+    readonly isMicrophoneEnabled: boolean
+    readonly isCameraEnabled: boolean
+  }
+  interface ScreenCaptureSession {
+    readonly id: string
+    readonly state: ScreenCaptureState
+    readonly isCapturing: boolean
+    readonly selection: ScreenCaptureSelection
+    readonly configuration: Readonly<ScreenCaptureConfiguration>
+    readonly timing: ScreenCaptureClockInfo
+    readonly activity: "unknown" | "active" | "inactive"
+    readonly closed: Promise<ScreenCaptureEnd>
+    onStateChanged: ((state: ScreenCaptureState) => void) | null
+    onFrameStatusChanged: ((status: ScreenCaptureFrameStatus) => void) | null
+    onActivityChanged: ((activity: "active" | "inactive") => void) | null
+    start(): Promise<void>
+    stop(): Promise<ScreenCaptureEnd>
+    nextFrame(options?: ScreenCaptureReadOptions & { image?: ScreenCaptureImageOptions }): Promise<ScreenCaptureImageFrame>
+    latestFrame(options?: { maxAgeMs?: number; image?: ScreenCaptureImageOptions }): Promise<ScreenCaptureImageFrame | null>
+    addVideoOutput(options?: ScreenCaptureVideoOutputOptions): Promise<ScreenCaptureVideoOutput>
+    addAudioOutput(options: ScreenCaptureAudioOutputOptions): Promise<ScreenCaptureAudioOutput>
+    addRecordingOutput(options: ScreenCaptureRecordingOptions): Promise<ScreenCaptureRecording>
+    addClipBufferingOutput(): Promise<ScreenCaptureClipBuffer>
+    addVideoEffectOutput(cameraDevice: AVCaptureDevice): Promise<ScreenCaptureVideoEffect>
+    getStatistics(): ScreenCaptureStatistics
+  }
+  interface ScreenCaptureVideoOutput {
+    readonly samples: AsyncIterable<ScreenCaptureVideoSample>
+    readonly closed: Promise<ScreenCaptureOutputEnd>
+    onError: ((error: ScreenCaptureError) => void) | null
+    getStatistics(): ScreenCaptureOutputStatistics
+    dispose(): Promise<void>
+  }
+  interface ScreenCaptureAudioOutput {
+    readonly source: "system" | "microphone"
+    readonly samples: AsyncIterable<ScreenCaptureAudioSample>
+    readonly closed: Promise<ScreenCaptureOutputEnd>
+    onError: ((error: ScreenCaptureError) => void) | null
+    getStatistics(): ScreenCaptureOutputStatistics
+    dispose(): Promise<void>
+  }
+  interface ScreenCaptureVideoOutputOptions {
+    maxFPS?: number
+    buffering?: ScreenCaptureBuffering
+  }
+  interface ScreenCaptureAudioOutputOptions {
+    source: "system" | "microphone"
+    buffering?: ScreenCaptureBuffering
+  }
+  interface ScreenCaptureBuffering {
+    capacity?: number
+    overflow?: "dropOldest" | "dropNewest" | "error"
+  }
+  interface ScreenCaptureRecordingCapabilities {
+    readonly videoCodecs: readonly string[]
+    readonly fileTypes: readonly string[]
+  }
+  interface ScreenCaptureRecordingOptions {
+    filePath: string
+    videoCodecType?: string
+    outputFileType?: string
+    mixesAudioWithMicrophone?: boolean
+    overwrite?: boolean
+  }
+  interface ScreenCaptureRecording {
+    readonly state: "prepared" | "recording" | "finishing" | "finished" | "failed"
+    readonly recordedDuration: number
+    readonly recordedFileSize: number
+    readonly finished: Promise<ScreenCaptureFileResult>
+    onStateChanged: ((state: ScreenCaptureRecording["state"]) => void) | null
+    stop(): Promise<ScreenCaptureFileResult>
+  }
+  interface ScreenCaptureFileResult { filePath: string; duration: number; fileSize: number }
+  interface ScreenCaptureClipBuffer {
+    readonly state: "starting" | "buffering" | "stopping" | "stopped" | "failed"
+    readonly maximumDuration: 15
+    onStateChanged: ((state: ScreenCaptureClipBuffer["state"]) => void) | null
+    onError: ((error: ScreenCaptureError) => void) | null
+    exportClip(options: { filePath: string; duration: number; overwrite?: boolean }): Promise<ScreenCaptureFileResult>
+    stop(): Promise<void>
+  }
+  interface ScreenCaptureVideoEffect {
+    readonly state: "prepared" | "starting" | "active" | "stopped" | "failed"
+    readonly cameraDevice: AVCaptureDevice
+    onStateChanged: ((state: ScreenCaptureVideoEffect["state"]) => void) | null
+    onError: ((error: ScreenCaptureError) => void) | null
+    setCameraDevice(device: AVCaptureDevice): Promise<void>
+    stop(): Promise<void>
+  }
+
+  interface ScreenCaptureRect { x: number; y: number; width: number; height: number }
+  interface ScreenCaptureTime {
+    value: bigint; timescale: number; epoch: bigint; flags: number
+    seconds: number | null
+  }
+  interface ScreenCaptureSampleTiming {
+    presentationTime: ScreenCaptureTime
+    decodeTime: ScreenCaptureTime
+    duration: ScreenCaptureTime
+    hostTimeSeconds: number | null
+  }
+  interface ScreenCaptureClockInfo {
+    readonly kind: "host" | "other" | "unavailable"
+    currentTime(): ScreenCaptureTime | null
+  }
+  interface ScreenCaptureVideoMetadata {
+    readonly status: ScreenCaptureFrameStatus
+    readonly displayTime: bigint | null
+    readonly scaleFactor: number | null
+    readonly contentScale: number | null
+    readonly contentRect: ScreenCaptureRect | null
+    readonly screenRect: ScreenCaptureRect | null
+    readonly videoOrientation: number | null
+  }
+  interface ScreenCaptureVideoFormat {
+    readonly width: number; readonly height: number
+    readonly pixelFormat: string
+    readonly pixelFormatCode: number
+    readonly planeCount: number
+    readonly bitDepth: number | null
+    readonly attachments: Readonly<Record<string, ScreenCaptureAttachmentValue>>
+  }
+  type ScreenCaptureAttachmentValue = null | boolean | number | string | bigint | Data
+    | readonly ScreenCaptureAttachmentValue[] | { readonly [key: string]: ScreenCaptureAttachmentValue }
+  interface ScreenCaptureVideoSample {
+    readonly sequence: number
+    readonly timing: ScreenCaptureSampleTiming
+    readonly metadata: ScreenCaptureVideoMetadata
+    readonly format: ScreenCaptureVideoFormat | null
+    readonly hasImage: boolean
+    readonly disposed: boolean
+    toImage(options?: ScreenCaptureImageOptions): Promise<UIImage>
+    copyPixelPlanes(): Promise<readonly ScreenCapturePixelPlane[]>
+    dispose(): void
+  }
+  interface ScreenCapturePixelPlane {
+    data: Data; width: number; height: number; bytesPerRow: number
+  }
+  interface ScreenCaptureAudioFormat {
+    sampleRate: number; formatID: string; formatFlags: number
+    bytesPerPacket: number; framesPerPacket: number; bytesPerFrame: number
+    channelsPerFrame: number; bitsPerChannel: number
+    channelLayout: Data | null
+  }
+  interface ScreenCaptureAudioSample {
+    readonly source: "system" | "microphone"
+    readonly sequence: number
+    readonly timing: ScreenCaptureSampleTiming
+    readonly format: ScreenCaptureAudioFormat
+    readonly sampleCount: number
+    readonly discontinuity: boolean | null
+    readonly disposed: boolean
+    copyAudioBuffers(): Promise<readonly { numberChannels: number; data: Data }[]>
+    dispose(): void
+  }
+  interface ScreenCaptureImageFrame {
+    readonly image: UIImage
+    readonly sequence: number
+    readonly timing: ScreenCaptureSampleTiming
+    readonly metadata: ScreenCaptureVideoMetadata
+    readonly sourceFormat: ScreenCaptureVideoFormat
+  }
+  interface ScreenCaptureEnd {
+    reason: "stopped" | "userStopped" | "systemStopped" | "aborted" | "ownerDisposed" | "failed"
+    error: ScreenCaptureError | null
+    recordings: readonly ScreenCaptureRecordingCompletion[]
+  }
+  interface ScreenCaptureRecordingCompletion {
+    result: ScreenCaptureFileResult | null
+    error: ScreenCaptureError | null
+  }
+  interface ScreenCaptureOutputEnd { reason: "disposed" | "sessionEnded" | "failed"; error: ScreenCaptureError | null }
+  interface ScreenCaptureError extends Error {
+    code: ScreenCaptureErrorCode
+    nativeDomain?: string; nativeCode?: number
+    cleanupError?: ScreenCaptureError
+  }
+  type ScreenCaptureErrorCode = "unsupportedOS" | "unsupportedContext" | "notForeground"
+    | "systemUnavailable" | "pickerBusy" | "invalidArgument" | "userCancelled" | "aborted"
+    | "scopeMismatch" | "notSupported" | "permissionDenied" | "invalidState"
+    | "consumerBusy" | "timeout" | "sessionEnded" | "startFailed" | "captureFailed"
+    | "stopFailed" | "outputFailed" | "bufferOverflow" | "fileExists" | "fileIO"
+    | "conversionUnsupported" | "resourceBusy" | "accessDenied"
+    | "ERR_PRO_REQUIRED" | "SCRIPT_API_ACCESS_DENIED" | "SCRIPT_PERMISSION_PERSISTENCE_FAILED" | "EACCES"
+  interface ScreenCaptureOutputStatistics {
+    receivedSamples: number; deliveredSamples: number; droppedSamples: number
+    queuedSamples: number; retainedSamples: number; retainedBytes: number | null
+  }
+  interface ScreenCaptureStatistics {
+    videoSamples: number; systemAudioSamples: number; microphoneSamples: number
+    outputs: readonly ScreenCaptureOutputStatistics[]
+    lastFrameStatus: ScreenCaptureFrameStatus | null
+  }
+
   /** Internal native asset transform. Usage and lifecycle: dedicated AssetCrypto spec. */
   namespace __AssetCrypto__ {
     interface OpenOptions {
@@ -521,8 +764,9 @@ declare global {
     resetBytes(startIndex: number, endIndex: number): void
     /**
      * Creates a new data buffer by removing the specified number of bytes from the beginning of the original buffer.
-     * @param amount The number of bytes to strip from the input data buffer. The value must be less than the original data buffer's length.
+     * @param amount The number of bytes to strip from the input data buffer. The value must be nonnegative and less than the original data buffer's length.
      * @returns Returns a new data buffer created by removing the given number of bytes from the front of the original buffer.
+     * @throws an error if amount is negative or is at least the buffer length.
      */
     advanced(amount: number): Data
     /**
@@ -549,6 +793,8 @@ declare global {
     decompressed(algorithm: CompressionAlgorithm): Data
     /**
      * Get a sub-data from the data.
+     * Indices follow JavaScript slice semantics: negative offsets count from the end,
+     * out-of-range offsets are clamped, and an end before the start returns empty Data.
      * @param start The start index of the sub-data, defaults to 0.
      * @param end The end index of the sub-data, defaults to the end of the data.
      * @returns Returns a new Data instance containing the bytes from start to end, or a new Data instance if no parameters are provided.
@@ -5692,7 +5938,79 @@ If the eventâ€™s calendar does not support availability settings, this propertyâ
    * The shared audio session instance.
    * An audio session acts as an intermediary between your app and the operating system â€” and, in turn, the underlying audio hardware.
    */
+  /** Media routing in the foreground main App; globals are provided by the native host. */
+  type ExternalDisplayState = "waiting" | "presenting" | "suspended" | "disposed"
+  namespace ExternalDisplay {
+    /** Registers external-display content for a visible UI owned by this main App script.
+     * Resolves without waiting for a display. A competing owner rejects. User connects AirPlay
+     * mirroring or a physical display through the system; this does not select receivers.
+     */
+    function createPresentation(): Promise<ExternalDisplayPresentation>
+  }
+  interface ExternalDisplayPresentation {
+    readonly state: ExternalDisplayState
+    /** Actual connected scene geometry in points; null while disconnected. */
+    readonly displayInfo: { width: number, height: number, scale: number } | null
+    /** Changes only; subscribe before reading state for the initial value. */
+    onStateChanged: ((state: ExternalDisplayState) => void) | null
+    /** Single-frame images only, at most 4096 by 4096 pixels. Does not prove receiver output. */
+    setImage(image: UIImage, options?: { contentMode?: "fit" | "fill", backgroundColor?: string }): Promise<void>
+    /** Replaces content with black; retains the presentation and ownership. */
+    clear(): Promise<void>
+    /** Terminal and idempotent. Releases the registration, image/window and callbacks. */
+    dispose(): void
+  }
+
+  namespace AirPlay {
+    /** Shows a panel containing the native AirPlay button. Tap it to open the system menu.
+     * Resolves when the panel closes, not when routing or playback succeeds.
+     * Rejects in unsupported environments, without a foreground host, or while another panel is open.
+     * Does not change the shared audio configuration or start playback.
+     */
+    function presentRoutePicker(options?: { prioritizesVideoDevices?: boolean }): Promise<void>
+  }
+
+  /** Reports additional playback routes, not a list of AirPlay devices. Main App only. */
+  class AVRouteDetector {
+    constructor()
+    /** Defaults to false. Detection consumes power; disable it when no longer needed.
+     * Enabling requires a foreground App script. Stops when the App leaves the foreground.
+     */
+    isRouteDetectionEnabled: boolean
+    /** False while disabled; does not prove that no receiver is nearby. */
+    readonly multipleRoutesDetected: boolean
+    /** Changes only; read the property after installing the callback for the initial state. */
+    onMultipleRoutesDetectedChanged: ((detected: boolean) => void) | null
+    /** Stops detection and releases observers and callbacks. Idempotent; the handle cannot be reused. */
+    dispose(): void
+  }
+
+  type AudioSessionRouteSharingPolicy = "default" | "longFormAudio" | "longFormVideo" | "independent" | "unknown"
+
   namespace SharedAudioSession {
+    /** Current process-wide policy. independent is system-managed. Main App only. */
+    const routeSharingPolicy: Promise<AudioSessionRouteSharingPolicy>
+    /** Sets category, mode, policy and options together without activating the session.
+     * Defaults: mode=default, routeSharingPolicy=default, options=[]. Affects all scripts in this process.
+     * Long-form policies require playback and default/moviePlayback/spokenAudio, with no options.
+     * Explicit allowAirPlay requires playAndRecord; playback enables it implicitly.
+     * Main App script context only. Invalid values reject with TypeError.
+     */
+    function configure(options: {
+      category: AudioSessionCategory
+      mode?: AudioSessionMode
+      routeSharingPolicy?: "default" | "longFormAudio" | "longFormVideo"
+      options?: AudioSessionCategoryOptions[]
+    }): Promise<void>
+    /** Prepares long-form video routing. The system may prompt when longFormVideo is configured.
+     * Requires a foreground main App script. This does not guarantee media delivery.
+     */
+    function prepareRouteSelectionForPlayback(): Promise<{
+      shouldStartPlayback: boolean
+      routeSelection: "none" | "local" | "external" | "unknown"
+    }>
+
+
 
     type AudioSessionSetActiveOptions = "notifyOthersOnDeactivation"
 
@@ -7846,6 +8164,20 @@ If the eventâ€™s calendar does not support availability settings, this propertyâ
    * Use for playing audio or video.
    */
   class AVPlayer {
+    /** Allows external video playback; defaults to true. Does not disconnect AirPlay audio.
+     * May be set before setSource. External-playback controls require the main App script context.
+     */
+    allowsExternalPlayback: boolean
+    /** Whether this player is in external video playback mode, independently of the audio route. */
+    readonly isExternalPlaybackActive: boolean
+    /** Automatically use external video playback while an external screen is active. Defaults to false. */
+    usesExternalPlaybackWhileExternalScreenIsActive: boolean
+    /** External-video scaling. Defaults to resizeAspect. Settings persist across source changes. */
+    externalPlaybackVideoGravity: "resize" | "resizeAspect" | "resizeAspectFill"
+    /** Changes only; no initial callback. Cleared by dispose. */
+    onExternalPlaybackActiveChanged: ((active: boolean) => void) | null
+
+
     constructor()
     /**
      * Controls the volume of the AVPlayer.
