@@ -30,13 +30,14 @@ import { palette } from '../theme'
 import { AppearancePicker } from '../components/AppearancePicker'
 import { useThemeMode } from '../hooks/useThemeMode'
 import { AppearanceService } from '../services/appearance'
+import { parseSourceImport } from '../utils/source-import'
 import type { CloudSnapshot } from '../types'
 
 const AppStorage = Storage
 const ICLOUD_SYNC_KEY = 'script_flix_icloud_sync_enabled'
 const BANNER_IMAGE_FILE_PATH = Path.join(Script.directory, 'assets', 'banner.webp')
 // 同一个备份文件按调用顺序写入；关闭再打开设置页也共用这条队列。
-let cloudSyncQueue: Promise<void> = Promise.resolve()
+let cloudSyncQueue: Promise<unknown> = Promise.resolve()
 
 const THEME_HINTS = {
   auto: '跟随系统外观，白天日间、夜晚夜间自动切换',
@@ -67,10 +68,13 @@ export const SettingsScreen = () => {
   const [syncing, setSyncing] = useState(false)
   /** 开启同步时正在读取并应用云端备份；期间不能关闭页面或改动视频源，避免恢复结果与首页、源列表错位 */
   const [restoring, setRestoring] = useState(false)
+  const [importing, setImporting] = useState(false)
   const [lastSyncedAt, setLastSyncedAt] = useState<number | null>(null)
   const [sources, setSources] = useState(() => SettingsService.getSources())
   const [widgetRefreshMinutes, setWidgetRefreshMinutes] = useState(SettingsService.getWidgetRefreshMinutes)
   const mountedRef = useRef(true)
+  const importingRef = useRef(false)
+  const updatingSettings = restoring || importing
   const enabledSourceCount = sources.filter(SettingsService.isSourceEnabled).length
 
   useEffect(
@@ -110,7 +114,8 @@ export const SettingsScreen = () => {
     return JSON.parse(await FileManager.readAsString(filePath)) as CloudSnapshot
   }
 
-  const syncSettingsToICloud = () => {
+  /** 写入云端备份，失败时返回原因；默认直接弹窗，导入流程把结果并入自己的提示 */
+  const syncSettingsToICloud = (alertOnError = true): Promise<string | null> => {
     setSyncing(true)
     const task = cloudSyncQueue.then(async () => {
       try {
@@ -123,16 +128,19 @@ export const SettingsScreen = () => {
         await FileManager.createDirectory(folder, true)
         await FileManager.writeAsString(filePath, JSON.stringify(snapshot, null, 2))
         if (mountedRef.current) setLastSyncedAt(Date.now())
+        return null
       } catch (error) {
         console.error('[SettingsScreen] iCloud sync failed', error)
         const message = error instanceof Error ? error.message : '未知错误'
-        if (mountedRef.current) await Dialog.alert({ title: 'iCloud 同步失败', message })
+        if (alertOnError && mountedRef.current) await Dialog.alert({ title: 'iCloud 同步失败', message })
+        return message
       }
     })
     cloudSyncQueue = task
-    return task.then(() => {
+    return task.then(error => {
       // 队尾写完才结束同步状态；还有排队的写入时保持进行中
       if (mountedRef.current && cloudSyncQueue === task) setSyncing(false)
+      return error
     })
   }
 
@@ -157,6 +165,56 @@ export const SettingsScreen = () => {
       if (mountedRef.current) await Dialog.alert({ title: 'iCloud 同步失败', message })
     } finally {
       if (mountedRef.current) setRestoring(false)
+    }
+  }
+
+  const importSources = async () => {
+    if (restoring || syncing || importingRef.current) return
+    importingRef.current = true
+    setImporting(true)
+    try {
+      const [path] = await DocumentPicker.pickFiles({ types: ['public.json'], allowsMultipleSelection: false })
+      if (!path || !mountedRef.current) return
+      const imported = parseSourceImport(await FileManager.readAsString(path))
+      if (!mountedRef.current) return
+      const count = imported.sources.length
+      const nextIndex = SettingsService.resolveImportedIndex(imported.sources, imported.currentSourceIndex)
+      const nextCurrent = imported.sources[SettingsService.resolveCurrentIndex(imported.sources, nextIndex)]
+      const lines =
+        count === 0
+          ? ['文件中没有视频源，强制覆盖将清空当前全部视频源。']
+          : [
+              `将用文件中的 ${count} 个视频源强制覆盖当前全部视频源，原列表不会保留。`,
+              nextCurrent ? `当前视频源：${nextCurrent.name}` : '文件中的视频源均已停用，首页与搜索将暂不可用。'
+            ]
+      if (icloudSyncEnabled) lines.push('导入后会更新 iCloud 云端备份。')
+      const confirmed = await Dialog.confirm({
+        title: '确认覆盖视频源？',
+        message: lines.join('\n'),
+        confirmLabel: '强制覆盖',
+        cancelLabel: '取消'
+      })
+      if (!confirmed || !mountedRef.current) return
+      // 本地列表始终整体覆盖，iCloud 开关只决定是否更新云端备份。
+      SettingsService.replaceSources(imported.sources, nextIndex)
+      setSources(imported.sources)
+      const syncError = icloudSyncEnabled ? await syncSettingsToICloud(false) : null
+      if (!mountedRef.current) return
+      await Dialog.alert(
+        syncError
+          ? { title: '导入完成，iCloud 同步失败', message: `已导入 ${count} 个视频源，云端备份未更新：${syncError}` }
+          : { title: '导入完成', message: `已导入 ${count} 个视频源` }
+      )
+    } catch (error) {
+      console.error('[SettingsScreen] import sources failed', error)
+      if (mountedRef.current) {
+        // 下标写入失败时视频源可能已替换，列表按实际存储刷新
+        setSources(SettingsService.getSources())
+        await Dialog.alert({ title: '导入失败', message: error instanceof Error ? error.message : '无法读取文件，请重新选择 JSON 文件' })
+      }
+    } finally {
+      importingRef.current = false
+      if (mountedRef.current) setImporting(false)
     }
   }
 
@@ -188,7 +246,7 @@ export const SettingsScreen = () => {
         : `开启后将在 iCloud Drive/${getScriptFolderRelativePath()}/settings.json 生成设置备份`
 
   return (
-    <NavigationStack preferredColorScheme={colorScheme} tint={palette.accent} interactiveDismissDisabled={restoring}>
+    <NavigationStack preferredColorScheme={colorScheme} tint={palette.accent} interactiveDismissDisabled={updatingSettings}>
       <List
         foregroundStyle={palette.textPrimary}
         background={<ScreenBackground />}
@@ -197,13 +255,15 @@ export const SettingsScreen = () => {
         toolbarColorScheme={colorScheme}
         navigationTitle="设置"
         toolbar={{
-          cancellationAction: <Button title="完成" action={dismiss} disabled={restoring} />
+          cancellationAction: <Button title="完成" action={dismiss} disabled={updatingSettings} />
         }}
       >
         <Section listRowBackground={<Rectangle fill={palette.card} />} header={<Text>视频源</Text>}>
           <NavigationLink
-            disabled={restoring}
-            destination={<SourceManagementScreen icloudSyncEnabled={icloudSyncEnabled} onRequestSync={syncSettingsToICloud} onSourcesChange={setSources} />}
+            disabled={updatingSettings}
+            destination={
+              <SourceManagementScreen icloudSyncEnabled={icloudSyncEnabled} onRequestSync={() => void syncSettingsToICloud()} onSourcesChange={setSources} />
+            }
           >
             <VStack alignment="leading" spacing={2}>
               <Text foregroundStyle={palette.accent}>视频源管理</Text>
@@ -212,6 +272,12 @@ export const SettingsScreen = () => {
               </Text>
             </VStack>
           </NavigationLink>
+          <Button
+            title={importing ? '正在导入…' : '导入视频源'}
+            foregroundStyle={palette.accent}
+            action={importSources}
+            disabled={updatingSettings || syncing}
+          />
         </Section>
         <Section
           listRowBackground={<Rectangle fill={palette.card} />}
@@ -277,7 +343,7 @@ export const SettingsScreen = () => {
             foregroundStyle={palette.accent}
             value={icloudSyncEnabled || restoring}
             onChanged={handleIcloudToggle}
-            disabled={restoring}
+            disabled={updatingSettings}
           />
         </Section>
         <Section

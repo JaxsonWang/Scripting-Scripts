@@ -36,27 +36,30 @@ const getSources = (): ApiSource[] => {
 /**
  * 持久化视频源数组；小组件按当前源推荐，源变化后一并刷新
  * @param sources 新的视频源数组
+ * @returns 是否写入成功
  */
-const saveSources = (sources: ApiSource[]) => {
-  AppStorage.set(STORAGE_KEY_SOURCES, sources)
+const saveSources = (sources: ApiSource[]): boolean => {
+  const saved = AppStorage.set(STORAGE_KEY_SOURCES, sources)
   Widget.reloadAll()
+  return saved
 }
 
 /**
  * 获取当前选中的视频源下标
  */
 const getCurrentSourceIndex = (): number => {
-  const index = AppStorage.get(STORAGE_KEY_INDEX)
-  return index !== undefined ? (index as number) : 0
+  return AppStorage.get<number>(STORAGE_KEY_INDEX) ?? 0
 }
 
 /**
  * 保存当前视频源下标，并刷新按当前源推荐的小组件
  * @param index 需要保存的下标
+ * @returns 是否写入成功
  */
-const saveCurrentSourceIndex = (index: number) => {
-  AppStorage.set(STORAGE_KEY_INDEX, index)
+const saveCurrentSourceIndex = (index: number): boolean => {
+  const saved = AppStorage.set(STORAGE_KEY_INDEX, index)
   Widget.reloadAll()
+  return saved
 }
 
 const isSourceEnabled = (source: ApiSource): boolean => !source.disabled
@@ -152,6 +155,30 @@ const removeSource = (index: number) => {
 }
 
 /**
+ * 计算导入后的当前源下标：文件指定的下标在新列表范围内时使用它，否则按地址保留原当前源，都没有时为 0
+ * @param sources 导入的视频源数组
+ * @param fileIndex 文件指定的下标，未指定为 null
+ */
+const resolveImportedIndex = (sources: ApiSource[], fileIndex: number | null): number => {
+  if (fileIndex !== null && fileIndex < sources.length) return fileIndex
+  const currentUrl = getCurrentSource()?.url
+  return Math.max(
+    sources.findIndex(source => source.url === currentUrl),
+    0
+  )
+}
+
+/**
+ * 导入时整体替换视频源并写入当前源下标，任一写入失败即抛错
+ * @param sources 导入的视频源数组
+ * @param currentIndex 导入后的当前源下标
+ */
+const replaceSources = (sources: ApiSource[], currentIndex: number) => {
+  if (!saveSources(sources)) throw new Error('视频源保存失败，请重试')
+  if (!saveCurrentSourceIndex(currentIndex)) throw new Error('视频源已替换，但当前视频源未能保存，请重新导入')
+}
+
+/**
  * 对外暴露的设置工具，负责视频源与小组件刷新频率
  */
 export const SettingsService = {
@@ -169,5 +196,7 @@ export const SettingsService = {
   setSourceEnabled,
   updateSource,
   addSource,
-  removeSource
+  removeSource,
+  resolveImportedIndex,
+  replaceSources
 }
