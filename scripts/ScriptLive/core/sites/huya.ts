@@ -29,7 +29,10 @@ type HuyaPlayback = { lines: HuyaLine[]; bitRates: { name: string; bitRate: numb
 type HuyaQuality = { bitRate: number }
 
 const MOBILE_UA = 'Mozilla/5.0 (Linux; Android 11; Pixel 5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.91 Mobile Safari/537.36'
-const CDN_PRIORITY: Record<string, number> = { HS: 0, TX: 1, AL: 2 }
+const CDN_PRIORITY: Record<'hls' | 'flv', Record<string, number>> = {
+  hls: { TX: 0, AL: 1, HS: 2 },
+  flv: { TX: 0, HS: 1, AL: 2 }
+}
 const SDK_UA = 'HYSDK(Windows, 30000002)_APP(pc_exe&7060000&official)_SDK(trans&2.32.3.5646)'
 const object = (value: unknown): JsonObject => (value && typeof value === 'object' ? (value as JsonObject) : {})
 const list = (value: unknown): JsonObject[] => (Array.isArray(value) ? value.map(object) : [])
@@ -160,8 +163,6 @@ export class HuyaSite implements LiveSite {
         cdnType: text(item.sCdnType),
         presenterUid: text(item.lPresenterUid || item.lChannelId || live.lChannel || 0)
       }))
-      // HS 的 HTTPS HLS 在实测中可直接播放；其余 CDN 保留为备选线路。
-      .sort((a, b) => (CDN_PRIORITY[a.cdnType] ?? 3) - (CDN_PRIORITY[b.cdnType] ?? 3))
     const data: HuyaPlayback = {
       lines,
       bitRates: list(object(stream.vBitRateInfo).value)
@@ -212,7 +213,10 @@ export class HuyaSite implements LiveSite {
     const signed = data.lines.map(line => ({ line, antiCode: buildAntiCode(line.streamName, line.presenterUid, tokens.get(line.streamName)!) }))
     const lines: LivePlayUrl['lines'] = []
     for (const format of ['hls', 'flv'] as const) {
-      for (const { line, antiCode } of signed) {
+      // HS HLS 实测返回 404，但 HS FLV 仍可用，按协议分别排序并保留备用。
+      const priority = CDN_PRIORITY[format]
+      const ordered = [...signed].sort((a, b) => (priority[a.line.cdnType] ?? 3) - (priority[b.line.cdnType] ?? 3))
+      for (const { line, antiCode } of ordered) {
         const base = format === 'hls' ? line.hlsUrl : line.flvUrl
         if (!base) continue
         const url = buildUrl(`${base}/${line.streamName}.${format === 'hls' ? 'm3u8' : 'flv'}?${antiCode}`, {

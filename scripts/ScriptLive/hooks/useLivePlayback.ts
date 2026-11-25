@@ -97,9 +97,9 @@ export const useLivePlayback = (siteId: SiteId) => {
   const fail = (token: number, message: string) => {
     if (token !== tokenRef.current) return
     const failed = lineRef.current
-    console.warn(`[ScriptLive] 线路 ${failed + 1} 播放失败：${message}`)
+    const line = sourceRef.current?.lines[failed]
+    console.warn(`[ScriptLive] ${siteId} 线路 ${failed + 1}（${line?.name ?? line?.format ?? '未知线路'}）播放失败：${message}`)
     if (failed < (sourceRef.current?.lines.length ?? 0) - 1) {
-      patch({ error: `线路${failed + 1}失败，正在尝试下一条` })
       playLine(failed + 1)
     } else {
       patch({ status: 'error', error: `播放失败：${message}` })
@@ -122,7 +122,7 @@ export const useLivePlayback = (siteId: SiteId) => {
     const token = ++tokenRef.current
     lineRef.current = index
     userPausedRef.current = false
-    patch({ lineIndex: index, status: 'loading' })
+    patch({ lineIndex: index, status: 'loading', error: null })
     try {
       if (source.engine === 'native') {
         const player = await ensureNative(token)

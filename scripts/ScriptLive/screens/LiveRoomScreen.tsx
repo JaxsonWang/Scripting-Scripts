@@ -41,6 +41,7 @@ import { useStore } from '../hooks/useStore'
 import { useThemeScheme } from '../hooks/useThemeScheme'
 import { addFollow, followId, followStore, removeFollow } from '../services/follows'
 import { addHistory } from '../services/history'
+import { currentQualityLevel } from '../services/network-quality'
 import { isShielded, settingsStore } from '../services/settings'
 import type { QualityLevel } from '../services/settings'
 import { getSite } from '../services/sites'
@@ -63,18 +64,6 @@ const ROTATE_ANIMATION = Animation.smooth({ duration: 0.3 })
 
 /** 与上游一致：最高取第一档，最低取最后一档，中等取中间 */
 const pickQualityIndex = (count: number, level: QualityLevel) => (level === 2 ? 0 : level === 0 ? count - 1 : Math.floor(count / 2))
-
-/** 蜂窝网络下使用单独的清晰度偏好；读取网络状态失败时沿用默认偏好并记录日志 */
-const currentQualityLevel = async (): Promise<QualityLevel> => {
-  const { qualityLevel, qualityLevelCellular } = settingsStore.get()
-  try {
-    const network = await Device.getNetworkState()
-    return network.interfaces.includes('cellular') && !network.interfaces.includes('wifi') ? qualityLevelCellular : qualityLevel
-  } catch (error) {
-    console.warn('[ScriptLive] 读取网络状态失败，使用默认清晰度', error)
-    return qualityLevel
-  }
-}
 
 /**
  * 直播间：播放器（Pro 原生 / 免费网页）+ 滚动弹幕 + 聊天、醒目留言、简介。
@@ -200,7 +189,7 @@ export const LiveRoomScreen = ({ siteId, roomId }: { siteId: SiteId; roomId: str
         setPlayError('无法读取播放清晰度')
         return
       }
-      const level = await currentQualityLevel()
+      const level = currentQualityLevel(settingsStore.get())
       if (isCurrent()) await playQuality(room, list, pickQualityIndex(list.length, level))
     } catch (error) {
       console.error('[ScriptLive] 读取清晰度失败', error)
@@ -403,14 +392,22 @@ export const LiveRoomScreen = ({ siteId, roomId }: { siteId: SiteId; roomId: str
     if (!detail) return <ProgressView progressViewStyle="circular" tint="#FFFFFF" />
     if (!living) return null
     if (playError || state.status === 'error') return null
-    if (state.status === 'idle' || state.status === 'loading' || state.status === 'buffering')
-      return <ProgressView progressViewStyle="circular" tint="#FFFFFF" />
+    if (state.status === 'loading')
+      return (
+        <VStack spacing={10}>
+          <ProgressView progressViewStyle="circular" tint="#FFFFFF" />
+          <Text font="footnote" foregroundStyle="rgba(255,255,255,0.82)">
+            {`正在尝试线路${state.lineIndex + 1}`}
+          </Text>
+        </VStack>
+      )
+    if (state.status === 'idle' || state.status === 'buffering') return <ProgressView progressViewStyle="circular" tint="#FFFFFF" />
     return null
   })()
 
   const failure = playError ?? (state.status === 'error' ? state.error : null)
 
-  /** 叠在播放器控件下方的状态：画中画占位，失败时给出原因与重试，加载中显示转圈 */
+  /** 叠在播放器控件下方的状态：画中画占位，失败时给出原因与重试，加载中显示当前尝试的线路 */
   const renderStatus = (landscape: boolean) =>
     pipActive ? (
       <VStack

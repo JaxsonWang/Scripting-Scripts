@@ -4901,6 +4901,143 @@ declare global {
     }
   }
 
+  /** Browser options fixed when the controller is created. Omitted values use WebKit defaults. */
+  interface WebViewConfigurationOptions {
+    ephemeral?: boolean
+    /** Inline playback also requires the video's playsinline attribute on iPhone. */
+    allowsInlineMediaPlayback?: boolean
+    mediaTypesRequiringUserActionForPlayback?: "none" | "audio" | "video" | "all"
+    allowsAirPlayForMediaPlayback?: boolean
+    allowsPictureInPictureMediaPlayback?: boolean
+    /** Controls scripts supplied by web content, independently of host evaluateJavaScript calls. */
+    allowsContentJavaScript?: boolean
+    preferredContentMode?: "recommended" | "mobile" | "desktop"
+    /** Allowing window.open does not itself provide a new-window host. */
+    javaScriptCanOpenWindowsAutomatically?: boolean
+    applicationNameForUserAgent?: string | null
+    suppressesIncrementalRendering?: boolean
+    ignoresViewportScaleLimits?: boolean
+    dataDetectorTypes?: Array<"none" | "all" | "phoneNumber" | "link" | "address" | "calendarEvent" | "trackingNumber" | "flightNumber" | "lookupSuggestion">
+    selectionGranularity?: "dynamic" | "character"
+  }
+  /** Settings that can change without recreating the webpage. */
+  interface WebViewSettings {
+    /** iOS 17+. Offscreen task scheduling. Omitted values use the current platform default. */
+    inactiveSchedulingPolicy: "suspend" | "throttle" | "none"
+    customUserAgent: string | null
+    allowsBackForwardNavigationGestures: boolean
+    allowsLinkPreview: boolean
+    isScrollEnabled: boolean
+    bounces: boolean
+    showsHorizontalScrollIndicator: boolean
+    showsVerticalScrollIndicator: boolean
+    /** Finite positive scale; 1 is the normal page size. */
+    pageZoom: number
+    isOpaque: boolean
+    isInspectable: boolean
+    isFindInteractionEnabled: boolean
+    /** Supported SDK color string, or null to restore the system background. Readback uses rgba(r,g,b,a). */
+    backgroundColor: string | null
+    underPageBackgroundColor: string | null
+  }
+  interface WebViewControllerOptions extends WebViewConfigurationOptions {
+    settings?: Partial<WebViewSettings>
+  }
+  interface WebViewState {
+    url: string | null
+    title: string | null
+    isLoading: boolean
+    estimatedProgress: number
+    canNavigateBack: boolean
+    canNavigateForward: boolean
+    hasOnlySecureContent: boolean
+    isDisposed: boolean
+    isAttached: boolean
+    isPresented: boolean
+  }
+  type WebViewContentWorld = "page" | { name: string }
+  type WebViewNavigationPolicy = "allow" | "cancel" | "download"
+  type WebViewJSONValue = null | boolean | number | string | WebViewJSONValue[] | { [key: string]: WebViewJSONValue }
+  interface WebViewFrameInfo {
+    /** Instance/document scoped token; expires on navigation/commit, process termination, disposal, or after 256 newer frame tokens. */
+    id: string
+    isMainFrame: boolean
+    url: string | null
+    securityOrigin: { protocol: string; host: string; port: number }
+  }
+  interface WebViewNavigationAction {
+    navigationId: string | null
+    url: string | null
+    method: string
+    headers: Record<string, string>
+    body: Data | null
+    timeoutInterval: number
+    navigationType: "linkActivated" | "reload" | "backForward" | "formResubmitted" | "formSubmitted" | "other"
+    sourceFrame: WebViewFrameInfo
+    targetFrame: WebViewFrameInfo | null
+    isMainFrame: boolean | null
+    /** The public iOS API does not expose a reliable user-gesture flag. */
+    isUserInitiated: null
+    shouldPerformDownload: boolean
+  }
+  interface WebViewNavigationResponse {
+    navigationId: string | null
+    url: string | null
+    mimeType: string | null
+    expectedContentLength: number
+    statusCode: number | null
+    headers: Record<string, string>
+    isForMainFrame: boolean
+    canShowMIMEType: boolean
+  }
+  interface WebViewRequest {
+    url: string
+    method?: string
+    headers?: Record<string, string>
+    body?: Data
+    /** Positive seconds; default 60. Headers and body apply to this request, not every subresource. */
+    timeoutInterval?: number
+    cachePolicy?: "useProtocolCachePolicy" | "reloadIgnoringLocalCacheData" | "returnCacheDataElseLoad" | "returnCacheDataDontLoad" | "reloadRevalidatingCacheData" | "reloadIgnoringLocalAndRemoteCacheData"
+  }
+  interface WebViewWaitOptions {
+    /** Positive seconds; omitted means no waiter timeout. Rejects with code timeout. */
+    timeout?: number
+    nextNavigation?: boolean
+    /** Default false. A waiter timeout normally leaves navigation running. */
+    cancelOnTimeout?: boolean
+  }
+  interface WebViewHistoryItem { id: string; url: string; initialURL: string; title: string | null }
+  interface WebViewHistory { backList: WebViewHistoryItem[]; currentItem: WebViewHistoryItem | null; forwardList: WebViewHistoryItem[] }
+  type WebViewEventType = "loadStart" | "redirect" | "commit" | "loadFinish" | "loadError" | "stateChange" | "webContentProcessTerminated" | "present" | "dismiss"
+  interface WebViewEvent {
+    type: WebViewEventType
+    navigationId: string | null
+    /** Main-document lifecycle events use true; unsupported subframe download errors use false. */
+    isMainFrame: boolean
+    state: WebViewState
+    error?: { code: string; message: string }
+  }
+  interface WebViewUserScriptOptions {
+    source: string
+    /** Default documentStart. Applies to future documents. */
+    injectionTime?: "documentStart" | "documentEnd"
+    /** Default true. */
+    forMainFrameOnly?: boolean
+    contentWorld?: WebViewContentWorld
+  }
+  interface WebViewJavaScriptOptions { contentWorld?: WebViewContentWorld; frameId?: string }
+  interface WebViewMessageOptions { contentWorld?: WebViewContentWorld; includeFrameInfo?: boolean }
+  interface WebViewMessageInfo { frame: WebViewFrameInfo; contentWorld: WebViewContentWorld }
+  interface WebViewCapabilities {
+    navigationPolicies: Array<"allow" | "cancel">
+    /** Download management is not available yet. A download decision cancels and emits an unsupported loadError. */
+    downloadPolicy: false
+    contentWorlds: boolean
+    frameTargeting: boolean
+    configurationOptions: Array<keyof WebViewConfigurationOptions>
+    runtimeSettings: Array<keyof WebViewSettings>
+  }
+
   /**
    * An object that displays interactive web content, such as for an in-app browser.
    */
@@ -4909,10 +5046,52 @@ declare global {
      * Create a new WebViewController.
      * @param options.ephemeral When true, the WebView uses a non-persistent data store so cookies and website data are isolated from the default container and discarded when the controller is released. Useful for sandboxed login flows or clean-slate scraping.
      */
-    constructor(options?: { ephemeral?: boolean })
+    constructor(options?: WebViewControllerOptions)
+    /** Explicit creation options; omitted fields retain platform defaults. Mutating this copy has no effect. */
+    readonly configuration: Readonly<WebViewConfigurationOptions>
+    /** State snapshots do not create a web view. Use getState for a consistent asynchronous read. */
+    readonly url: string | null
+    readonly title: string | null
+    readonly isLoading: boolean
+    readonly estimatedProgress: number
+    readonly canNavigateBack: boolean
+    readonly canNavigateForward: boolean
+    readonly hasOnlySecureContent: boolean
+    readonly isDisposed: boolean
+    readonly isAttached: boolean
+    /** Returns actual settings, creating the underlying web view if needed. */
+    getSettings(): Promise<WebViewSettings>
+    /** Validates the entire patch before applying it. Invalid values reject with code invalidArgument. */
+    setSettings(patch: Partial<WebViewSettings>): Promise<void>
+    getState(): Promise<WebViewState>
+    /** Supported option names; does not imply that hardware or system permissions are available. */
+    getCapabilities(): Promise<WebViewCapabilities>
     /**
-     * When the web view performs a request to load a resource, the function can determine whether or not to allow the request.
+     * Decides whether to allow a navigation. This callback does not intercept every subresource request.
      */
+    /** Takes precedence over shouldAllowRequest. Exceptions, invalid values and a 60-second timeout cancel. */
+    onNavigationAction?: (action: WebViewNavigationAction) => WebViewNavigationPolicy | Promise<WebViewNavigationPolicy>
+    /** Default: allow displayable MIME types, cancel others. Download currently reports unsupported. */
+    onNavigationResponse?: (response: WebViewNavigationResponse) => WebViewNavigationPolicy | Promise<WebViewNavigationPolicy>
+    loadRequest(request: WebViewRequest): Promise<boolean>
+    stopLoading(): Promise<void>
+    /** Revalidates the current page with the origin; does not promise to bypass every cache. */
+    reloadFromOrigin(): Promise<boolean>
+    getBackForwardList(): Promise<WebViewHistory>
+    goToHistoryItem(id: string): Promise<boolean>
+    addEventListener(type: WebViewEventType, listener: (event: WebViewEvent) => void): Promise<void>
+    removeEventListener(type: WebViewEventType, listener: (event: WebViewEvent) => void): Promise<void>
+    addUserScript(options: WebViewUserScriptOptions): Promise<string>
+    /** Removes future injection; cannot undo code already executed. Internal scripts are retained. */
+    removeUserScript(id: string): Promise<void>
+    removeAllUserScripts(): Promise<void>
+    /** Async function body with named JSON arguments. Defaults to the main frame in the page world. */
+    callAsyncJavaScript<T = any>(body: string, args?: Record<string, WebViewJSONValue>, options?: WebViewJavaScriptOptions): Promise<T>
+    removeScriptMessageHandler(name: string, options?: Pick<WebViewMessageOptions, "contentWorld">): Promise<void>
+    /** Compiles WebKit content-blocker JSON and installs it on this instance. Same id replaces atomically on success. */
+    addContentRuleList(options: { id: string; rules: string | Array<Record<string, any>> }): Promise<void>
+    removeContentRuleList(id: string): Promise<void>
+    removeAllContentRuleLists(): Promise<void>
     shouldAllowRequest?: (request: {
       /**
        * The URL of the request.
@@ -4966,9 +5145,9 @@ declare global {
      */
     loadData(data: Data, mimeType: string, encoding: string, baseURL: string): Promise<boolean>
     /**
-     * Wait for the WebView load completed, returns a Promise that resolves a boolean value indicates that whether it is successful.
+     * Waits for the first or current navigation. Resolves false on failure, replacement, process termination or disposal. A known terminal result is returned immediately.
      */
-    waitForLoad(): Promise<boolean>
+    waitForLoad(options?: WebViewWaitOptions): Promise<boolean>
     /**
      * Get current HTML content of the webpage, you must call this method after the website is loaded completed.
      */
@@ -5007,7 +5186,7 @@ declare global {
      * console.log(result) // "Hello!"
      * ```
      */
-    addScriptMessageHandler<P = any, R = any>(name: string, handler: (params?: P) => R): Promise<void>
+    addScriptMessageHandler<P = any, R = any>(name: string, handler: (params: P, info?: WebViewMessageInfo) => R | Promise<R>, options?: WebViewMessageOptions): Promise<void>
     /**
      * Present the WebView, returns a Promise that is resolved after the WebView is dismissed. If this WebViewController is used for the WebView view, this operation will be failure. And if this controller is presented, it can no longer use for WebView view.
      * @param fullscreen Whether present the WebView in fullscreen. Defaults to false.
@@ -5022,9 +5201,9 @@ declare global {
      */
     getCustomUserAgent(): string | null
     /**
-     * Set the custom user agent string of the WebView, returns a Promise that resolves with a boolean value indicates whether the operation is successful.
+     * Sets the custom user agent. Returns whether the change was accepted; a background caller applies it on the main queue. Await setSettings for application completion.
      * @param userAgent The custom user agent string, or `null` to reset to the default user agent.
-     * @returns A Promise that resolves with a boolean value indicates whether the operation is successful.
+     * @returns Whether the change was accepted.
      * @example
      * ```ts
      * const webView = new WebViewController()

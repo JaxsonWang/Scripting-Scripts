@@ -1,6 +1,6 @@
 /**
  * 直播核心模型与站点接口。
- * core 目录只依赖运行时全局（fetch、Data、Crypto、WebSocket、定时器），不引用 'scripting'，
+ * core 目录只依赖运行时全局（fetch、Data、Crypto、WebSocket、WebViewController、定时器），不引用 'scripting'，
  * 便于在 Node 中用同一份代码验证真实接口。
  */
 

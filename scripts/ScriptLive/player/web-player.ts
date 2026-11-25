@@ -142,9 +142,19 @@ export class WebLivePlayer {
         if (event.type === 'error' && event.fatal) this.playRequest++
         this.onEvent?.(event)
       })
+      await this.controller.addEventListener('webContentProcessTerminated', () => {
+        if (this.disposed) return
+        const wasLoaded = this.loadedSite !== null
+        this.loadedSite = null
+        // 加载中的进程终止由 loadHTML / evaluateJavaScript 的失败返回处理，避免重复换线。
+        if (!wasLoaded) return
+        this.playRequest++
+        this.onEvent?.({ type: 'error', message: '网页播放器意外停止，请重试', fatal: true })
+      })
       this.handlerAdded = true
     }
     if (this.disposed) return
+    this.loadedSite = null
     const mpegts = await loadMpegts()
     if (this.disposed) return
     const loaded = await this.controller.loadHTML(pageHtml(mpegts), PAGE_ORIGIN[siteId])
