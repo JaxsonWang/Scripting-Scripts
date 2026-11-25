@@ -1,6 +1,23 @@
 import { Script, fetch } from 'scripting'
 import scriptConfig from '../script.json'
+import type { CachedForecast, ForecastData } from './oil-forecast'
+import { createUnknownForecast, extractForecastText, formatBeijingDate, isForecastValid, parseForecastString, resolveForecastFromCache } from './oil-forecast'
 import { createStorageManager } from './storage'
+
+export type { CachedForecast, ForecastData, ParsedForecast, PriceDirection } from './oil-forecast'
+export {
+  createUnknownForecast,
+  extractForecastText,
+  formatForecastBadge,
+  formatForecastFooter,
+  formatForecastPrice,
+  getTrendColor,
+  getTrendSymbol,
+  getTrendText,
+  isForecastValid,
+  parseForecastString,
+  resolveForecastFromCache
+} from './oil-forecast'
 
 // 地区选项配置
 export const areaOptions = [
@@ -132,13 +149,13 @@ export interface OilPriceData {
   availableOilTypes: OilTypeValue[]
 }
 
-export interface ForecastData {
-  priceDirection: 'rising' | 'falling' | 'stranded'
-  forecastDate: string
-  forecastPrice: string
-}
-
 export interface CompleteOilData extends OilPriceData, ForecastData {}
+
+interface CachedProvinceOilData {
+  areaType: string
+  fetchedAt: number
+  response: SinopecResponse
+}
 
 export interface AreaSettings {
   areaType: string
@@ -154,7 +171,7 @@ const STORAGE_KEYS = {
   AREA_TYPE: 'areaType',
   AREA_ZONE_TYPE: 'areaZoneType',
   OIL_DATA: 'oilData',
-  FORECAST_STR: 'forecastStr',
+  FORECAST_CACHE: 'forecastCache',
   AREA_ZONE_OPTIONS: 'areaZoneOptions',
   AVAILABLE_OIL_TYPES: 'availableOilTypes',
   SELECTED_OIL_TYPES: 'selectedOilTypes',
@@ -205,6 +222,7 @@ const formatPrice = (price: number | string | undefined): string => {
 const requestProvinceData = async (areaType: string): Promise<SinopecResponse> => {
   const response = await fetch('https://cx.sinopecsales.com/yjkqiantai/data/switchProvince', {
     method: 'POST',
+    timeout: 10,
     headers: {
       'Content-Type': 'application/json;charset=UTF-8',
       Accept: 'application/json, text/plain, */*',
@@ -346,15 +364,54 @@ const cacheAreaMetadata = (areaZoneOptions: AreaZoneOption[], availableOilTypes:
   })
 }
 
-const buildAreaMetadata = (response: SinopecResponse, areaZoneType: number): AreaMetadata => {
+const extractAreaMetadata = (response: SinopecResponse, areaZoneType: number): AreaMetadata => {
   const areaZoneOptions = buildAreaZoneOptions(response.data?.area)
   const { areaCheck, priceData } = pickProvinceSource(response.data, areaZoneType)
   const availableOilTypes = buildOilPriceItems(areaCheck, priceData).map(item => item.type)
 
-  cacheAreaMetadata(areaZoneOptions, availableOilTypes)
-
   return {
     areaZoneOptions,
+    availableOilTypes
+  }
+}
+
+const getCachedProvinceOilData = (areaType: string): CachedProvinceOilData | null => {
+  const cached = storageManager.storage.get<CachedProvinceOilData>(STORAGE_KEYS.OIL_DATA)
+  if (!cached || cached.areaType !== areaType || !cached.response || !Number.isFinite(cached.fetchedAt)) {
+    return null
+  }
+  return cached
+}
+
+const isCurrentAreaSelection = (areaType: string, areaZoneType?: number): boolean => {
+  const currentAreaType = storageManager.storage.get<string>(STORAGE_KEYS.AREA_TYPE) || '32'
+  if (currentAreaType !== areaType) return false
+  if (areaZoneType === undefined) return true
+  const currentZoneType = storageManager.storage.get<number>(STORAGE_KEYS.AREA_ZONE_TYPE) || 0
+  return currentZoneType === areaZoneType
+}
+
+const parseOilPriceData = (response: SinopecResponse, areaType: string, areaZoneType: number, fetchedAt: Date): OilPriceData | null => {
+  const data = response.data
+  const { areaCheck, priceData, areaZoneName } = pickProvinceSource(data, areaZoneType)
+  const prices = buildOilPriceItems(areaCheck, priceData)
+  const availableOilTypes = prices.map(item => item.type)
+
+  if (prices.length === 0 || Object.keys(priceData).length === 0) {
+    return null
+  }
+
+  const startDateData = priceData.START_DATE?.slice(0, 10)
+  const day = 1000 * 60 * 60 * 24
+  const startDate = startDateData ? new Date(new Date(startDateData).valueOf() + day) : fetchedAt
+  const region = areaOptions.find(i => i.value === areaType)?.label || areaCheck.PROVINCE_NAME || '未知地区'
+
+  return {
+    startDate: formatDate(startDate, 'yyyy年MM月dd日'),
+    region,
+    areaZoneName,
+    lastUpdated: formatBeijingDate(fetchedAt),
+    prices,
     availableOilTypes
   }
 }
@@ -366,56 +423,38 @@ const buildAreaMetadata = (response: SinopecResponse, areaZoneType: number): Are
 export const fetchOilPriceData = async (): Promise<OilPriceData> => {
   const areaType = storageManager.storage.get<string>(STORAGE_KEYS.AREA_TYPE) || '32' // 默认江苏
   const areaZoneType = storageManager.storage.get<number>(STORAGE_KEYS.AREA_ZONE_TYPE) || 0
+  const now = new Date()
 
   try {
     const data = await requestProvinceData(areaType)
-    storageManager.storage.set(STORAGE_KEYS.OIL_DATA, data)
+    const parsed = parseOilPriceData(data, areaType, areaZoneType, now)
+    if (!parsed) {
+      throw new Error('油价接口返回空数据')
+    }
 
-    return handleOilPriceData(data, areaType, areaZoneType)
+    if (isCurrentAreaSelection(areaType)) {
+      const areaZoneOptions = buildAreaZoneOptions(data.data?.area)
+      storageManager.storage.set(STORAGE_KEYS.OIL_DATA, {
+        areaType,
+        fetchedAt: now.getTime(),
+        response: data
+      } satisfies CachedProvinceOilData)
+      cacheAreaMetadata(areaZoneOptions, parsed.availableOilTypes)
+    }
+
+    return parsed
   } catch (error) {
     console.error('获取油价数据失败:', error)
 
-    const cachedData = storageManager.storage.get<SinopecResponse>(STORAGE_KEYS.OIL_DATA)
-    if (cachedData) {
-      return handleOilPriceData(cachedData, areaType, areaZoneType)
+    const cached = getCachedProvinceOilData(areaType)
+    if (cached) {
+      const parsedCache = parseOilPriceData(cached.response, areaType, areaZoneType, new Date(cached.fetchedAt))
+      if (parsedCache) {
+        return parsedCache
+      }
     }
 
     return getDefaultOilData(areaType)
-  }
-}
-
-/**
- * 处理油价数据
- * @param response API响应数据
- * @param areaType 地区类型
- * @param areaZoneType 价区类型
- * @returns 处理后的油价数据
- */
-const handleOilPriceData = (response: SinopecResponse, areaType: string, areaZoneType: number): OilPriceData => {
-  const data = response.data
-  const areaZoneOptions = buildAreaZoneOptions(data?.area)
-  const { areaCheck, priceData, areaZoneName } = pickProvinceSource(data, areaZoneType)
-  const prices = buildOilPriceItems(areaCheck, priceData)
-  const availableOilTypes = prices.map(item => item.type)
-
-  cacheAreaMetadata(areaZoneOptions, availableOilTypes)
-
-  if (prices.length === 0 || Object.keys(priceData).length === 0) {
-    return getDefaultOilData(areaType)
-  }
-
-  const startDateData = priceData.START_DATE?.slice(0, 10)
-  const day = 1000 * 60 * 60 * 24
-  const startDate = startDateData ? new Date(new Date(startDateData).valueOf() + day) : new Date()
-  const region = areaOptions.find(i => i.value === areaType)?.label || areaCheck.PROVINCE_NAME || '未知地区'
-
-  return {
-    startDate: formatDate(startDate, 'yyyy年MM月dd日'),
-    region,
-    areaZoneName,
-    lastUpdated: formatDate(new Date(), 'yyyy年MM月dd日'),
-    prices,
-    availableOilTypes
   }
 }
 
@@ -426,23 +465,14 @@ const handleOilPriceData = (response: SinopecResponse, areaType: string, areaZon
  */
 const getDefaultOilData = (areaType: string): OilPriceData => {
   const region = areaOptions.find(i => i.value === areaType)?.label || '未知地区'
-  const availableOilTypes = getDefaultDisplayOilTypes()
-  const prices = oilTypeOptions
-    .filter(option => availableOilTypes.includes(option.value))
-    .map(option => ({
-      type: option.value,
-      label: option.label,
-      shortLabel: option.shortLabel,
-      price: formatForecastPrice('0')
-    }))
 
   return {
     startDate: '数据获取失败',
     region,
     areaZoneName: '',
-    lastUpdated: formatDate(new Date(), 'yyyy年MM月dd日'),
-    prices,
-    availableOilTypes
+    lastUpdated: '暂未获取',
+    prices: [],
+    availableOilTypes: []
   }
 }
 
@@ -454,79 +484,40 @@ export const fetchForecastData = async (): Promise<ForecastData> => {
   const areaType = storageManager.storage.get<string>(STORAGE_KEYS.AREA_TYPE) || '32'
   const areaName = areaOptions.find(i => i.value === areaType)?.name || 'jiangsu'
   const url = `http://m.qiyoujiage.com/${areaName}.shtml`
+  const now = new Date()
 
   try {
-    const webView = new WebViewController()
-    await webView.loadURL(url)
-    const js = `return document.querySelector('.tishi').textContent`
-    const str = await webView.evaluateJavaScript(js)
+    const response = await fetch(url, {
+      allowInsecureRequest: true,
+      timeout: 10
+    })
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
 
-    // 缓存预测字符串
-    storageManager.storage.set(STORAGE_KEYS.FORECAST_STR, str)
+    const html = await response.text()
+    const text = extractForecastText(html)
+    const parsed = text ? parseForecastString(text, now) : null
 
-    return parseForecastString(str)
+    if (!parsed || !isForecastValid(parsed, now)) {
+      throw new Error('未解析到有效的油价预测信息')
+    }
+
+    const cacheEntry: CachedForecast = {
+      ...parsed,
+      fetchedAt: now.getTime()
+    }
+    storageManager.storage.set(STORAGE_KEYS.FORECAST_CACHE, cacheEntry)
+
+    return {
+      priceDirection: parsed.priceDirection,
+      forecastDate: parsed.forecastDate,
+      forecastPrice: parsed.forecastPrice
+    }
   } catch (error) {
     console.error('获取预测数据失败:', error)
-    // 使用缓存数据
-    const cachedStr = storageManager.storage.get<string>(STORAGE_KEYS.FORECAST_STR)
-    if (cachedStr) {
-      return parseForecastString(cachedStr as string)
-    }
-
-    // 返回默认预测数据
-    return {
-      priceDirection: 'stranded',
-      forecastDate: formatDate(new Date(), 'yyyy年MM月dd日'),
-      forecastPrice: '0.00'
-    }
-  }
-}
-
-/**
- * 解析预测字符串
- * @param str 预测字符串
- * @returns 预测数据
- */
-const parseForecastString = (str: string): ForecastData => {
-  const regex = /\d+\.\d+元\/升-\d+\.\d+元\/升/gm
-  const match = str.match(regex)
-
-  let forecastPrice = '0.00'
-  let forecastDate = formatDate(new Date(), 'yyyy年MM月dd日')
-  let priceDirection: 'rising' | 'falling' | 'stranded' = 'stranded'
-
-  // 判断价格趋势
-  if (/上涨|大涨|上调/gm.test(str)) priceDirection = 'rising'
-  if (/下跌|大跌|下调/gm.test(str)) priceDirection = 'falling'
-  if (/搁浅/gm.test(str)) priceDirection = 'stranded'
-
-  // 解析价格范围
-  if (match) {
-    let data: string | string[] = match[0]
-    data = data.replaceAll('元/升', '')
-    data = data.split('-')
-
-    const minPrice = Number(data[0])
-    const maxPrice = Number(data[1])
-    forecastPrice = (Math.floor((minPrice + (maxPrice - minPrice) / 2) * 100) / 100).toFixed(2)
-  }
-
-  // 解析日期
-  const dateRegex = /(\d{1,2}月\d{1,2}日)/
-  const dateRegexYear = /(\d{4}年\d{1,2}月\d{1,2}日)/
-  const hasYearMatch = dateRegexYear.test(str)
-  const dateMatch = hasYearMatch ? str.match(dateRegexYear) : str.match(dateRegex)
-
-  if (dateMatch) {
-    let datetime = hasYearMatch ? dateMatch[1] + '00:00:00' : new Date().getFullYear() + '年' + dateMatch[1] + '00:00:00'
-    datetime = datetime.replaceAll('年', '/').replaceAll('月', '/').replaceAll('日', ' ')
-    forecastDate = formatDate(new Date(datetime), 'yyyy年MM月dd日')
-  }
-
-  return {
-    priceDirection,
-    forecastDate,
-    forecastPrice
+    const cached = storageManager.storage.get<CachedForecast>(STORAGE_KEYS.FORECAST_CACHE)
+    return resolveForecastFromCache(cached, now)
   }
 }
 
@@ -548,9 +539,7 @@ export const getCompleteOilData = async (): Promise<CompleteOilData> => {
     const areaType = storageManager.storage.get<string>(STORAGE_KEYS.AREA_TYPE) || '32'
     return {
       ...getDefaultOilData(areaType as string),
-      priceDirection: 'stranded' as const,
-      forecastDate: formatDate(new Date(), 'yyyy年MM月dd日'),
-      forecastPrice: '0.00'
+      ...createUnknownForecast()
     }
   }
 }
@@ -561,6 +550,17 @@ export const getCompleteOilData = async (): Promise<CompleteOilData> => {
  * @param areaZoneType 价区类型，默认为0
  */
 export const setArea = (areaType: string, areaZoneType: number = 0): void => {
+  const prevAreaType = storageManager.storage.get<string>(STORAGE_KEYS.AREA_TYPE) || '32'
+  if (prevAreaType !== areaType) {
+    storageManager.storage.batchSet({
+      [STORAGE_KEYS.AREA_TYPE]: areaType,
+      [STORAGE_KEYS.AREA_ZONE_TYPE]: areaZoneType,
+      [STORAGE_KEYS.AREA_ZONE_OPTIONS]: [],
+      [STORAGE_KEYS.AVAILABLE_OIL_TYPES]: []
+    })
+    return
+  }
+
   storageManager.storage.batchSet({
     [STORAGE_KEYS.AREA_TYPE]: areaType,
     [STORAGE_KEYS.AREA_ZONE_TYPE]: areaZoneType
@@ -588,12 +588,28 @@ export const getCurrentAreaSettings = (): AreaSettings => {
 export const getAreaMetadata = async (areaType: string, areaZoneType: number = 0): Promise<AreaMetadata> => {
   try {
     const data = await requestProvinceData(areaType)
-    storageManager.storage.set(STORAGE_KEYS.OIL_DATA, data)
+    const metadata = extractAreaMetadata(data, areaZoneType)
+    if (metadata.availableOilTypes.length === 0) {
+      throw new Error('地区油标数据为空')
+    }
 
-    return buildAreaMetadata(data, areaZoneType)
+    // 仅在仍匹配当前选择时写回共享缓存，避免慢请求乱序覆盖新地区
+    if (isCurrentAreaSelection(areaType, areaZoneType)) {
+      storageManager.storage.set(STORAGE_KEYS.OIL_DATA, {
+        areaType,
+        fetchedAt: Date.now(),
+        response: data
+      } satisfies CachedProvinceOilData)
+      cacheAreaMetadata(metadata.areaZoneOptions, metadata.availableOilTypes)
+    }
+
+    return metadata
   } catch (error) {
     console.error('获取地区元数据失败:', error)
-    cacheAreaMetadata([], [])
+    const cached = getCachedProvinceOilData(areaType)
+    if (cached) {
+      return extractAreaMetadata(cached.response, areaZoneType)
+    }
 
     return {
       areaZoneOptions: [],
@@ -685,52 +701,6 @@ export const getRefuelEstimateText = (data: OilPriceData, settings: { preferredO
   if (!Number.isFinite(price) || price <= 0) return `暂无${oilLabel}价格，无法估算加满费用`
 
   return `预计加满${oilLabel}${tankCapacity}升需要${(price * tankCapacity).toFixed(2)}元`
-}
-
-/**
- * 格式化预测价格显示
- * @param forecastPrice 预测价格
- * @returns 格式化后的价格字符串
- */
-export const formatForecastPrice = (forecastPrice: string): string => {
-  const price = parseFloat(forecastPrice)
-  return price > 0 ? `¥${price.toFixed(2)}` : '¥0.00'
-}
-
-/**
- * 获取价格趋势颜色
- * @param priceDirection 价格趋势
- * @returns 对应的颜色名称
- */
-export const getTrendColor = (priceDirection: string) => {
-  switch (priceDirection) {
-    case 'rising':
-      return 'systemRed'
-    case 'falling':
-      return 'systemGreen'
-    case 'stranded':
-      return 'systemGray'
-    default:
-      return 'systemGray'
-  }
-}
-
-/**
- * 获取价格趋势符号
- * @param priceDirection 价格趋势
- * @returns 对应的趋势符号
- */
-export const getTrendSymbol = (priceDirection: string) => {
-  switch (priceDirection) {
-    case 'rising':
-      return '↗'
-    case 'falling':
-      return '↘'
-    case 'stranded':
-      return '→'
-    default:
-      return '→'
-  }
 }
 
 /**

@@ -47,51 +47,66 @@ export const SettingsPage = () => {
   const [darkModeColor, setDarkModeColor] = useState<Color>(() => oilSettings.darkModeColor || '#FFFFFF')
 
   // 颜色背景相关状态
-  const [enableColorBackground, setEnableColorBackground] = useState<boolean>(() => oilSettings.enableColorBackground ?? true)
-  const [backgroundColors, setBackgroundColors] = useState<Color[]>(() => oilSettings.backgroundColors ?? ['#999999', '#444444'])
+  const [enableColorBackground, setEnableColorBackground] = useState<boolean>(() => oilSettings.enableColorBackground)
+  const [backgroundColors, setBackgroundColors] = useState<Color[]>(() => oilSettings.backgroundColors)
   const [showAddColorModal, setShowAddColorModal] = useState(false)
   const [newColor, setNewColor] = useState<Color>('#007AFF')
 
-  // 加载价区和当前价区可用油标
-  const loadAreaMetadata = async (areaType: string, areaZoneType: number) => {
-    setLoading(true)
-    try {
-      const metadata = await getAreaMetadata(areaType, areaZoneType)
-      const nextSelectedOilTypes = getSelectedOilTypes(metadata.availableOilTypes)
-      const nextSmallWidgetOilType = getSmallWidgetOilType(metadata.availableOilTypes)
-
-      setAreaZoneOptions(metadata.areaZoneOptions)
-      setAvailableOilTypes(metadata.availableOilTypes)
-      setSelectedOilTypesState(nextSelectedOilTypes)
-      setSmallWidgetOilTypeState(nextSmallWidgetOilType)
-    } catch (error) {
-      console.error('加载地区元数据失败:', error)
-      setAreaZoneOptions([])
-      setAvailableOilTypes([])
-      setSelectedOilTypesState([])
-      setSmallWidgetOilTypeState(getSmallWidgetOilType([]))
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  // 初始加载当前地区的价区和油标选项
+  // 统一由地区/价区状态驱动元数据加载，忽略已过期请求避免乱序回写
   useEffect(() => {
-    loadAreaMetadata(currentAreaType, currentAreaZoneType)
-  }, [currentAreaType])
+    let cancelled = false
 
-  const handleAreaChange = async (newAreaType: string) => {
+    const loadAreaMetadata = async () => {
+      setLoading(true)
+      try {
+        const metadata = await getAreaMetadata(currentAreaType, currentAreaZoneType)
+        if (cancelled) return
+
+        setAreaZoneOptions(metadata.areaZoneOptions)
+        setAvailableOilTypes(metadata.availableOilTypes)
+        setSelectedOilTypesState(getSelectedOilTypes(metadata.availableOilTypes))
+        setSmallWidgetOilTypeState(getSmallWidgetOilType(metadata.availableOilTypes))
+
+        const latestSettings = getCurrentSettings()
+        if (metadata.availableOilTypes.length > 0 && !metadata.availableOilTypes.includes(latestSettings.preferredOilType)) {
+          const fallbackPreferredOilType = metadata.availableOilTypes.includes('95')
+            ? '95'
+            : metadata.availableOilTypes.includes('92')
+              ? '92'
+              : metadata.availableOilTypes[0]
+          setPreferredOilType(fallbackPreferredOilType)
+          saveSettings({ ...latestSettings, preferredOilType: fallbackPreferredOilType })
+        }
+      } catch (error) {
+        if (cancelled) return
+        console.error('加载地区元数据失败:', error)
+        setAreaZoneOptions([])
+        setAvailableOilTypes([])
+        setSelectedOilTypesState([])
+        setSmallWidgetOilTypeState(getSmallWidgetOilType([]))
+      } finally {
+        if (!cancelled) {
+          setLoading(false)
+        }
+      }
+    }
+
+    loadAreaMetadata()
+    return () => {
+      cancelled = true
+    }
+  }, [currentAreaType, currentAreaZoneType])
+
+  const handleAreaChange = (newAreaType: string) => {
     setCurrentAreaType(newAreaType)
     setCurrentAreaZoneType(0) // 重置价区选择
     setArea(newAreaType, 0)
-    await loadAreaMetadata(newAreaType, 0)
   }
 
-  const handleAreaZoneChange = async (newAreaZoneType: string) => {
+  const handleAreaZoneChange = (newAreaZoneType: string) => {
     const zoneIndex = parseInt(newAreaZoneType, 10)
     setCurrentAreaZoneType(zoneIndex)
     setArea(currentAreaType, zoneIndex)
-    await loadAreaMetadata(currentAreaType, zoneIndex)
   }
 
   const handleOilTypeToggle = async (oilType: OilTypeValue, checked: boolean) => {
@@ -151,37 +166,33 @@ export const SettingsPage = () => {
     }
   }
 
-  // 更新字体颜色设置的函数
-  const updateOilSettings = (newSettings: any) => {
-    saveSettings(newSettings)
+  // 写入设置前始终读取最新持久化快照，避免覆盖其他字段修改
+  const updateOilSettings = (patch: Record<string, any>) => {
+    saveSettings({ ...getCurrentSettings(), ...patch })
   }
 
   // 处理浅色模式颜色变化
   const handleLightModeColorChange = (color: Color) => {
     setLightModeColor(color)
-    const newSettings = { ...oilSettings, lightModeColor: color }
-    updateOilSettings(newSettings)
+    updateOilSettings({ lightModeColor: color })
   }
 
   // 处理深色模式颜色变化
   const handleDarkModeColorChange = (color: Color) => {
     setDarkModeColor(color)
-    const newSettings = { ...oilSettings, darkModeColor: color }
-    updateOilSettings(newSettings)
+    updateOilSettings({ darkModeColor: color })
   }
 
   // 颜色背景管理函数
   const handleEnableColorBackgroundChange = (value: boolean) => {
     setEnableColorBackground(value)
-    const newSettings = { ...oilSettings, enableColorBackground: value }
-    updateOilSettings(newSettings)
+    updateOilSettings({ enableColorBackground: value })
   }
 
   const handleAddColor = () => {
     const updatedColors = [...backgroundColors, newColor]
     setBackgroundColors(updatedColors)
-    const newSettings = { ...oilSettings, backgroundColors: updatedColors }
-    updateOilSettings(newSettings)
+    updateOilSettings({ backgroundColors: updatedColors })
     setNewColor('#007AFF')
     setShowAddColorModal(false)
   }
@@ -189,8 +200,13 @@ export const SettingsPage = () => {
   const handleRemoveColor = (index: number) => {
     const updatedColors = backgroundColors.filter((_, i) => i !== index)
     setBackgroundColors(updatedColors)
-    const newSettings = { ...oilSettings, backgroundColors: updatedColors }
-    updateOilSettings(newSettings)
+    updateOilSettings({ backgroundColors: updatedColors })
+  }
+
+  const handleUpdateColor = (index: number, color: Color) => {
+    const updatedColors = backgroundColors.map((item, i) => (i === index ? color : item))
+    setBackgroundColors(updatedColors)
+    updateOilSettings({ backgroundColors: updatedColors })
   }
 
   const handleCancelAddColor = () => {
@@ -199,6 +215,8 @@ export const SettingsPage = () => {
   }
 
   const availableOilTypeOptions = oilTypeOptions.filter(oil => availableOilTypes.includes(oil.value))
+  const preferredOilTypeOptions = availableOilTypeOptions.length > 0 ? availableOilTypeOptions : oilTypeOptions
+  const currentPreferredOilType = preferredOilTypeOptions.some(oil => oil.value === preferredOilType) ? preferredOilType : preferredOilTypeOptions[0].value
   const mediumSelectionFull = selectedOilTypes.length >= MAX_DISPLAY_OIL_TYPES
 
   return (
@@ -261,18 +279,17 @@ export const SettingsPage = () => {
             {/* 显示现有颜色列表 */}
             {backgroundColors && backgroundColors.length > 0 ? (
               backgroundColors.map((color, index) => (
-                <VStack key={index} spacing={8}>
-                  {/* 颜色信息区域 - 只显示，不可点击 */}
-                  <HStack>
-                    <VStack spacing={4} alignment="leading">
+                <HStack key={index} spacing={12} alignment="center">
+                  <ColorPicker value={color} onChanged={nextColor => handleUpdateColor(index, nextColor)} supportsOpacity={false}>
+                    <VStack spacing={2} alignment="leading">
                       <Text font="body">颜色 {index + 1}</Text>
-                      <Text font="caption">{color}</Text>
+                      <Text font="caption" foregroundStyle="secondaryLabel">
+                        {color}
+                      </Text>
                     </VStack>
-                    <Spacer />
-                    {/* 删除按钮区域 - 独立点击区域 */}
-                    <Button title="删除" role="destructive" action={() => handleRemoveColor(index)} />
-                  </HStack>
-                </VStack>
+                  </ColorPicker>
+                  <Button title="删除" role="destructive" buttonStyle="borderless" action={() => handleRemoveColor(index)} />
+                </HStack>
               ))
             ) : (
               <Text font="footnote" foregroundStyle="secondaryLabel">
@@ -334,8 +351,8 @@ export const SettingsPage = () => {
             </Text>
           }
         >
-          <Picker title="优先展示油号" value={preferredOilType} onChanged={handlePreferredOilTypeChange}>
-            {oilTypeOptions.map(oil => (
+          <Picker title="优先展示油号" value={currentPreferredOilType} onChanged={handlePreferredOilTypeChange}>
+            {preferredOilTypeOptions.map(oil => (
               <Text key={oil.value} tag={oil.value}>
                 {oil.label}
               </Text>

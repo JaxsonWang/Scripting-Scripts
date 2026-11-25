@@ -1,4 +1,21 @@
-import { Button, HStack, Image, List, Navigation, NavigationStack, Path, Script, Section, Spacer, Text, VStack, Widget, useEffect, useState } from 'scripting'
+import {
+  Button,
+  HStack,
+  Image,
+  List,
+  Navigation,
+  NavigationStack,
+  Path,
+  Script,
+  ScrollView,
+  Section,
+  Spacer,
+  Text,
+  VStack,
+  Widget,
+  useEffect,
+  useState
+} from 'scripting'
 import type { CompleteOilData } from './utils/oil-price-service'
 import {
   areaOptions,
@@ -8,6 +25,8 @@ import {
   getCurrentAreaSettings,
   getCurrentVersion,
   getLocalVersionInfo,
+  getTrendColor,
+  getTrendText,
   markUpdateLogDismissed,
   shouldShowUpdateLog
 } from './utils/oil-price-service'
@@ -45,10 +64,19 @@ const GasPriceDetail = () => {
   }
 
   // 刷新当前地区设置和数据
+  const reloadWidgets = () => {
+    try {
+      Widget.reloadAll()
+    } catch (error) {
+      console.error('刷新桌面小组件失败:', error)
+    }
+  }
+
   const refreshData = async () => {
     const settings = getCurrentAreaSettings()
     setCurrentArea(settings.areaType)
     await loadData()
+    reloadWidgets()
   }
 
   // 加载版本信息
@@ -157,33 +185,16 @@ const GasPriceDetail = () => {
     )
   }
 
-  const getTrendText = (direction: string) => {
-    switch (direction) {
-      case 'rising':
-        return '上涨'
-      case 'falling':
-        return '下跌'
-      case 'stranded':
-        return '搁浅'
-      default:
-        return '未知'
-    }
-  }
-
-  const getTrendColor = (direction: string) => {
-    switch (direction) {
-      case 'rising':
-        return 'systemRed'
-      case 'falling':
-        return 'systemGreen'
-      case 'stranded':
-        return 'systemGray'
-      default:
-        return 'systemGray'
-    }
-  }
-
   const oilPriceTitle = oilData.areaZoneName ? `${oilData.region}${oilData.areaZoneName}油价` : `${oilData.region}油价`
+  const formattedForecastPrice = formatForecastPrice(oilData.forecastPrice)
+  const forecastDetailText =
+    oilData.priceDirection === 'unknown'
+      ? '请稍后刷新重试'
+      : oilData.priceDirection === 'stranded'
+        ? null
+        : formattedForecastPrice
+          ? `约 ${formattedForecastPrice}/L（每升参考幅度）`
+          : '暂未公布每升参考幅度'
 
   return (
     <NavigationStack>
@@ -235,17 +246,23 @@ const GasPriceDetail = () => {
             </Text>
           }
         >
-          {oilData.prices.map(item => (
-            <HStack key={item.type} alignment="center">
-              <Text font="body" foregroundStyle="label">
-                {item.label}
-              </Text>
-              <Spacer />
-              <Text font="title3" foregroundStyle="label">
-                {item.price}
-              </Text>
-            </HStack>
-          ))}
+          {oilData.prices.length > 0 ? (
+            oilData.prices.map(item => (
+              <HStack key={item.type} alignment="center">
+                <Text font="body" foregroundStyle="label">
+                  {item.label}
+                </Text>
+                <Spacer />
+                <Text font="title3" foregroundStyle="label">
+                  {item.price}
+                </Text>
+              </HStack>
+            ))
+          ) : (
+            <Text font="body" foregroundStyle="secondaryLabel">
+              暂无当前地区油价数据，请稍后刷新重试
+            </Text>
+          )}
         </Section>
 
         {/* 预测信息 */}
@@ -253,7 +270,7 @@ const GasPriceDetail = () => {
           header={<Text font="headline">价格预测</Text>}
           footer={
             <Text font="footnote" foregroundStyle="secondaryLabel">
-              数据仅供参考，实际价格以加油站为准
+              预测幅度为每升通用参考，实际价格以加油站为准
             </Text>
           }
         >
@@ -263,7 +280,7 @@ const GasPriceDetail = () => {
                 预测日期
               </Text>
               <Text font="caption" foregroundStyle="secondaryLabel">
-                {oilData.forecastDate}
+                {oilData.forecastDate || '暂不可用'}
               </Text>
             </VStack>
             <Spacer />
@@ -271,9 +288,11 @@ const GasPriceDetail = () => {
               <Text font="title3" foregroundStyle={getTrendColor(oilData.priceDirection)}>
                 {getTrendText(oilData.priceDirection)}
               </Text>
-              <Text font="caption" foregroundStyle="secondaryLabel">
-                {formatForecastPrice(oilData.forecastPrice)}
-              </Text>
+              {forecastDetailText ? (
+                <Text font="caption" foregroundStyle="secondaryLabel">
+                  {forecastDetailText}
+                </Text>
+              ) : null}
             </VStack>
           </HStack>
         </Section>
@@ -304,9 +323,11 @@ const GasPriceDetail = () => {
                   <Text font="title2" foregroundStyle="label">
                     {updateTitle}
                   </Text>
-                  <Text font="body" foregroundStyle="label" padding={10}>
-                    {changelogContent}
-                  </Text>
+                  <ScrollView>
+                    <Text font="body" foregroundStyle="label" padding={10} frame={{ maxWidth: 'infinity', alignment: 'leading' }}>
+                      {changelogContent}
+                    </Text>
+                  </ScrollView>
                   {updateTitle.includes('脚本更新') ? (
                     <Button title="我已知晓" action={handleUpdateDismiss} />
                   ) : (
@@ -320,6 +341,7 @@ const GasPriceDetail = () => {
             title="刷新数据"
             action={async () => {
               await loadData()
+              reloadWidgets()
             }}
           />
         </Section>

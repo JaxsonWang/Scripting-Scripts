@@ -1,19 +1,17 @@
 import { HStack, Image, Spacer, Text, VStack, Widget } from 'scripting'
-import type { CompleteOilData } from './utils/oil-price-service'
+import type { CompleteOilData, PriceDirection } from './utils/oil-price-service'
 import {
-  formatForecastPrice,
+  createUnknownForecast,
+  formatForecastBadge,
+  formatForecastFooter,
   getCompleteOilData,
   getCurrentSettings,
   getDynamicTextColor,
   getMediumWidgetOilPriceItems,
   getRefuelEstimateText,
   getSmallWidgetOilPriceItem,
-  getTrendColor,
-  getTrendSymbol
+  getTrendColor
 } from './utils/oil-price-service'
-
-// 全局数据变量
-let oilData: CompleteOilData | null = null
 
 /**
  * 生成背景样式
@@ -53,7 +51,7 @@ const generateWidgetBackground = (settings: any) => {
 const GasPriceItem = ({
   label,
   price,
-  forecastPrice,
+  forecastText,
   priceDirection,
   forecastFontSize,
   labelFontSize,
@@ -61,10 +59,10 @@ const GasPriceItem = ({
 }: {
   label: string
   price: string
-  forecastPrice?: string
+  forecastText?: string | null
   forecastFontSize: number
   labelFontSize: number
-  priceDirection?: 'rising' | 'falling' | 'stranded'
+  priceDirection: PriceDirection
   priceFontSize: number
 }) => {
   // 获取动态字体颜色
@@ -79,26 +77,13 @@ const GasPriceItem = ({
       <Text font={priceFontSize} foregroundStyle={textColor} lineLimit={1} minScaleFactor={0.8}>
         {price}
       </Text>
-      {forecastPrice && priceDirection ? (
+      {forecastText ? (
         <Text font={forecastFontSize} foregroundStyle={getTrendColor(priceDirection)} lineLimit={1} minScaleFactor={0.75}>
-          {getTrendSymbol(priceDirection)} {formatForecastPrice(forecastPrice)}
+          {forecastText}
         </Text>
       ) : null}
     </HStack>
   )
-}
-
-const getTrendText = (direction: string): string => {
-  switch (direction) {
-    case 'rising':
-      return '上涨'
-    case 'falling':
-      return '下跌'
-    case 'stranded':
-      return '搁浅'
-    default:
-      return '搁浅'
-  }
 }
 
 const getLargeWidgetLayout = (itemCount: number) => {
@@ -154,26 +139,20 @@ const getLargeWidgetLayout = (itemCount: number) => {
  * @returns 完整油价数据Promise
  */
 const loadOilData = async (): Promise<CompleteOilData> => {
-  if (!oilData) {
-    try {
-      oilData = await getCompleteOilData()
-    } catch (error) {
-      console.error('加载油价数据失败:', error)
-      // 返回默认数据
-      oilData = {
-        startDate: '数据加载失败',
-        region: '未知地区',
-        areaZoneName: '',
-        lastUpdated: new Date().toLocaleString(),
-        prices: [],
-        availableOilTypes: [],
-        priceDirection: 'stranded',
-        forecastDate: '未知',
-        forecastPrice: '0.00'
-      }
+  try {
+    return await getCompleteOilData()
+  } catch (error) {
+    console.error('加载油价数据失败:', error)
+    return {
+      startDate: '数据加载失败',
+      region: '未知地区',
+      areaZoneName: '',
+      lastUpdated: '暂未获取',
+      prices: [],
+      availableOilTypes: [],
+      ...createUnknownForecast()
     }
   }
-  return oilData
 }
 
 /**
@@ -186,6 +165,9 @@ const WidgetView = ({ data }: { data: CompleteOilData }) => {
   const textColor = getDynamicTextColor()
   const oilSettings = getCurrentSettings()
   const title = data.areaZoneName ? `${data.region}${data.areaZoneName}油价` : `${data.region}油价`
+  const forecastBadge = formatForecastBadge(data)
+  const forecastFooter = formatForecastFooter(data)
+  const updatedText = data.lastUpdated === '暂未获取' ? '暂未获取' : `${data.lastUpdated}刷新`
 
   const widgetBackground = generateWidgetBackground(oilSettings)
 
@@ -194,17 +176,22 @@ const WidgetView = ({ data }: { data: CompleteOilData }) => {
       const selectedItem = getSmallWidgetOilPriceItem(data)
 
       return (
-        <VStack spacing={6} padding={16} alignment="center" widgetBackground={widgetBackground}>
+        <VStack spacing={4} padding={14} alignment="center" frame={{ maxWidth: 'infinity', maxHeight: 'infinity' }} widgetBackground={widgetBackground}>
           <Image systemName="fuelpump.fill" font="title2" foregroundStyle="systemOrange" />
-          <Spacer />
-          <Text font="title" fontWeight="bold" foregroundStyle={textColor}>
-            {selectedItem?.price || '未开放'}
+          <Spacer minLength={0} />
+          <Text font="title" fontWeight="bold" foregroundStyle={textColor} lineLimit={1} minScaleFactor={0.75}>
+            {selectedItem?.price || '暂无数据'}
           </Text>
-          <Text font="caption" foregroundStyle="#EB604D">
+          <Text font="caption" foregroundStyle="#EB604D" lineLimit={1} minScaleFactor={0.8}>
             {selectedItem?.label || '油价'}
           </Text>
-          <Spacer />
-          <Text font="caption2" foregroundStyle={textColor}>
+          {forecastBadge ? (
+            <Text font="caption2" foregroundStyle={getTrendColor(data.priceDirection)} lineLimit={1} minScaleFactor={0.75}>
+              {forecastBadge}
+            </Text>
+          ) : null}
+          <Spacer minLength={0} />
+          <Text font="caption2" foregroundStyle={textColor} lineLimit={1} minScaleFactor={0.8}>
             {data.lastUpdated}
           </Text>
         </VStack>
@@ -227,21 +214,29 @@ const WidgetView = ({ data }: { data: CompleteOilData }) => {
 
             <Spacer minLength={0} />
 
-            <HStack spacing={16} padding={{ horizontal: 24 }}>
-              {mediumOilPriceItems.map(item => (
-                <VStack key={item.type} spacing={2} alignment="center">
-                  <Text font="title2" fontWeight="medium" foregroundStyle="#EB604D">
-                    {item.shortLabel}
-                  </Text>
-                  <Text font="title3" fontWeight="medium" foregroundStyle={textColor}>
-                    {item.price}
-                  </Text>
-                  <Text font="caption2" foregroundStyle={getTrendColor(data.priceDirection)}>
-                    {getTrendSymbol(data.priceDirection)} {formatForecastPrice(data.forecastPrice)}
-                  </Text>
-                </VStack>
-              ))}
-            </HStack>
+            {mediumOilPriceItems.length > 0 ? (
+              <HStack spacing={8} padding={{ horizontal: 14 }}>
+                {mediumOilPriceItems.map(item => (
+                  <VStack key={item.type} spacing={2} alignment="center" frame={{ maxWidth: 'infinity' }}>
+                    <Text font="title2" fontWeight="medium" foregroundStyle="#EB604D" lineLimit={1} minScaleFactor={0.8}>
+                      {item.shortLabel}
+                    </Text>
+                    <Text font="title3" fontWeight="medium" foregroundStyle={textColor} lineLimit={1} minScaleFactor={0.75}>
+                      {item.price}
+                    </Text>
+                    {forecastBadge ? (
+                      <Text font="caption2" foregroundStyle={getTrendColor(data.priceDirection)} lineLimit={1} minScaleFactor={0.75}>
+                        {forecastBadge}
+                      </Text>
+                    ) : null}
+                  </VStack>
+                ))}
+              </HStack>
+            ) : (
+              <Text font="subheadline" foregroundStyle={textColor}>
+                暂无当前地区油价数据
+              </Text>
+            )}
 
             <Spacer minLength={0} />
 
@@ -249,15 +244,15 @@ const WidgetView = ({ data }: { data: CompleteOilData }) => {
               <Text font={11} foregroundStyle={textColor} lineLimit={1} minScaleFactor={0.8} padding={{ horizontal: 16 }}>
                 {getRefuelEstimateText(data, oilSettings)}
               </Text>
-              <HStack spacing={2} alignment="center">
-                <Text font={10} foregroundStyle={textColor}>
-                  {data.lastUpdated}刷新
+              <HStack spacing={2} alignment="center" padding={{ horizontal: 16 }}>
+                <Text font={10} foregroundStyle={textColor} lineLimit={1} minScaleFactor={0.8}>
+                  {updatedText}
                 </Text>
                 <Text font={10} foregroundStyle={textColor}>
                   •
                 </Text>
-                <Text font={10} foregroundStyle={textColor}>
-                  {data.forecastDate + getTrendText(data.priceDirection)}调整
+                <Text font={10} foregroundStyle={textColor} lineLimit={1} minScaleFactor={0.8}>
+                  {forecastFooter}
                 </Text>
               </HStack>
             </VStack>
@@ -280,20 +275,26 @@ const WidgetView = ({ data }: { data: CompleteOilData }) => {
             <Spacer />
           </HStack>
           <Spacer />
-          <VStack spacing={layout.rowSpacing} alignment="center">
-            {data.prices.map(item => (
-              <GasPriceItem
-                key={item.type}
-                label={item.shortLabel}
-                price={item.price}
-                forecastPrice={data.forecastPrice}
-                forecastFontSize={layout.forecastFontSize}
-                labelFontSize={layout.labelFontSize}
-                priceDirection={data.priceDirection}
-                priceFontSize={layout.priceFontSize}
-              />
-            ))}
-          </VStack>
+          {data.prices.length > 0 ? (
+            <VStack spacing={layout.rowSpacing} alignment="center">
+              {data.prices.map(item => (
+                <GasPriceItem
+                  key={item.type}
+                  label={item.shortLabel}
+                  price={item.price}
+                  forecastText={forecastBadge}
+                  forecastFontSize={layout.forecastFontSize}
+                  labelFontSize={layout.labelFontSize}
+                  priceDirection={data.priceDirection}
+                  priceFontSize={layout.priceFontSize}
+                />
+              ))}
+            </VStack>
+          ) : (
+            <Text font="body" foregroundStyle={textColor}>
+              暂无当前地区油价数据
+            </Text>
+          )}
           <Spacer />
           <VStack spacing={4}>
             <Text font={layout.footerFontSize} foregroundStyle={textColor} lineLimit={1} minScaleFactor={0.8}>
@@ -301,13 +302,13 @@ const WidgetView = ({ data }: { data: CompleteOilData }) => {
             </Text>
             <HStack spacing={2} alignment="center">
               <Text font={layout.footerFontSize} foregroundStyle={textColor} lineLimit={1} minScaleFactor={0.8}>
-                {data.lastUpdated}刷新
+                {updatedText}
               </Text>
               <Text font={layout.footerFontSize} foregroundStyle={textColor}>
                 •
               </Text>
               <Text font={layout.footerFontSize} foregroundStyle={textColor} lineLimit={1} minScaleFactor={0.8}>
-                {data.forecastDate + getTrendText(data.priceDirection)}调整
+                {forecastFooter}
               </Text>
             </HStack>
           </VStack>
